@@ -13,6 +13,9 @@
 static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
+double mouse_sensitivity = 0.005;
+double lastx; double lasty;
+
 enum KeyboardAction {
     MOVE_FORWARD,
     MOVE_BACKWARD,
@@ -82,6 +85,11 @@ struct FreeCam {
             cam.pos.y -= 0.5 * dt;
         }
     }
+    void mouseMove(double dx, double dy) {
+        cam.theta -= dx * mouse_sensitivity;
+        cam.y_theta -= dy * mouse_sensitivity;
+        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0, PI / 2.0);
+    }
 };
 
 // RTS camera (SC2, BAR, etc) controls
@@ -93,38 +101,59 @@ struct RTSCam {
     // TODO: Unimplemented and possibly unnecessary; just here to demonstrate why I have a "generic" `Cam`
 };
 
+// Disable mouse and make sure that the initial mouse position is correct
+void initMouse(GLFWwindow* window) {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    } else {
+        printf("Cannot enable GLFW_RAW_MOUSE_MOTION, aborting");
+        exit(1);
+    }
+    glfwGetCursorPos(window, &lastx, &lasty);
+}
+
+// When ESCAPE pressed, give mouse control. When mouse clicked, disable mouse again.
+void windowFocusControl(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // ENABLE MOUSE MOVEMENT
+    }
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
+        if (glfwRawMouseMotionSupported())
+            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+}
+
 void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
     dt *= 5.0;
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_FORWARD, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_BACKWARD, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::STRAFE_LEFT, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::STRAFE_RIGHT, dt);
-    }
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_UP, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_DOWN, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_LEFT, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_RIGHT, dt);
-    }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_DOWN, dt);
-    }
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
-    }
+
+    // mouse input
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    cam.mouseMove(xpos - lastx, ypos - lasty);
+    lastx = xpos; lasty = ypos;
 }

@@ -180,6 +180,7 @@ void genTangents(std::vector<Vertex>& vertices) {
 int main() {
     GLFWwindow* window = init();
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+    initMouse(window); // function in cam.h
 
     GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
     GLuint shadowShader = createShader("src/shader/shadow.vert");
@@ -270,13 +271,14 @@ int main() {
         // check for user input
         glfwPollEvents();
 
-        if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+        /*if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
             useNormalMap = 1;
         }
         if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) {
             useNormalMap = 0;
-        }
+        }*/
 
+        windowFocusControl(window);
         moveFreeCam(window, cam, dt);
 
         // TODO: don't create these in a loop; only when necessary
