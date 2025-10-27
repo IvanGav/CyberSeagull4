@@ -12,6 +12,7 @@
 
 static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
+static constexpr auto epsilon = 0.00001;
 
 double mouse_sensitivity = 0.005;
 double lastx; double lasty;
@@ -88,7 +89,7 @@ struct FreeCam {
     void mouseMove(double dx, double dy) {
         cam.theta -= dx * mouse_sensitivity;
         cam.y_theta -= dy * mouse_sensitivity;
-        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);
+        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0 + epsilon, PI / 2.0 - epsilon);
     }
 };
 
