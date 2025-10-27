@@ -1405,5 +1405,8 @@
     <ClInclude Include="include\tinyobjloader\tiny_obj_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\cam.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

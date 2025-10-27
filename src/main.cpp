@@ -5,6 +5,7 @@
 #include <string>
 #include <array>
 #include <unordered_map>
+#include <cmath>
 
 // GLAD: OpenGL function loader
 #include <glad/glad.h>
@@ -30,6 +31,9 @@
 #include <imgui/imgui_stdlib.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+
+// This project
+#include "cam.h"
 
 // Static data
 static constexpr int width = 1920;
@@ -203,6 +207,7 @@ int main() {
 
     std::vector<Vertex> vertices;
 
+    // Temporary code to create a quad
     {
         Vertex v;
         v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
@@ -238,8 +243,6 @@ int main() {
 
     genTangents(vertices);
 
-    // glm::mat4 base = baseTransform(vertices);
-
     GLuint buffer;
     glCreateBuffers(1, &buffer);
     glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
@@ -249,14 +252,21 @@ int main() {
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_TRUE);
 
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
+    //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
+    FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
     glm::vec3 lightAngle = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     int useNormalMap = 1;
+    double last_time_sec = 0.0;
 
     // event loop (each iteration of this loop is one frame of the application)
     while (!glfwWindowShouldClose(window)) {
+        // calculate delta time
+        double cur_time_sec = glfwGetTime();
+        double dt = cur_time_sec - last_time_sec;
+        last_time_sec = cur_time_sec;
+
         // check for user input
         glfwPollEvents();
 
@@ -267,19 +277,22 @@ int main() {
             useNormalMap = 0;
         }
 
-        cameraPos = glm::vec3(-cosf(glfwGetTime())*2.0f, 0.0f, -sinf(glfwGetTime())*2.0f);
+        moveFreeCam(window, cam, dt);
+
+        // TODO: don't create these in a loop; only when necessary
         glm::mat4 model = glm::rotate(glm::mat4(1.0f), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
 
+        // TODO: same here; only when necessary
         lightAngle = glm::vec3(cosf(glfwGetTime()), 0.5f, sinf(glfwGetTime()));
         glm::mat4 lightView = glm::lookAt(glm::vec3(0.0f), lightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightProjection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
         glm::mat3 normal = glm::inverse(glm::transpose(glm::mat3(model)));
 
+        // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
         glClear(GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shadowShader);
@@ -288,8 +301,8 @@ int main() {
 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
+        // Draw to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(program);
@@ -298,7 +311,7 @@ int main() {
         glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
         glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normal));
 
-        glProgramUniform3fv(program, 11, 1, glm::value_ptr(cameraPos));
+        glProgramUniform3fv(program, 11, 1, glm::value_ptr(cam.cam.pos));
         glProgramUniform3fv(program, 12, 1, glm::value_ptr(lightAngle));
         glProgramUniform3fv(program, 13, 1, glm::value_ptr(lightColor));
 
@@ -321,7 +334,7 @@ int main() {
     cleanup(window);
 }
 
-/* Other graphics related function */
+/* Gameplay related functions */
 
 // Given an object, give a transform matrix that roughly scales it down to appropriate size; don't use for percise transformations
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
