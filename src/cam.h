@@ -88,7 +88,7 @@ struct FreeCam {
     void mouseMove(double dx, double dy) {
         cam.theta -= dx * mouse_sensitivity;
         cam.y_theta -= dy * mouse_sensitivity;
-        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0, PI / 2.0);
+        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);
     }
 };
 
