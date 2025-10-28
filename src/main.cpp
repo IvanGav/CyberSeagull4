@@ -226,7 +226,7 @@ int main() {
         double cur_time_sec = glfwGetTime();
         double dt = cur_time_sec - last_time_sec;
         last_time_sec = cur_time_sec;
-        double lightAzimuth = PI / 2.0;// glfwGetTime();
+        double lightAzimuth = glfwGetTime();
 
         // check for user input
         glfwPollEvents();
@@ -235,7 +235,8 @@ int main() {
         moveFreeCam(window, cam, dt);
 
         // TODO: don't create these in a loop; only when necessary
-        glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(2.0f, 2.0f, 2.0f));
+        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(2.0f, 2.0f, 2.0f));
+        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
 
