@@ -215,7 +215,7 @@ int main() {
     //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
-    sun.illuminateArea(10.0);
+    sun.illuminateArea(25.0);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     double last_time_sec = 0.0;
@@ -227,6 +227,7 @@ int main() {
         double dt = cur_time_sec - last_time_sec;
         last_time_sec = cur_time_sec;
         double lightAzimuth = glfwGetTime();
+        glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0); // glm::vec3(sin(cur_time_sec) * 3.0, -1.0f, 0.0f);
 
         // check for user input
         glfwPollEvents();
@@ -235,13 +236,13 @@ int main() {
         moveFreeCam(window, cam, dt);
 
         // TODO: don't create these in a loop; only when necessary
-        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(2.0f, 2.0f, 2.0f));
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
+        //glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
 
         // Update the light direction
-        sun.setLightDir(lightAzimuth, PI / 4.0);
+        sun.setLightDirVec3(lightDir);
 
         glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(model)));
 
@@ -267,7 +268,7 @@ int main() {
         glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
 
         glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
-        glProgramUniform3fv(program, 16, 1, glm::value_ptr(getAngle(lightAzimuth, PI / 4.0)));
+        glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());

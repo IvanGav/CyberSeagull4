@@ -18,41 +18,45 @@ layout(location = 16) uniform vec3 lightAngle;
 layout(location = 17) uniform vec3 lightColor;
 
 bool inShadow(vec4 lightSpacePos) {
+	return false; // TODO temporary
 	vec3 projectedPos = lightSpacePos.xyz/lightSpacePos.w; // is done automatically for gl_Position, but need manually here
 	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f; // to sample the texture, it's (0,1), but drawing box is (-1,1)
 	float depth = texture(shadowMap, projectedPos.xy).r; // r from rgba
 
-	return lightSpacePos.z > depth + 0.001f;
+	return lightSpacePos.z > depth + 0.005f;
 }
 
-/*vec4 directionalLight(vec4 baseColor, vec3 lightAngle, vec3 lightColor, vec3 cameraPos, vec3 normal) {
-	const float specularIntensity = 0.5f;
-	vec3 viewDir = normalize(cameraPos - inPos);
-	vec3 reflectDir = reflect(lightAngle, normal);
-	vec4 diffuse = baseColor * max(dot(normal, -lightAngle), 0.0f) * vec4(lightColor, 1.0f);
-	float specular = pow(max(dot(viewDir, reflectDir), 0.0f), 32.0f) * specularIntensity;
+// Phong
+vec4 directionalLightAlt(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cameraPos, vec3 normal) {
+	vec4 diffuse = baseColor * max(dot(normal, -toLightDir), 0.0f) * vec4(lightColor, 1.0f);
 	vec4 ambient = 0.1f * baseColor;
+	
+    // Specular (Phong)
+	const float specularIntensity = 0.5f;
+    vec3 toCameraDir = normalize(cameraPos - inPos);
+    vec3 reflectedLightDir = reflect(-toLightDir, normal);
+    float specularBase = clamp(dot(reflectedLightDir, toCameraDir), 0.0, 1.0);
+    float specular = pow(specularBase, 32.0f) * specularIntensity;
 
 	if(inShadow(inLightspacePos)) {
 		return ambient;
 	} else {
 		return diffuse + specular + ambient;
 	}
-}*/
+}
 
+// Blinn-Phong (BROKEN)
 vec4 directionalLight(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cameraPos, vec3 normal) {
-	vec4 ambient = 0.1f * baseColor;
 	vec4 diffuse = baseColor * max(dot(normal, -toLightDir), 0.0f) * vec4(lightColor, 1.0f);
+	vec4 ambient = 0.1f * baseColor;
 
-	// Specular (Blinn-Phong)
 	const float specularIntensity = 0.5f;
-	vec3 toCamDir = normalize(cameraPos - inPos);
-    vec3 halfVector = normalize(toCamDir + toLightDir);
-    float specularBase = max(dot(halfVector, normal), 0.0);
-    float specular = pow(specularBase, 32.0f) * specularIntensity;
 	
-	//return vec4(specular, 0.0f, 0.0f, 1.0f);
-	return diffuse + specular + ambient;
+	// Specular (Blinn-Phong)
+    vec3 toCameraDir = normalize(cameraPos - inPos);
+    vec3 halfVector = normalize(toCameraDir - toLightDir);
+    float specularBase = clamp(dot(halfVector, normal), 0.0, 1.0);
+    float specular = pow(specularBase, 32.0f) * specularIntensity;
 
 	if(inShadow(inLightspacePos)) {
 		return ambient;
@@ -72,5 +76,5 @@ void main() {
 	normal = normalize(TBN * (texture(normalMap, inUV).rgb * 2.0f - 1.0f));
 	*/
 
-	fCol = directionalLight(texture(baseColorTex, inUV), normalize(-lightAngle), lightColor, cameraPos, normal);
+	fCol = directionalLightAlt(texture(baseColorTex, inUV), normalize(-lightAngle), lightColor, cameraPos, normal);
 }
