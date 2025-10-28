@@ -49,6 +49,7 @@ void cleanup(GLFWwindow* window);
 std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
+void loadObj(std::vector<Vertex>& vertices, const char* path);
 
 struct Vertex {
     alignas(16) glm::vec3 position;
@@ -154,7 +155,7 @@ int main() {
     GLuint tex;
     {
         int texWidth, texHeight;
-        stbi_uc* pixels = stbi_load("asset/cat_hot_dog.png", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load("asset/green.jpg", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
         tex = createTexture(texWidth, texHeight, GL_RGBA8, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
         stbi_image_free(pixels);
         glBindTextureUnit(0, tex);
@@ -164,15 +165,17 @@ int main() {
     {
         shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F);
         glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
-        glBindTextureUnit(2, shadowmap);
+        glBindTextureUnit(1, shadowmap);
     }
 
     // Create geometry
 
     std::vector<Vertex> vertices;
 
+    loadObj(vertices, "asset/test_scene.obj");
+
     // Temporary code to create a quad
-    {
+    /*{
         Vertex v;
         v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
         v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -203,7 +206,7 @@ int main() {
         v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
         v.uv = glm::vec2(1.0f, 0.0f);
         vertices.push_back(v);
-    }
+    }*/
 
     genTangents(vertices);
 
@@ -215,7 +218,7 @@ int main() {
     //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
-    sun.illuminateArea(25.0);
+    sun.illuminateArea(10.0); 
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     double last_time_sec = 0.0;
@@ -236,8 +239,8 @@ int main() {
         moveFreeCam(window, cam, dt);
 
         // TODO: don't create these in a loop; only when necessary
-        glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
-        //glm::mat4 model = glm::mat4(1.0f);
+        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
+        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
 

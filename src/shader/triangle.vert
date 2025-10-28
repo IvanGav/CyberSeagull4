@@ -33,7 +33,7 @@ void main() {
 	outNormal = normalTransform * v.normal;
 	outTangent = normalTransform * v.tangent;
 	outBitangent = cross(outNormal, outTangent);
-	outLightspacePos = worldSpacePos * lightTransform;
+	outLightspacePos = lightTransform * worldSpacePos;
 	
 	gl_Position = camMatrix * worldSpacePos;
 }
