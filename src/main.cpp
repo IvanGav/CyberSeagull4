@@ -119,9 +119,10 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 }
 
 // Create a texture
-GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, void* pixels = nullptr, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
+GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool genMips, void* pixels = nullptr, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
     GLuint tex;
-    int numMips = std::log2(std::max(texWidth, texHeight)) + 1;
+    int numMips = genMips ? std::log2(std::max(texWidth, texHeight)) + 1 : 1;
+    //int numMips = std::log2(std::max(texWidth, texHeight)) + 1;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex);
     glTextureStorage2D(tex, numMips, internalFormat, texWidth, texHeight);
 
@@ -156,14 +157,14 @@ int main() {
     {
         int texWidth, texHeight;
         stbi_uc* pixels = stbi_load("asset/green.jpg", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
-        tex = createTexture(texWidth, texHeight, GL_RGBA8, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
+        tex = createTexture(texWidth, texHeight, GL_RGBA8, true, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
         stbi_image_free(pixels);
         glBindTextureUnit(0, tex);
     }
 
     GLuint shadowmap;
     {
-        shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F);
+        shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F, false, nullptr);
         glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
         glBindTextureUnit(1, shadowmap);
     }
@@ -173,40 +174,6 @@ int main() {
     std::vector<Vertex> vertices;
 
     loadObj(vertices, "asset/test_scene.obj");
-
-    // Temporary code to create a quad
-    /*{
-        Vertex v;
-        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 0.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(-0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 1.0f);
-        vertices.push_back(v);
-        
-        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 1.0f);
-        vertices.push_back(v);
-        
-        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 1.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 0.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 0.0f);
-        vertices.push_back(v);
-    }*/
 
     genTangents(vertices);
 
@@ -229,7 +196,7 @@ int main() {
         double cur_time_sec = glfwGetTime();
         double dt = cur_time_sec - last_time_sec;
         last_time_sec = cur_time_sec;
-        double lightAzimuth = glfwGetTime();
+        double lightAzimuth = glfwGetTime() / 3.0;
         glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0); // glm::vec3(sin(cur_time_sec) * 3.0, -1.0f, 0.0f);
 
         // check for user input
@@ -254,6 +221,7 @@ int main() {
         glClear(GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shadowShader);
+
         glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(model));
         glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
 
@@ -273,6 +241,7 @@ int main() {
         glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
         glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
+        //glProgramUniform2f(program, 18, width, height);
 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 

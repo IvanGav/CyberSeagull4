@@ -16,13 +16,18 @@ layout(binding = 1) uniform sampler2D shadowMap;
 layout(location = 15) uniform vec3 cameraPos;
 layout(location = 16) uniform vec3 lightAngle;
 layout(location = 17) uniform vec3 lightColor;
+//layout(location = 18) uniform vec2 screenResolution;
 
 bool inShadow(vec4 lightSpacePos) {
 	vec3 projectedPos = lightSpacePos.xyz/lightSpacePos.w; // is done automatically for gl_Position, but need to do manually here
 	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f; // to sample the texture, it's (0,1), but drawing box is (-1,1)
+	//float depth = textureLod(shadowMap, projectedPos.xy, 0.0f).r;
 	float depth = texture(shadowMap, projectedPos.xy).r;
+	//float depth = textureLod(shadowMap, gl_FragCoord.xy / screenResolution, 0.0f).r;
+	//float depth = texture(shadowMap, gl_FragCoord.xy / screenResolution).r;
 	
-	// fCol = vec4(depth, 0.0f, 0.0f, 1.0f);
+	//fCol = vec4(depth, depth, depth, 1.0f);
+	//fCol = vec4(projectedPos.z, 0.0f, 0.0f, 1.0f);
 
 	return projectedPos.z > depth + 0.005f;
 }

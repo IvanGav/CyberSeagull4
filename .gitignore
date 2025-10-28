@@ -102,7 +102,7 @@ StyleCopReport.xml
 *_h.h
 *.ilk
 *.meta
-*.obj
+# *.obj # 3d .obj files
 *.idb
 *.iobj
 *.pch
