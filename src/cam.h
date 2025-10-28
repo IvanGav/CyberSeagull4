@@ -102,6 +102,8 @@ struct RTSCam {
     // TODO: Unimplemented and possibly unnecessary; just here to demonstrate why I have a "generic" `Cam`
 };
 
+/* Other functions */
+
 // Disable mouse and make sure that the initial mouse position is correct
 void initMouse(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
@@ -123,8 +125,7 @@ void windowFocusControl(GLFWwindow* window) {
     }
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
-        if (glfwRawMouseMotionSupported())
-            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
         glfwGetCursorPos(window, &lastx, &lasty);
     }
 }

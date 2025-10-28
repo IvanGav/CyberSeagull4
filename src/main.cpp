@@ -34,6 +34,8 @@
 
 // This project
 #include "cam.h"
+#include "debug.h"
+#include "light.h"
 
 // Static data
 static constexpr int width = 1920;
@@ -45,10 +47,8 @@ struct Vertex;
 GLFWwindow* init();
 void cleanup(GLFWwindow* window);
 std::string readFile(const char* path);
-void getCompileStatus(GLuint shader);
-void getLinkStatus(GLuint program);
-void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
+void genTangents(std::vector<Vertex>& vertices);
 
 struct Vertex {
     alignas(16) glm::vec3 position;
@@ -135,6 +135,211 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, void* p
     return tex;
 }
 
+int main() {
+    GLFWwindow* window = init();
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_TRUE);
+    glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+    initMouse(window); // function in cam.h
+
+    GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
+    GLuint shadowShader = createShader("src/shader/shadow.vert");
+
+    GLuint framebuffer;
+    glCreateFramebuffers(1, &framebuffer);
+
+    // Create textures (and frame buffers)
+
+    GLuint tex;
+    {
+        int texWidth, texHeight;
+        stbi_uc* pixels = stbi_load("asset/cat_hot_dog.png", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
+        tex = createTexture(texWidth, texHeight, GL_RGBA8, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
+        stbi_image_free(pixels);
+        glBindTextureUnit(0, tex);
+    }
+
+    GLuint shadowmap;
+    {
+        shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F);
+        glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
+        glBindTextureUnit(2, shadowmap);
+    }
+
+    // Create geometry
+
+    std::vector<Vertex> vertices;
+
+    // Temporary code to create a quad
+    {
+        Vertex v;
+        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(0.0f, 0.0f);
+        vertices.push_back(v);
+
+        v.position = glm::vec3(-0.5f, 0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(0.0f, 1.0f);
+        vertices.push_back(v);
+        
+        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(1.0f, 1.0f);
+        vertices.push_back(v);
+        
+        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(1.0f, 1.0f);
+        vertices.push_back(v);
+
+        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(0.0f, 0.0f);
+        vertices.push_back(v);
+
+        v.position = glm::vec3(0.5f, -0.5f, 0.0f);
+        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+        v.uv = glm::vec2(1.0f, 0.0f);
+        vertices.push_back(v);
+    }
+
+    genTangents(vertices);
+
+    GLuint buffer;
+    glCreateBuffers(1, &buffer);
+    glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+
+    //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
+    FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
+    DirectionalLight sun = DirectionalLight{};
+    sun.illuminateArea(10.0);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    double last_time_sec = 0.0;
+
+    // event loop (each iteration of this loop is one frame of the application)
+    while (!glfwWindowShouldClose(window)) {
+        // calculate delta time
+        double cur_time_sec = glfwGetTime();
+        double dt = cur_time_sec - last_time_sec;
+        last_time_sec = cur_time_sec;
+        double lightAzimuth = PI / 2.0;// glfwGetTime();
+
+        // check for user input
+        glfwPollEvents();
+
+        windowFocusControl(window);
+        moveFreeCam(window, cam, dt);
+
+        // TODO: don't create these in a loop; only when necessary
+        glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(2.0f, 2.0f, 2.0f));
+        glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
+
+        // Update the light direction
+        sun.setLightDir(lightAzimuth, PI / 4.0);
+
+        glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(model)));
+
+        // Draw to framebuffer (shadow map)
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shadowShader);
+        glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(model));
+        glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
+
+        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+        // Draw to screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(program);
+
+        glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(model));
+        glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
+        glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+        glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
+
+        glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
+        glProgramUniform3fv(program, 16, 1, glm::value_ptr(getAngle(lightAzimuth, PI / 4.0)));
+        glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
+
+        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+        // tell the OS to display the frame
+        glfwSwapBuffers(window);
+    }
+
+    //glDeleteFrameBuffers(1, &framebuffer);
+    glDeleteBuffers(1, &buffer);
+    glDeleteTextures(1, &tex);
+    glDeleteProgram(program);
+    glDeleteProgram(shadowShader);
+
+    cleanup(window);
+}
+
+/* Gameplay related functions */
+
+// Given an object, give a transform matrix that roughly scales it down to appropriate size; don't use for percise transformations
+glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
+    glm::vec3 minPoint(INFINITY);
+    glm::vec3 maxPoint(-INFINITY);
+
+    for (Vertex v : vertices) {
+        minPoint = glm::min(minPoint, v.position);
+        maxPoint = glm::max(maxPoint, v.position);
+    }
+
+    const glm::vec3 center = (maxPoint + minPoint) / 2.0f;
+    const glm::vec3 size = maxPoint - minPoint;
+    const float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
+
+    return glm::scale(glm::mat4(1.0f), glm::vec3(scale)) * glm::translate(glm::mat4(1.0f), -center);
+}
+
+/* Graphics Functions */
+
+void loadObj(std::vector<Vertex>& vertices, const char* path) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path);
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex v;
+
+            v.position = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            v.normal = {
+                attrib.normals[3 * index.normal_index + 0],
+                attrib.normals[3 * index.normal_index + 1],
+                attrib.normals[3 * index.normal_index + 2]
+            };
+
+            v.uv = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertices.push_back(v);
+        }
+    }
+
+    //genTangents(vertices);
+}
+
 void genTangents(std::vector<Vertex>& vertices) {
     std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
     std::unordered_map<VertexKey, int> counts;
@@ -175,218 +380,6 @@ void genTangents(std::vector<Vertex>& vertices) {
             vertex.tangent = glm::normalize(accumulatedTangents[key]);
         }
     }
-}
-
-int main() {
-    GLFWwindow* window = init();
-    glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-    initMouse(window); // function in cam.h
-
-    GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
-    GLuint shadowShader = createShader("src/shader/shadow.vert");
-
-    GLuint framebuffer;
-    glCreateFramebuffers(1, &framebuffer);
-
-    GLuint tex;
-    {
-        int texWidth, texHeight;
-        stbi_uc* pixels = stbi_load("asset/cat_hot_dog.png", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
-        tex = createTexture(texWidth, texHeight, GL_RGBA8, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
-        stbi_image_free(pixels);
-        glBindTextureUnit(0, tex);
-    }
-
-    GLuint shadowmap;
-    {
-        shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F);
-
-        glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
-
-        glBindTextureUnit(2, shadowmap);
-    }
-
-    std::vector<Vertex> vertices;
-
-    // Temporary code to create a quad
-    {
-        Vertex v;
-        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 0.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(-0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 1.0f);
-        vertices.push_back(v);
-        
-        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 1.0f);
-        vertices.push_back(v);
-        
-        v.position = glm::vec3(0.5f, 0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 1.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(-0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(0.0f, 0.0f);
-        vertices.push_back(v);
-
-        v.position = glm::vec3(0.5f, -0.5f, 0.0f);
-        v.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-        v.uv = glm::vec2(1.0f, 0.0f);
-        vertices.push_back(v);
-    }
-
-    // for loading obj files
-    /*
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
-
-    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "statue.obj");
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex v;
-
-            v.position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            v.normal = {
-                attrib.normals[3 * index.normal_index + 0],
-                attrib.normals[3 * index.normal_index + 1],
-                attrib.normals[3 * index.normal_index + 2]
-            };
-
-            v.uv = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertices.push_back(v);
-        }
-    }
-    */
-
-    genTangents(vertices);
-
-    GLuint buffer;
-    glCreateBuffers(1, &buffer);
-    glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_TRUE);
-
-    //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
-    FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
-    glm::vec3 lightAngle = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
-
-    int useNormalMap = 1;
-    double last_time_sec = 0.0;
-
-    // event loop (each iteration of this loop is one frame of the application)
-    while (!glfwWindowShouldClose(window)) {
-        // calculate delta time
-        double cur_time_sec = glfwGetTime();
-        double dt = cur_time_sec - last_time_sec;
-        last_time_sec = cur_time_sec;
-
-        // check for user input
-        glfwPollEvents();
-
-        /*if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
-            useNormalMap = 1;
-        }
-        if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) {
-            useNormalMap = 0;
-        }*/
-
-        windowFocusControl(window);
-        moveFreeCam(window, cam, dt);
-
-        // TODO: don't create these in a loop; only when necessary
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
-
-        // TODO: same here; only when necessary
-        lightAngle = glm::vec3(cosf(glfwGetTime()), 0.5f, sinf(glfwGetTime()));
-        glm::mat4 lightView = glm::lookAt(glm::vec3(0.0f), lightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 lightProjection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
-
-        glm::mat3 normal = glm::inverse(glm::transpose(glm::mat3(model)));
-
-        // Draw to framebuffer (shadow map)
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        glUseProgram(shadowShader);
-        glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(model));
-        glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(lightProjection * lightView));
-
-        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-
-        // Draw to screen
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glUseProgram(program);
-
-        glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(model));
-        glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
-        glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normal));
-
-        glProgramUniform3fv(program, 11, 1, glm::value_ptr(cam.cam.pos));
-        glProgramUniform3fv(program, 12, 1, glm::value_ptr(lightAngle));
-        glProgramUniform3fv(program, 13, 1, glm::value_ptr(lightColor));
-
-        glProgramUniform1i(program, 14, useNormalMap);
-
-        glProgramUniformMatrix4fv(program, 15, 1, GL_FALSE, glm::value_ptr(lightProjection * lightView));
-
-        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-
-        // tell the OS to display the frame
-        glfwSwapBuffers(window);
-    }
-
-    //glDeleteFrameBuffers(1, &framebuffer);
-    glDeleteBuffers(1, &buffer);
-    glDeleteTextures(1, &tex);
-    glDeleteProgram(program);
-    glDeleteProgram(shadowShader);
-
-    cleanup(window);
-}
-
-/* Gameplay related functions */
-
-// Given an object, give a transform matrix that roughly scales it down to appropriate size; don't use for percise transformations
-glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
-    glm::vec3 minPoint(INFINITY);
-    glm::vec3 maxPoint(-INFINITY);
-
-    for (Vertex v : vertices) {
-        minPoint = glm::min(minPoint, v.position);
-        maxPoint = glm::max(maxPoint, v.position);
-    }
-
-    const glm::vec3 center = (maxPoint + minPoint) / 2.0f;
-    const glm::vec3 size = maxPoint - minPoint;
-    const float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
-
-    return glm::scale(glm::mat4(1.0f), glm::vec3(scale)) * glm::translate(glm::mat4(1.0f), -center);
 }
 
 /* Files */
@@ -447,116 +440,4 @@ void cleanup(GLFWwindow* window) {
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
-}
-
-/* Misc */
-
-void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam) {
-    // ignore non-significant error/warning codes
-    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) {
-        return;
-    }
-
-    std::cout << "---------------" << std::endl;
-    std::cout << "Debug message (" << id << "): " << message << std::endl;
-
-    switch (source) {
-    case GL_DEBUG_SOURCE_API:
-        std::cout << "Source: API" << std::endl;
-        break;
-    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-        std::cout << "Source: Window System" << std::endl;
-        break;
-    case GL_DEBUG_SOURCE_SHADER_COMPILER:
-        std::cout << "Source: Shader Compiler" << std::endl;
-        break;
-    case GL_DEBUG_SOURCE_THIRD_PARTY:
-        std::cout << "Source: Third Party" << std::endl;
-        break;
-    case GL_DEBUG_SOURCE_APPLICATION:
-        std::cout << "Source: Application" << std::endl;
-        break;
-    case GL_DEBUG_SOURCE_OTHER:
-        std::cout << "Source: Other" << std::endl;
-        break;
-    }
-
-    switch (type) {
-    case GL_DEBUG_TYPE_ERROR:
-        std::cout << "Type: Error" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-        std::cout << "Type: Deprecated Behaviour" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-        std::cout << "Type: Undefined Behaviour" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_PORTABILITY:
-        std::cout << "Type: Portability" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_PERFORMANCE:
-        std::cout << "Type: Performance" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_MARKER:
-        std::cout << "Type: Marker" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_PUSH_GROUP:
-        std::cout << "Type: Push Group" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_POP_GROUP:
-        std::cout << "Type: Pop Group" << std::endl;
-        break;
-    case GL_DEBUG_TYPE_OTHER:
-        std::cout << "Type: Other" << std::endl;
-        break;
-    }
-
-    switch (severity) {
-    case GL_DEBUG_SEVERITY_HIGH:
-        std::cout << "Severity: high" << std::endl;
-        break;
-    case GL_DEBUG_SEVERITY_MEDIUM:
-        std::cout << "Severity: medium" << std::endl;
-        break;
-    case GL_DEBUG_SEVERITY_LOW:
-        std::cout << "Severity: low" << std::endl;
-        break;
-    case GL_DEBUG_SEVERITY_NOTIFICATION:
-        std::cout << "Severity: notification" << std::endl;
-        break;
-    }
-}
-
-void getCompileStatus(GLuint shader) {
-    GLint success = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    if (success == GL_FALSE) {
-        GLint logSize = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
-
-        GLchar* buf = new GLchar[logSize];
-        glGetShaderInfoLog(shader, logSize, &logSize, buf);
-
-        std::cout << buf << std::endl;
-
-        delete[] buf;
-    }
-}
-
-void getLinkStatus(GLuint program) {
-    GLint success = 0;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-
-    if (success == GL_FALSE) {
-        GLint logSize = 0;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
-
-        GLchar* buf = new GLchar[logSize];
-        glGetProgramInfoLog(program, logSize, &logSize, buf);
-
-        std::cout << buf << std::endl;
-
-        delete[] buf;
-    }
 }

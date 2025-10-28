@@ -21,7 +21,7 @@ layout(location = 5) out vec4 outLightspacePos;
 layout(location = 0) uniform mat4 modelMatrix;
 layout(location = 4) uniform mat4 camMatrix;
 layout(location = 8) uniform mat3 normalTransform;
-layout(location = 15) uniform mat4 lightTransform;
+layout(location = 11) uniform mat4 lightTransform;
 
 void main() {
 	Vertex v = vertices[gl_VertexID];

@@ -306,6 +306,7 @@
     <None Include="include\glm\gtx\vector_angle.inl" />
     <None Include="include\glm\gtx\vector_query.inl" />
     <None Include="include\glm\gtx\wrap.inl" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\glad\glad.h" />
@@ -606,6 +607,8 @@
     <ClInclude Include="include\stb\stb_image.h" />
     <ClInclude Include="include\tinyobjloader\tiny_obj_loader.h" />
     <ClInclude Include="src\cam.h" />
+    <ClInclude Include="src\debug.h" />
+    <ClInclude Include="src\light.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
