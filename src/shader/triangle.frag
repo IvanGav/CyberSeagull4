@@ -23,7 +23,7 @@ bool inShadow(vec4 lightSpacePos) {
 	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f; // to sample the texture, it's (0,1), but drawing box is (-1,1)
 	float depth = texture(shadowMap, projectedPos.xy).r;
 
-	return projectedPos.z > depth + 0.0005f;
+	return projectedPos.z > depth + 0.001f;
 }
 
 // Phong

@@ -183,7 +183,7 @@ int main() {
     glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
 
-    FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
+    FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
     sun.illuminateArea(10.0);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
