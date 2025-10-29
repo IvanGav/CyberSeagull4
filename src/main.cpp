@@ -142,6 +142,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     initMouse(window); // function in cam.h
 
@@ -162,9 +163,9 @@ int main() {
         glBindTextureUnit(0, tex);
     }
 
-    GLuint shadowmap;
+    GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
     {
-        shadowmap = createTexture(2048, 2048, GL_DEPTH_COMPONENT32F, false, nullptr);
+        shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
         glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
         glBindTextureUnit(1, shadowmap);
     }
@@ -185,7 +186,7 @@ int main() {
     //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
-    sun.illuminateArea(10.0); 
+    sun.illuminateArea(10.0);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     double last_time_sec = 0.0;
@@ -197,7 +198,7 @@ int main() {
         double dt = cur_time_sec - last_time_sec;
         last_time_sec = cur_time_sec;
         double lightAzimuth = glfwGetTime() / 3.0;
-        glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0); // glm::vec3(sin(cur_time_sec) * 3.0, -1.0f, 0.0f);
+        glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
 
         // check for user input
         glfwPollEvents();
@@ -218,6 +219,8 @@ int main() {
 
         // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glViewport(0, 0, shadowmap_width, shadowmap_height);
+        glCullFace(GL_FRONT);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shadowShader);
@@ -229,6 +232,8 @@ int main() {
 
         // Draw to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, width, height);
+        glCullFace(GL_BACK);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(program);
@@ -241,7 +246,6 @@ int main() {
         glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
         glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
-        //glProgramUniform2f(program, 18, width, height);
 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 

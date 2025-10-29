@@ -21,21 +21,15 @@ layout(location = 17) uniform vec3 lightColor;
 bool inShadow(vec4 lightSpacePos) {
 	vec3 projectedPos = lightSpacePos.xyz/lightSpacePos.w; // is done automatically for gl_Position, but need to do manually here
 	projectedPos.xy = projectedPos.xy * 0.5f + 0.5f; // to sample the texture, it's (0,1), but drawing box is (-1,1)
-	//float depth = textureLod(shadowMap, projectedPos.xy, 0.0f).r;
 	float depth = texture(shadowMap, projectedPos.xy).r;
-	//float depth = textureLod(shadowMap, gl_FragCoord.xy / screenResolution, 0.0f).r;
-	//float depth = texture(shadowMap, gl_FragCoord.xy / screenResolution).r;
-	
-	//fCol = vec4(depth, depth, depth, 1.0f);
-	//fCol = vec4(projectedPos.z, 0.0f, 0.0f, 1.0f);
 
-	return projectedPos.z > depth + 0.005f;
+	return projectedPos.z > depth;
 }
 
 // Phong
 vec4 directionalLightAlt(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cameraPos, vec3 normal) {
 	vec4 diffuse = baseColor * max(dot(normal, toLightDir), 0.0f) * vec4(lightColor, 1.0f);
-	vec4 ambient = 0.1f * baseColor;
+	vec4 ambient = 0.3f * baseColor;
 	
     // Specular (Phong)
 	const float specularIntensity = 0.5f;
@@ -54,7 +48,7 @@ vec4 directionalLightAlt(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 
 // Blinn-Phong
 vec4 directionalLight(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cameraPos, vec3 normal) {
 	vec4 diffuse = baseColor * max(dot(normal, toLightDir), 0.0f) * vec4(lightColor, 1.0f);
-	vec4 ambient = 0.1f * baseColor;
+	vec4 ambient = 0.3f * baseColor;
 
 	const float specularIntensity = 0.5f;
 	
@@ -62,7 +56,7 @@ vec4 directionalLight(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cam
     vec3 toCameraDir = normalize(cameraPos - inPos);
     vec3 halfVector = normalize(toCameraDir + toLightDir);
     float specularBase = clamp(dot(halfVector, normal), 0.0, 1.0);
-    float specular = pow(specularBase, 32.0f) * specularIntensity;
+    float specular = pow(specularBase, 64.0f) * specularIntensity;
 
 	if(inShadow(inLightspacePos)) {
 		return ambient;
