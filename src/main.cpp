@@ -33,52 +33,23 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 // This project
+#include "util.h"
 #include "cam.h"
 #include "debug.h"
 #include "light.h"
+#include "world_object.h"
 
 // Static data
 static constexpr int width = 1920;
 static constexpr int height = 1080;
 static GLuint vao;
 
-// forward declarations (probably replace later by .h files in current project)
-struct Vertex;
+// forward declarations
 GLFWwindow* init();
 void cleanup(GLFWwindow* window);
 std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
-void loadObj(std::vector<Vertex>& vertices, const char* path);
-
-struct Vertex {
-    alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 normal;
-    alignas(16) glm::vec3 tangent;
-    alignas(8) glm::vec2 uv;
-};
-
-struct VertexKey {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
-
-    bool operator==(const VertexKey& other) const {
-        return position == other.position && normal == other.normal && uv == other.uv;
-    }
-};
-
-namespace std {
-    template<>
-    struct hash<VertexKey> {
-        size_t operator()(const VertexKey& key) const {
-            size_t h1 = hash<float>()(key.position.x) ^ hash<float>()(key.position.y) << 1 ^ hash<float>()(key.position.z) << 2;
-            size_t h2 = hash<float>()(key.normal.x) ^ hash<float>()(key.normal.y) << 1 ^ hash<float>()(key.normal.z) << 2;
-            size_t h3 = hash<float>()(key.uv.x) ^ hash<float>()(key.uv.y) << 1;
-            return h1 ^ h2 ^ h3;
-        }
-    };
-}
 
 // Create a shader from vertex and fragment shader files
 GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
@@ -118,51 +89,25 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
     return program;
 }
 
-// Create a texture
-GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool genMips, void* pixels = nullptr, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
-    GLuint tex;
-    int numMips = genMips ? std::log2(std::max(texWidth, texHeight)) + 1 : 1;
-    //int numMips = std::log2(std::max(texWidth, texHeight)) + 1;
-    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
-    glTextureStorage2D(tex, numMips, internalFormat, texWidth, texHeight);
-
-    if (pixels) {
-        glTextureSubImage2D(tex, 0, 0, 0, texWidth, texHeight, format, type, pixels);
-        glGenerateTextureMipmap(tex);
-
-        glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
-    }
-
-    return tex;
-}
-
 int main() {
     GLFWwindow* window = init();
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     initMouse(window); // function in cam.h
+    initDefaultTexture();
 
     GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
     GLuint shadowShader = createShader("src/shader/shadow.vert");
-
-    GLuint framebuffer;
-    glCreateFramebuffers(1, &framebuffer);
+    GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
 
     // Create textures (and frame buffers)
 
-    GLuint tex;
-    {
-        int texWidth, texHeight;
-        stbi_uc* pixels = stbi_load("asset/green.jpg", &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
-        tex = createTexture(texWidth, texHeight, GL_RGBA8, true, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
-        stbi_image_free(pixels);
-        glBindTextureUnit(0, tex);
-    }
-
+    GLuint framebuffer;
+    glCreateFramebuffers(1, &framebuffer);
     GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
     {
         shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
@@ -172,11 +117,27 @@ int main() {
 
     // Create geometry
 
+    std::vector<WorldObj> objects;
     std::vector<Vertex> vertices;
 
-    loadObj(vertices, "asset/test_scene.obj");
+    objects.push_back(WorldObj::create(vertices, "asset/test_scene.obj", "asset/green.jpg"));
+    objects.push_back(WorldObj::create(vertices, "asset/cat.obj", "asset/cat.jpg"));
+    objects.back().model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f));
 
     genTangents(vertices);
+
+    GLuint cubemaptex;
+    {
+        const char* cubemap_files[6] = {
+            "asset/skybox/right.jpg",
+            "asset/skybox/left.jpg",
+            "asset/skybox/top.jpg",
+            "asset/skybox/bottom.jpg",
+            "asset/skybox/front.jpg",
+            "asset/skybox/back.jpg"
+        };
+        cubemaptex = createCubeTexture(cubemap_files);
+    }
 
     GLuint buffer;
     glCreateBuffers(1, &buffer);
@@ -213,49 +174,68 @@ int main() {
             moveFreeCam(window, cam, dt);
         }
 
-        // TODO: don't create these in a loop; only when necessary
-        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
-        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,0.0f,0.0f)), (float) -PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
-        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
 
         // Update the light direction
         sun.setLightDirVec3(lightDir);
 
-        glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(model)));
-
         // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glViewport(0, 0, shadowmap_width, shadowmap_height);
-        //glCullFace(GL_FRONT);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shadowShader);
 
-        glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(model));
-        glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
+        for (int i = 0; i < objects.size(); i++) {
+            WorldObj& o = objects[i];
 
-        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+            glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+            glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
+
+            glDrawArrays(GL_TRIANGLES, o.offset, o.size);
+        }
 
         // Draw to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, width, height);
-        glCullFace(GL_BACK);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+        // Draw the skybox
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        glUseProgram(cubeProgram);
+
+        glBindTextureUnit(2, cubemaptex);
+
+        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(view))));
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+
+        // normal draw
         glUseProgram(program);
 
-        glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(model));
         glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
-        glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
         glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
-
         glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
         glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 
-        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+        for (int i = 0; i < objects.size(); i++) {
+            WorldObj& o = objects[i];
+            glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+            glBindTextureUnit(0, objects[i].tex);
+
+            glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+            glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+
+            glDrawArrays(GL_TRIANGLES, o.offset, o.size);
+        }
 
         // tell the OS to display the frame
         glfwSwapBuffers(window);
@@ -263,7 +243,7 @@ int main() {
 
     //glDeleteFrameBuffers(1, &framebuffer);
     glDeleteBuffers(1, &buffer);
-    glDeleteTextures(1, &tex);
+    //glDeleteTextures(1, &tex); // TODO delete all textures here
     glDeleteProgram(program);
     glDeleteProgram(shadowShader);
 
@@ -290,41 +270,6 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
 }
 
 /* Graphics Functions */
-
-void loadObj(std::vector<Vertex>& vertices, const char* path) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
-
-    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path);
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex v;
-
-            v.position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            v.normal = {
-                attrib.normals[3 * index.normal_index + 0],
-                attrib.normals[3 * index.normal_index + 1],
-                attrib.normals[3 * index.normal_index + 2]
-            };
-
-            v.uv = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertices.push_back(v);
-        }
-    }
-
-    //genTangents(vertices);
-}
 
 void genTangents(std::vector<Vertex>& vertices) {
     std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
