@@ -183,7 +183,6 @@ int main() {
     glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
 
-    //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 2.0f);
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,0.0f,-2.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
     sun.illuminateArea(10.0);
@@ -208,6 +207,7 @@ int main() {
 
         // TODO: don't create these in a loop; only when necessary
         //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
+        //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,0.0f,0.0f)), (float) -PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
         glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
@@ -220,7 +220,7 @@ int main() {
         // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glViewport(0, 0, shadowmap_width, shadowmap_height);
-        glCullFace(GL_FRONT);
+        //glCullFace(GL_FRONT);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shadowShader);
