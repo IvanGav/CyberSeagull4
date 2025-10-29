@@ -187,6 +187,7 @@ int main() {
         // Draw the skybox
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         glUseProgram(cubeProgram);
 
         glBindTextureUnit(2, cubemaptex);
