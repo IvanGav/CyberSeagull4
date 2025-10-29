@@ -155,12 +155,12 @@ struct Mesh {
 };
 
 struct Entity {
-    Mesh mesh;
+    Mesh* mesh;
     GLuint tex;
     glm::mat4 model;
 
     // You can use "default_tex" if you don't need a texture
-    static Entity create(Mesh mesh, GLuint tex) {
+    static Entity create(Mesh* mesh, GLuint tex) {
         Entity o;
         o.mesh = mesh;
         o.tex = tex;
@@ -168,7 +168,7 @@ struct Entity {
         return o;
     }
 
-    static Entity create(Mesh mesh, GLuint tex, glm::mat4 initial_transform) {
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform) {
         Entity o;
         o.mesh = mesh;
         o.tex = tex;

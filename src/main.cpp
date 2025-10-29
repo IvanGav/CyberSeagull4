@@ -119,22 +119,30 @@ int main() {
     // Create geometry
 
     std::vector<Entity> objects;
-    std::map<std::string, Mesh> meshes;
-    std::map<std::string, GLuint> textures;
     std::vector<Vertex> vertices;
 
-    meshes["test_scene"] = Mesh::create(vertices, "asset/test_scene.obj");
-    meshes["cat"] = Mesh::create(vertices, "asset/cat.obj");
+    struct {
+        GLuint green;
+        GLuint cat;
+        GLuint skybox;
+    } textures;
 
-    textures["green"] = createTextureFromImage("asset/green.jpg");
-    textures["cat"] = createTextureFromImage("asset/cat.jpg");
+    struct {
+        Mesh test_scene;
+        Mesh cat;
+    } meshes;
 
-    objects.push_back(Entity::create(meshes["test_scene"], textures["green"]));
-    objects.push_back(Entity::create(meshes["cat"], textures["cat"], glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f))));
+    meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
+    meshes.cat = Mesh::create(vertices, "asset/cat.obj");
+
+    textures.green = createTextureFromImage("asset/green.jpg");
+    textures.cat = createTextureFromImage("asset/cat.jpg");
+
+    objects.push_back(Entity::create(&meshes.test_scene, textures.green));
+    objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f))));
 
     genTangents(vertices);
 
-    GLuint cubemaptex;
     {
         const char* cubemap_files[6] = {
             "asset/skybox/right.jpg",
@@ -144,7 +152,7 @@ int main() {
             "asset/skybox/front.jpg",
             "asset/skybox/back.jpg"
         };
-        cubemaptex = createCubeTexture(cubemap_files);
+        textures.skybox = createCubeTexture(cubemap_files);
     }
 
     GLuint buffer;
@@ -201,7 +209,7 @@ int main() {
             glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(o.model));
             glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
 
-            glDrawArrays(GL_TRIANGLES, o.mesh.offset, o.mesh.size);
+            glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
 
         // Draw to screen
@@ -215,7 +223,7 @@ int main() {
         // Draw the skybox
         glUseProgram(cubeProgram);
 
-        glBindTextureUnit(2, cubemaptex);
+        glBindTextureUnit(2, textures.skybox);
 
         glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(view))));
 
@@ -241,7 +249,7 @@ int main() {
             glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
             glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
-            glDrawArrays(GL_TRIANGLES, o.mesh.offset, o.mesh.size);
+            glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
 
         // tell the OS to display the frame
