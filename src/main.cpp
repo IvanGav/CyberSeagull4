@@ -173,12 +173,12 @@ int main() {
         glUseProgram(shadowShader);
 
         for (int i = 0; i < objects.size(); i++) {
-            glm::mat4& model = objects[i].model;
+            WorldObj& o = objects[i];
 
-            glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(model));
+            glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(o.model));
             glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
 
-            glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+            glDrawArrays(GL_TRIANGLES, o.offset, o.size);
         }
 
         // Draw to screen
