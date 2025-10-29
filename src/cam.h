@@ -14,8 +14,8 @@ static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
 
-double mouse_sensitivity = 0.005;
-double lastx; double lasty;
+F32 mouse_sensitivity = 0.005;
+F64 lastx; F64 lasty;
 
 enum KeyboardAction {
     MOVE_FORWARD,
@@ -33,8 +33,8 @@ enum KeyboardAction {
 // Generic camera
 struct Cam {
     glm::vec3 pos; // world position
-    double theta; // rotation of camera in xz plane
-    double y_theta; // angle of camera from xz plane to y axis
+    F32 theta; // rotation of camera in xz plane
+    F32 y_theta; // angle of camera from xz plane to y axis
 
     glm::vec3 lookDir() {
         float xmag = sin(theta) * cos(y_theta);
@@ -47,7 +47,7 @@ struct Cam {
 // First person free camera controls
 struct FreeCam {
     Cam cam;
-    void buttonPress(KeyboardAction action, double dt) {
+    void buttonPress(KeyboardAction action, F32 dt) {
         int numRotations = 30; // basically speed of rotating
         if (action == MOVE_FORWARD) {
             cam.pos.x += sin(cam.theta) * dt;
@@ -73,11 +73,11 @@ struct FreeCam {
         }
         if (action == TURN_DOWN) {
             cam.y_theta -= (PI * 2.0) / numRotations * dt;
-            cam.y_theta = std::max(-PI / 2.0 + 0.01, cam.y_theta);
+            cam.y_theta = std::max<F32>(-PI / 2.0 + 0.01, cam.y_theta);
         }
         if (action == TURN_UP) {
             cam.y_theta += (PI * 2.0) / numRotations * dt;
-            cam.y_theta = std::min(PI / 2.0 - 0.01, cam.y_theta);
+            cam.y_theta = std::min<F32>(PI / 2.0 - 0.01, cam.y_theta);
         }
         if (action == MOVE_UP) {
             cam.pos.y += 0.5 * dt;
@@ -86,10 +86,10 @@ struct FreeCam {
             cam.pos.y -= 0.5 * dt;
         }
     }
-    void mouseMove(double dx, double dy) {
+    void mouseMove(F32 dx, F32 dy) {
         cam.theta -= dx * mouse_sensitivity;
         cam.y_theta -= dy * mouse_sensitivity;
-        cam.y_theta = std::clamp(cam.y_theta, -PI / 2.0 + epsilon, PI / 2.0 - epsilon);
+        cam.y_theta = std::clamp<F32>(cam.y_theta, -PI / 2.0 + epsilon, PI / 2.0 - epsilon);
     }
 };
 
@@ -97,7 +97,7 @@ struct FreeCam {
 struct RTSCam {
     Cam cam;
     glm::vec3 anchor; // rotation origin
-    double anchor_dist; // distance from origin
+    F32 anchor_dist; // distance from origin
 
     // TODO: Unimplemented and possibly unnecessary; just here to demonstrate why I have a "generic" `Cam`
 };
@@ -141,9 +141,9 @@ void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepad
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || state.buttons[2] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::STRAFE_RIGHT, dt);
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS || state.buttons[11] == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS || state.buttons[13] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_UP, dt);
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS || state.buttons[13] == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS || state.buttons[11] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_DOWN, dt);
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || state.buttons[14] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_LEFT, dt);
@@ -156,7 +156,7 @@ void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepad
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
 
     // mouse input
-    double xpos, ypos;
+    F64 xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     cam.mouseMove(xpos - lastx, ypos - lasty);
     lastx = xpos; lasty = ypos;
@@ -188,7 +188,7 @@ void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
 
     // mouse input
-    double xpos, ypos;
+    F64 xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     cam.mouseMove(xpos - lastx, ypos - lasty);
     lastx = xpos; lasty = ypos;

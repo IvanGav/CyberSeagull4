@@ -185,10 +185,20 @@ int main() {
         GLFWgamepadstate state;
         if (glfwGetGamepadState(0, &state)) {
             moveFreeCamGamepad(window, cam, dt, state);
+            if (state.buttons[4] == GLFW_PRESS)
+                objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
+                    glm::rotate(
+                        glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos + (cam.cam.lookDir() * 4.0f) + glm::vec3(0.0f, -2.0f, 0.0f)), cam.cam.theta + F32(PI),
+                            glm::vec3(0.0f, 1.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
+                        ), 
+                    glm::vec3(0.1f, 0.1f, 0.1f))
+                ));
         }
         else {
             moveFreeCam(window, cam, dt);
         }
+
+        
 
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
