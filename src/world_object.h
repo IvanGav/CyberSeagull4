@@ -126,8 +126,8 @@ GLuint createCubeTexture(int texWidth, int texHeight, GLenum internalFormat, boo
     //glTextureStorage2D(cubemap, 1, GL_RGBA8, texWidth, texHeight);
     glGenTextures(1, &cubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
-    glTextureParameteri(cubemap, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTextureParameteri(cubemap, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     for (int i = 0; i < 6; i++) {
         //glTextureSubImage3D(cubemap, 0, 0, 0, i, texWidth, texHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, cubemapData[i]);
