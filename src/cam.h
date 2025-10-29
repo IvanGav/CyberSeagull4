@@ -130,6 +130,38 @@ void windowFocusControl(GLFWwindow* window) {
     }
 }
 
+void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepadstate state) {
+    dt *= 5.0;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || state.buttons[0] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::MOVE_FORWARD, dt);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || state.buttons[1] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::MOVE_BACKWARD, dt);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || state.buttons[3] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::STRAFE_LEFT, dt);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || state.buttons[2] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::STRAFE_RIGHT, dt);
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS || state.buttons[11] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::TURN_UP, dt);
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS || state.buttons[13] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::TURN_DOWN, dt);
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || state.buttons[14] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::TURN_LEFT, dt);
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS || state.buttons[12] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::TURN_RIGHT, dt);
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || state.buttons[6] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::MOVE_DOWN, dt);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS || state.buttons[7] == GLFW_PRESS)
+        cam.buttonPress(KeyboardAction::MOVE_UP, dt);
+
+    // mouse input
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    cam.mouseMove(xpos - lastx, ypos - lasty);
+    lastx = xpos; lasty = ypos;
+}
+
 void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
     dt *= 5.0;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)

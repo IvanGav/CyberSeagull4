@@ -190,6 +190,7 @@ int main() {
 
     double last_time_sec = 0.0;
 
+
     // event loop (each iteration of this loop is one frame of the application)
     while (!glfwWindowShouldClose(window)) {
         // calculate delta time
@@ -202,8 +203,15 @@ int main() {
         // check for user input
         glfwPollEvents();
 
+
         windowFocusControl(window);
-        moveFreeCam(window, cam, dt);
+        GLFWgamepadstate state;
+        if (glfwGetGamepadState(0, &state)) {
+            moveFreeCamGamepad(window, cam, dt, state);
+        }
+        else {
+            moveFreeCam(window, cam, dt);
+        }
 
         // TODO: don't create these in a loop; only when necessary
         //glm::mat4 model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,-1.0f,0.0f)), (float) PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(4.0f, 4.0f, 4.0f));
