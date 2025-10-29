@@ -126,8 +126,18 @@ int main() {
 
     genTangents(vertices);
 
-    // TODO: temp
-    GLuint cubemaptex = createCubeTexture(0, 0, 0, 0, 0);
+    GLuint cubemaptex;
+    {
+        const char* cubemap_files[6] = {
+            "asset/skybox/right.jpg",
+            "asset/skybox/left.jpg",
+            "asset/skybox/top.jpg",
+            "asset/skybox/bottom.jpg",
+            "asset/skybox/front.jpg",
+            "asset/skybox/back.jpg"
+        };
+        cubemaptex = createCubeTexture(cubemap_files);
+    }
 
     GLuint buffer;
     glCreateBuffers(1, &buffer);

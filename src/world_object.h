@@ -103,23 +103,9 @@ GLuint createTextureFromImage(const char* path) {
     return tex;
 }
 
-// Create a texture; if no pixels specified, blank texture
-GLuint createCubeTexture(int texWidth, int texHeight, GLenum internalFormat, bool genMips, void* pixels, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
-    std::array<const char*, 6> filenames = {
-        "asset/skybox/right.jpg",
-        "asset/skybox/left.jpg",
-        "asset/skybox/top.jpg",
-        "asset/skybox/bottom.jpg",
-        "asset/skybox/front.jpg",
-        "asset/skybox/back.jpg"
-    };
-    std::array<stbi_uc*, 6> cubemapData;
-
-    stbi_set_flip_vertically_on_load(false);
-    for (int i = 0; i < 6; i++) {
-        cubemapData[i] = stbi_load(filenames[i], &texWidth, &texHeight, nullptr, STBI_rgb); // TODO no alpha?
-    }
-    stbi_set_flip_vertically_on_load(true);
+// Create a cube texture. Filenames should have right, left, top, bottom, front, back filenames
+GLuint createCubeTexture(const char** filenames) {
+    int texWidth, texHeight;
     
     GLuint cubemap;
     //glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &cubemap);
@@ -129,12 +115,15 @@ GLuint createCubeTexture(int texWidth, int texHeight, GLenum internalFormat, boo
     glTextureParameteri(cubemap, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
 
+    stbi_set_flip_vertically_on_load(false);
     for (int i = 0; i < 6; i++) {
+        stbi_uc* pixels = stbi_load(filenames[i], &texWidth, &texHeight, nullptr, STBI_rgb);
         //glTextureSubImage3D(cubemap, 0, 0, 0, i, texWidth, texHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, cubemapData[i]);
         //glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, texWidth, texHeight, GL_RGB, GL_UNSIGNED_BYTE, cubemapData[i]);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, cubemapData[i]);
-        stbi_image_free(cubemapData[i]);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        stbi_image_free(pixels);
     }
+    stbi_set_flip_vertically_on_load(true);
     return cubemap;
 }
 
