@@ -102,18 +102,12 @@ int main() {
 
     GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
     GLuint shadowShader = createShader("src/shader/shadow.vert");
-
-    GLuint framebuffer;
-    glCreateFramebuffers(1, &framebuffer);
+    GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
 
     // Create textures (and frame buffers)
 
-    /*GLuint tex;
-    {
-        tex = createTextureFromImage("asset/green.jpg");
-        glBindTextureUnit(0, tex);
-    }*/
-
+    GLuint framebuffer;
+    glCreateFramebuffers(1, &framebuffer);
     GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
     {
         shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
@@ -131,6 +125,9 @@ int main() {
     objects.back().model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f));
 
     genTangents(vertices);
+
+    // TODO: temp
+    GLuint cubemaptex = createCubeTexture(0, 0, 0, 0, 0);
 
     GLuint buffer;
     glCreateBuffers(1, &buffer);
@@ -186,6 +183,22 @@ int main() {
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+        // Draw the skybox
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glUseProgram(cubeProgram);
+
+        glBindTextureUnit(2, cubemaptex);
+
+        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(view))));
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+
+        // normal draw
         glUseProgram(program);
 
         glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
