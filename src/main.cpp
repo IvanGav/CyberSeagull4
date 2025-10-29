@@ -96,6 +96,7 @@ int main() {
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     initMouse(window); // function in cam.h
     initDefaultTexture();
@@ -117,16 +118,31 @@ int main() {
 
     // Create geometry
 
-    std::vector<WorldObj> objects;
+    std::vector<Entity> objects;
     std::vector<Vertex> vertices;
 
-    objects.push_back(WorldObj::create(vertices, "asset/test_scene.obj", "asset/green.jpg"));
-    objects.push_back(WorldObj::create(vertices, "asset/cat.obj", "asset/cat.jpg"));
-    objects.back().model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f));
+    struct {
+        GLuint green;
+        GLuint cat;
+        GLuint skybox;
+    } textures;
+
+    struct {
+        Mesh test_scene;
+        Mesh cat;
+    } meshes;
+
+    meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
+    meshes.cat = Mesh::create(vertices, "asset/cat.obj");
+
+    textures.green = createTextureFromImage("asset/green.jpg");
+    textures.cat = createTextureFromImage("asset/cat.jpg");
+
+    objects.push_back(Entity::create(&meshes.test_scene, textures.green));
+    objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f))));
 
     genTangents(vertices);
 
-    GLuint cubemaptex;
     {
         const char* cubemap_files[6] = {
             "asset/skybox/right.jpg",
@@ -136,7 +152,7 @@ int main() {
             "asset/skybox/front.jpg",
             "asset/skybox/back.jpg"
         };
-        cubemaptex = createCubeTexture(cubemap_files);
+        textures.skybox = createCubeTexture(cubemap_files);
     }
 
     GLuint buffer;
@@ -188,12 +204,12 @@ int main() {
         glUseProgram(shadowShader);
 
         for (int i = 0; i < objects.size(); i++) {
-            WorldObj& o = objects[i];
+            Entity& o = objects[i];
 
             glProgramUniformMatrix4fv(shadowShader, 0, 1, GL_FALSE, glm::value_ptr(o.model));
             glProgramUniformMatrix4fv(shadowShader, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
 
-            glDrawArrays(GL_TRIANGLES, o.offset, o.size);
+            glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
 
         // Draw to screen
@@ -201,23 +217,22 @@ int main() {
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-        // Draw the skybox
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
-        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+        // Draw the skybox
         glUseProgram(cubeProgram);
 
-        glBindTextureUnit(2, cubemaptex);
+        glBindTextureUnit(2, textures.skybox);
 
         glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(view))));
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, 36); // number of vertices in a cube; aka a magic number
 
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
 
-        // normal draw
+        // Draw scene
         glUseProgram(program);
 
         glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
@@ -227,14 +242,14 @@ int main() {
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 
         for (int i = 0; i < objects.size(); i++) {
-            WorldObj& o = objects[i];
+            Entity& o = objects[i];
             glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
             glBindTextureUnit(0, objects[i].tex);
 
             glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
             glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
-            glDrawArrays(GL_TRIANGLES, o.offset, o.size);
+            glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
 
         // tell the OS to display the frame

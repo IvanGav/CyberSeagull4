@@ -106,14 +106,14 @@ GLuint createTextureFromImage(const char* path) {
 // Create a cube texture. Filenames should have right, left, top, bottom, front, back filenames
 GLuint createCubeTexture(const char** filenames) {
     int texWidth, texHeight;
-    
+
     GLuint cubemap;
     //glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &cubemap);
     //glTextureStorage2D(cubemap, 1, GL_RGBA8, texWidth, texHeight);
     glGenTextures(1, &cubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
     glTextureParameteri(cubemap, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_set_flip_vertically_on_load(false);
     for (int i = 0; i < 6; i++) {
@@ -142,31 +142,45 @@ void initDefaultTexture() {
     default_tex = createTexture(16, 16, GL_RGBA8, false, hardcodedTextureData);
 }
 
-struct WorldObj {
+struct Mesh {
     int offset;
     int size;
+
+    static Mesh create(std::vector<Vertex>& vertices, const char* obj_path) {
+        Mesh o;
+        o.offset = vertices.size();
+        o.size = loadObj(vertices, obj_path);
+        return o;
+    }
+};
+
+struct Entity {
+    Mesh* mesh;
     GLuint tex;
     glm::mat4 model;
 
-    static WorldObj create(std::vector<Vertex>& vertices, const char* obj_path, const char* texture_path = nullptr) {
-        WorldObj o;
-        o.offset = vertices.size();
-        o.size = loadObj(vertices, obj_path);
-        o.tex = texture_path ? createTextureFromImage(texture_path) : default_tex;
+    // You can use "default_tex" if you don't need a texture
+    static Entity create(Mesh* mesh, GLuint tex) {
+        Entity o;
+        o.mesh = mesh;
+        o.tex = tex;
         o.model = glm::mat4(1.0f);
         return o;
     }
 
-    static WorldObj create(std::vector<Vertex>& vertices, glm::mat4 initial_transform, const char* obj_path, const char* texture_path = nullptr) {
-        WorldObj o;
-        o.offset = vertices.size();
-        o.size = loadObj(vertices, obj_path);
-        o.tex = texture_path ? createTextureFromImage(texture_path) : default_tex;
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform) {
+        Entity o;
+        o.mesh = mesh;
+        o.tex = tex;
         o.model = initial_transform;
         return o;
     }
 
-    WorldObj copy() {
-        return WorldObj{ offset, size, tex, model };
+    Entity copy() {
+        return Entity{ mesh, tex, model };
+    }
+
+    Entity copyWithModel(glm::mat4 model) {
+        return Entity{ mesh, tex, model };
     }
 };
