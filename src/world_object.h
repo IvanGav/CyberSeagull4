@@ -127,7 +127,7 @@ GLuint createCubeTexture(int texWidth, int texHeight, GLenum internalFormat, boo
     glGenTextures(1, &cubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
     glTextureParameteri(cubemap, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(cubemap, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
 
     for (int i = 0; i < 6; i++) {
         //glTextureSubImage3D(cubemap, 0, 0, 0, i, texWidth, texHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, cubemapData[i]);
@@ -175,5 +175,9 @@ struct WorldObj {
         o.tex = texture_path ? createTextureFromImage(texture_path) : default_tex;
         o.model = initial_transform;
         return o;
+    }
+
+    WorldObj copy() {
+        return WorldObj{ offset, size, tex, model };
     }
 };
