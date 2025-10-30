@@ -185,22 +185,6 @@ int main() {
         double lightAzimuth = glfwGetTime() / 3.0;
         glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("State");
-        ImGui::Text("fart");
-        ImGui::End();
-
-        ImGui::Begin("Episode");
-        ImGui::Text("big ol fart");
-        ImGui::End();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-
         // check for user input
         glfwPollEvents();
 
@@ -288,6 +272,17 @@ int main() {
 
             glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("State");
+        ImGui::Text("Time: %lf", cur_time_sec);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // tell the OS to display the frame
         glfwSwapBuffers(window);
