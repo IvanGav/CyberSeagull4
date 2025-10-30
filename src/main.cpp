@@ -41,6 +41,7 @@
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
+#include "particle.h"
 
 // Static data
 static int width = 1920;
