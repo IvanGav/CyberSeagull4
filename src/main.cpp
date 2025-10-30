@@ -40,8 +40,8 @@
 #include "world_object.h"
 
 // Static data
-static constexpr int width = 1920;
-static constexpr int height = 1080;
+static int width = 1920;
+static int height = 1080;
 static GLuint vao;
 
 // forward declarations
@@ -345,6 +345,11 @@ std::string readFile(const char* path) {
     return std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
 }
 
+void window_size_callback(GLFWwindow* window, int new_width, int new_height) {
+    width = new_width;
+	height = new_height;
+}
+
 /* Window */
 
 // Create window
@@ -354,7 +359,7 @@ GLFWwindow* init() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_SAMPLES, 8);
     glfwSwapInterval(1);
 
@@ -370,6 +375,7 @@ GLFWwindow* init() {
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(glDebugOutput, nullptr);
+    glfwSetWindowSizeCallback(window, window_size_callback);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
     // make OpenGL normal (lol)
