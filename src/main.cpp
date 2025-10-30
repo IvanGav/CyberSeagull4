@@ -50,6 +50,7 @@ static std::mt19937 rng{ std::random_device{}() };
 static std::uniform_real_distribution<float> meowPitch(0.02f, 1.15f);
 
 
+std::vector<ma_sound*> liveSounds;
 
 
 // Static data
@@ -326,9 +327,6 @@ int main() {
 
 // MEOW MEOW 
 
-
-// keep these somewhere global
-std::vector<ma_sound*> liveSounds;
 void cleanupFinishedSounds() {
     for (auto it = liveSounds.begin(); it != liveSounds.end();) {
         ma_sound* s = *it;
