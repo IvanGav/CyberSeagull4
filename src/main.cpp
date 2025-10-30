@@ -32,6 +32,9 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+// miniaudio
+#include <miniaudio.h>
+
 // This project
 #include "util.h"
 #include "cam.h"
@@ -43,6 +46,7 @@
 static int width = 1920;
 static int height = 1080;
 static GLuint vao;
+ma_engine engine;
 
 // forward declarations
 GLFWwindow* init();
@@ -167,6 +171,10 @@ int main() {
 
     double last_time_sec = 0.0;
 
+    ma_result result;
+    result = ma_engine_init(NULL, &engine);
+    ma_engine_set_volume(&engine, 1.0f);
+    ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
 
     // event loop (each iteration of this loop is one frame of the application)
     while (!glfwWindowShouldClose(window)) {
@@ -185,14 +193,17 @@ int main() {
         GLFWgamepadstate state;
         if (glfwGetGamepadState(0, &state)) {
             moveFreeCamGamepad(window, cam, dt, state);
-            if (state.buttons[4] == GLFW_PRESS)
+            if (state.buttons[4] == GLFW_PRESS) {
                 objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
                     glm::rotate(
                         glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos + (cam.cam.lookDir() * 4.0f) + glm::vec3(0.0f, -2.0f, 0.0f)), cam.cam.theta + F32(PI),
                             glm::vec3(0.0f, 1.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-                        ), 
+                    ),
                     glm::vec3(0.1f, 0.1f, 0.1f))
                 ));
+
+                ma_engine_play_sound(&engine, "asset/cat-meow-401729.wav", NULL);
+            }
         }
         else {
             moveFreeCam(window, cam, dt);
@@ -272,6 +283,8 @@ int main() {
     //glDeleteTextures(1, &tex); // TODO delete all textures here
     glDeleteProgram(program);
     glDeleteProgram(shadowShader);
+
+    ma_engine_uninit(&engine);
 
     cleanup(window);
 }

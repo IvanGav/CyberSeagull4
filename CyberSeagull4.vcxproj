@@ -152,6 +152,7 @@
     <ClCompile Include="lib\imgui_widgets.cpp" />
     <ClCompile Include="lib\init.c" />
     <ClCompile Include="lib\input.c" />
+    <ClCompile Include="lib\miniaudio.cpp" />
     <ClCompile Include="lib\monitor.c" />
     <ClCompile Include="lib\osmesa_context.c" />
     <ClCompile Include="lib\stb_image.c" />
