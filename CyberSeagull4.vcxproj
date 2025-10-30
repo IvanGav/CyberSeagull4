@@ -606,6 +606,7 @@
     <ClInclude Include="include\KHR\khrplatform.h" />
     <ClInclude Include="include\stb\stb_image.h" />
     <ClInclude Include="include\tinyobjloader\tiny_obj_loader.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="src\cam.h" />
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\light.h" />
