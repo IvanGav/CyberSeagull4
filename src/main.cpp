@@ -173,7 +173,7 @@ int main() {
 
     ma_result result;
     result = ma_engine_init(NULL, &engine);
-    ma_engine_set_volume(&engine, 1.0f);
+    ma_engine_set_volume(&engine, 0.1f);
     ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
 
     // event loop (each iteration of this loop is one frame of the application)
@@ -185,9 +185,24 @@ int main() {
         double lightAzimuth = glfwGetTime() / 3.0;
         glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("State");
+        ImGui::Text("fart");
+        ImGui::End();
+
+        ImGui::Begin("Episode");
+        ImGui::Text("big ol fart");
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
         // check for user input
         glfwPollEvents();
-
 
         windowFocusControl(window);
         GLFWgamepadstate state;
@@ -392,7 +407,7 @@ GLFWwindow* init() {
     glfwSetWindowSizeCallback(window, window_size_callback);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
-    // make OpenGL normal (lol)
+    // make OpenGL normal-style (laugh out loud)
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glCreateVertexArrays(1, &vao);
     glBindVertexArray(vao);
