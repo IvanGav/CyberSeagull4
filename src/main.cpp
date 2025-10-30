@@ -250,6 +250,7 @@ int main() {
         glProgramUniform3fv(program, 15, 1, glm::value_ptr(cam.cam.pos));
         glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
         glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
+        glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 
         for (int i = 0; i < objects.size(); i++) {
             Entity& o = objects[i];
