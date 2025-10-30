@@ -91,6 +91,11 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool ge
         glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
     }
+    else {
+        glTextureParameteri(tex, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE); // TODO SHADOW HERE
+        glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
 
     return tex;
 }

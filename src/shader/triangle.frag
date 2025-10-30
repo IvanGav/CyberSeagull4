@@ -10,7 +10,7 @@ layout(location = 5) in vec4 inLightspacePos;
 layout(location = 0) out vec4 fCol;
 
 layout(binding = 0) uniform sampler2D baseColorTex;
-layout(binding = 1) uniform sampler2D shadowMap;
+layout(binding = 1) uniform sampler2DShadow shadowMap;
 //layout(binding = 2) uniform sampler2D normalMap;
 
 layout(location = 15) uniform vec3 cameraPos;
@@ -25,14 +25,14 @@ float inShadow(vec4 lightSpacePos) {
 	vec2 texel_size = 1.0f/shadowMapResolution;
 
 	float accumulated = 0.0f;
-	for(float i = -2.0f; i <= 2.0f; i += 1.0f) {
-		for(float j = -2.0f; j <= 2.0f; j += 1.0f) {
-			float depth = texture(shadowMap, projectedPos.xy + vec2(i,j) * texel_size).r;
-			accumulated += (projectedPos.z > depth + 0.005f) ? 0.0f : 1.0f;
-		}
-	}
 
-	return accumulated/25.0f;
+	accumulated += texture(shadowMap, projectedPos.xyz + vec3(vec2(0,0) * texel_size, -0.005f)).r;
+	accumulated += texture(shadowMap, projectedPos.xyz + vec3(vec2(1.0f,1.0f) * texel_size, -0.005f)).r;
+	accumulated += texture(shadowMap, projectedPos.xyz + vec3(vec2(-1.0f,1.0f) * texel_size, -0.005f)).r;
+	accumulated += texture(shadowMap, projectedPos.xyz + vec3(vec2(1.0f,-1.0f) * texel_size, -0.005f)).r;
+	accumulated += texture(shadowMap, projectedPos.xyz + vec3(vec2(-1.0f,-1.0f) * texel_size, -0.005f)).r;
+
+	return accumulated/5.0f;
 }
 
 // Phong
