@@ -47,7 +47,7 @@
 #include <random>
 static std::mt19937 rng{ std::random_device{}() };
 
-static std::uniform_real_distribution<float> meowPitch(0.02f, 1.15f);
+static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 
 
 std::vector<ma_sound*> liveSounds;
@@ -67,6 +67,7 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playMeowWithRandomPitch(ma_engine* engine);
+void playSeagullsWithRandomPitch(ma_engine* engine);
 
 
 // Create a shader from vertex and fragment shader files
@@ -185,10 +186,9 @@ int main() {
 
     double last_time_sec = 0.0;
 
-    ma_result result;
-    result = ma_engine_init(NULL, &engine);
+    ma_engine_init(NULL, &engine);
     ma_engine_set_volume(&engine, 0.1f);
-    ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
+    playSeagullsWithRandomPitch(&engine);
 
     // event loop (each iteration of this loop is one frame of the application)
     while (!glfwWindowShouldClose(window)) {
@@ -346,7 +346,21 @@ void playMeowWithRandomPitch(ma_engine* engine) {
     if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
         MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
         nullptr, nullptr, s) == MA_SUCCESS) {
-        ma_sound_set_pitch(s, meowPitch(rng));
+        ma_sound_set_pitch(s, randomPitch(rng));
+        ma_sound_start(s);
+        liveSounds.push_back(s);
+    }
+    else {
+        delete s;
+    }
+}
+
+void playSeagullsWithRandomPitch(ma_engine* engine) {
+    ma_sound* s = new ma_sound{};
+    if (ma_sound_init_from_file(engine, "asset/seagull-flock-sound-effect-206610.wav",
+        MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+        nullptr, nullptr, s) == MA_SUCCESS) {
+        ma_sound_set_pitch(s, randomPitch(rng));
         ma_sound_start(s);
         liveSounds.push_back(s);
     }
