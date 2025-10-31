@@ -165,6 +165,7 @@ struct Entity {
     glm::mat4 model;
     glm::mat4 pretransmodel;
     F64 start_time;
+    F32 shoot_angle;
 
     // You can use "default_tex" if you don't need a texture
     static Entity create(Mesh* mesh, GLuint tex) {

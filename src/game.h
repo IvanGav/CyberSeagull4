@@ -46,6 +46,6 @@ struct Game {
 };
 
 // Given a lane and dist, return the model matrix.
-glm::mat4 toModel(F64 dist, U32 lane, F64 distancebetweenthetwoshipswhichshallherebyshootateachother) {
-	return glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, (-0.25 * (dist) * (dist - distancebetweenthetwoshipswhichshallherebyshootateachother)), dist));
+glm::mat4 toModel(F64 dist, U32 lane, F64 distancebetweenthetwoshipswhichshallherebyshootateachother, F32 angle) {
+	return glm::translate(glm::mat4(1.0f), glm::vec3(sin(angle) * dist, (-1.5 / distancebetweenthetwoshipswhichshallherebyshootateachother * (dist) * (dist - distancebetweenthetwoshipswhichshallherebyshootateachother)), cos(angle) * dist));
 }

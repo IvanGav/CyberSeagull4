@@ -53,6 +53,7 @@ static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 
 std::vector<ma_sound*> liveSounds;
 
+FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
 
 // Static data
 static int width = 1920;
@@ -185,7 +186,6 @@ int main() {
     glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
 
-    FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
     sun.illuminateArea(10.0);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -234,8 +234,9 @@ int main() {
             ));
             objects.back().start_time = cur_time_sec;
             objects.back().pretransmodel = objects.back().model;
+            objects.back().shoot_angle = cam.cam.theta;
             objects.back().update = [](Entity& cat, F64 curtime) {
-                cat.model = toModel(curtime-cat.start_time, 0, 5) * cat.pretransmodel;
+                cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
                 };
 
             playMeowWithRandomPitch(&engine);
