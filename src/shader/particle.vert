@@ -1,30 +1,52 @@
 #version 460 core
 
-struct Vertex {
+vec3 vertex_offsets[6] = {
+	{-1.0f, -1.0f, 0.0f},
+	{-1.0f, 1.0f, 0.0f},
+	{1.0f, 1.0f, 0.0f},
+	{-1.0f, -1.0f, 0.0f},
+	{1.0f, 1.0f, 0.0f},
+	{1.0f, -1.0f, 0.0f}
+};
+
+vec2 uvs[6] = {
+	{0.0f, 0.0f},
+	{0.0f, 1.0f},
+	{1.0f, 1.0f},
+	{0.0f, 0.0f},
+	{1.0f, 1.0f},
+	{1.0f, 0.0f}
+};
+
+struct ParticleVertex {
 	int particleid;
 	int vertexid; // from 0 to 5 - which vertex in this particle quad
 };
 
 struct Particle {
-    vec3 position;
+    vec3 pos;
     vec4 color;
 };
 
-layout(binding = 0, std430) readonly buffer VertexBuffer {
-	Vertex vertices[];
+layout(binding = 1, std430) readonly buffer VertexBuffer {
+	ParticleVertex vertices[];
 };
 
+layout(binding = 2, std430) readonly buffer ParticleBuffer {
+	Particle particles[];
+};
+
+layout(location = 0) out vec2 outUV;
+
+layout(location = 0) uniform mat4 camMatrix;
+
 void main() {
-	Vertex v = vertices[gl_VertexID];
+	ParticleVertex v = vertices[gl_VertexID];
+	Particle p = particles[v.particleid];
 
-	vec4 worldSpacePos = modelMatrix * vec4(v.position, 1.0f);
+	vec4 worldSpacePos = vec4(p.pos + vertex_offsets[v.vertexid], 1.0f);
 
-	outPos = worldSpacePos.xyz;
-	outUV = v.uv;
-	outNormal = normalTransform * v.normal;
-	outTangent = normalTransform * v.tangent;
-	outBitangent = cross(outNormal, outTangent);
-	outLightspacePos = lightTransform * worldSpacePos;
+	outUV = uvs[v.vertexid];
 	
 	gl_Position = camMatrix * worldSpacePos;
 }

@@ -114,6 +114,7 @@ int main() {
     GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
     GLuint shadowShader = createShader("src/shader/shadow.vert");
     GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
+    GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
 
     // Create textures (and frame buffers)
 
@@ -165,10 +166,24 @@ int main() {
         textures.skybox = createCubeTexture(cubemap_files);
     }
 
+    // Create static particle sources (later change this to be dynamic or something)
+
+    ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(2.0f), RGBA8 { 0,255,0,255 }, 5.0f }; // live for 5 seconds
+
     GLuint buffer;
     glCreateBuffers(1, &buffer);
     glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+
+    GLuint pvertex_buffer;
+    glCreateBuffers(1, &pvertex_buffer);
+    glNamedBufferStorage(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pvertex_buffer);
+
+    GLuint pdata_buffer;
+    glCreateBuffers(1, &pdata_buffer);
+    glNamedBufferStorage(pdata_buffer, sizeof(pvertex_data), pvertex_data, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, pdata_buffer);
 
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
     DirectionalLight sun = DirectionalLight{};
@@ -215,6 +230,12 @@ int main() {
             moveFreeCam(window, cam, dt);
         }
 
+        // Update particles
+
+        advanceParticles(dt);
+        particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle();
+        sortParticles(cam.cam, cam.cam.lookDir());
+        packParticles();
         
 
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
@@ -279,6 +300,14 @@ int main() {
 
             glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
+
+        // Draw particles
+        glUseProgram(particleProgram);
+
+        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * view));
+        glBindTextureUnit(0, objects[0].tex);
+
+        glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
         // tell the OS to display the frame
         glfwSwapBuffers(window);

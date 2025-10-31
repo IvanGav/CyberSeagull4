@@ -1,5 +1,14 @@
 #pragma once
 
+/*
+	README usage guide
+
+	advanceParticles(dt);
+	particleSource.spawnParticle();
+	sortParticles(cam, cam.lookDir());
+	packParticles();
+*/
+
 #include "util.h"
 #include "rng.h"
 
@@ -13,6 +22,21 @@
 #include "util.h"
 
 #define MAX_PARTICLES 1000000
+#define VERTICES_PER_PARTICLE 6
+
+// For gpu
+
+struct ParticleVertex {
+	alignas(4) U32 particleid;
+	alignas(4) U32 vertexid;
+};
+
+struct ParticleData {
+	alignas(16) glm::vec3 pos;
+	alignas(16) glm::vec4 color;
+};
+
+// For cpu
 
 U32 getUnusedParticlePos();
 
@@ -31,7 +55,10 @@ struct Particle {
 
 // Global particles array; all existing particles are stored here
 Particle particles[MAX_PARTICLES];
-U32 lastUsedParticle = -1; // Inclusive; `lastUsedParticle == 2` means that there are 3 particles that may be alive: particles[0], [1] and [2]
+U32 lastUsedParticle = 0; // Exclusive; `lastUsedParticle == 2` means that there are 2 particles that may be alive: particles[0] and [1]
+
+ParticleData pvertex_data[MAX_PARTICLES];
+ParticleVertex pvertex_vertex[MAX_PARTICLES * VERTICES_PER_PARTICLE];
 
 struct ParticleSource {
 	glm::vec3 pos;
@@ -51,9 +78,9 @@ struct ParticleSource {
 U32 getUnusedParticlePos() {
 	if (lastUsedParticle <= MAX_PARTICLES) {
 		lastUsedParticle++;
-		return lastUsedParticle;
+		return lastUsedParticle - 1;
 	}
-	for (U32 i = 0; i <= lastUsedParticle; i++) {
+	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life <= 0.0f) return i;
 	}
 	return 0;
@@ -71,6 +98,7 @@ void advanceParticles(F32 dt) {
 }
 
 // Call after adding new particles, before drawing them
+// After calling this, `lastUsedParticle + 1` is the total number of particles
 void sortParticles(const Cam& c, const glm::vec3 cam_forward) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
@@ -78,9 +106,19 @@ void sortParticles(const Cam& c, const glm::vec3 cam_forward) {
 		}
 	}
 	std::sort(particles, &particles[lastUsedParticle]);
-	for (; lastUsedParticle >= 0 && particles[lastUsedParticle].life <= 0.0f; lastUsedParticle--);
+	for (; lastUsedParticle > 0 && particles[lastUsedParticle-1].life <= 0.0f; lastUsedParticle--);
 }
 
+// Call `sortParticles` before this
+// Updates the global `pvertex_data` and `pvertex_vertex` arrays
 void packParticles() {
-
+	for (U32 i = 0; i < lastUsedParticle; i++) {
+		// pvertex_data, pvertex_vertex
+		for (U32 j = 0; j < VERTICES_PER_PARTICLE; j++) {
+			pvertex_vertex[i * VERTICES_PER_PARTICLE + j].particleid = i;
+			pvertex_vertex[i * VERTICES_PER_PARTICLE + j].vertexid = j;
+		}
+		pvertex_data[i].pos = particles[i].pos;
+		pvertex_data[i].color = particles[i].color.to_v4f32();
+	}
 }
