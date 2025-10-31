@@ -41,6 +41,7 @@
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
+#include "game.h"
 
 
 
@@ -131,6 +132,11 @@ int main() {
     GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
     {
         shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
+        glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
+        glTextureParameterfv(shadowmap, GL_TEXTURE_BORDER_COLOR, border);
+
         glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
         glBindTextureUnit(1, shadowmap);
     }
@@ -226,8 +232,18 @@ int main() {
                 ),
                 glm::vec3(0.1f, 0.1f, 0.1f))
             ));
+            objects.back().start_time = cur_time_sec;
+            objects.back().pretransmodel = objects.back().model;
+            objects.back().update = [](Entity& cat, F64 curtime) {
+                cat.model = toModel(curtime-cat.start_time, 0, 5) * cat.pretransmodel;
+                };
 
             playMeowWithRandomPitch(&engine);
+        }
+
+        for (int i = 0; i < objects.size(); i++) {
+            if (objects[i].update)
+                objects[i].update(objects[i], cur_time_sec);
         }
 
         cleanupFinishedSounds();
@@ -244,7 +260,9 @@ int main() {
         // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glViewport(0, 0, shadowmap_width, shadowmap_height);
+        glClearDepth(9999999.0);
         glClear(GL_DEPTH_BUFFER_BIT);
+        glClearDepth(1.0);
 
         glUseProgram(shadowShader);
 
