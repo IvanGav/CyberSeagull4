@@ -41,6 +41,18 @@
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
+#include "game.h"
+
+
+
+#include <random>
+static std::mt19937 rng{ std::random_device{}() };
+
+static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
+
+
+std::vector<ma_sound*> liveSounds;
+
 
 // Static data
 static int width = 1920;
@@ -54,6 +66,10 @@ void cleanup(GLFWwindow* window);
 std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
+void cleanupFinishedSounds();
+void playMeowWithRandomPitch(ma_engine* engine);
+void playSeagullsWithRandomPitch(ma_engine* engine);
+
 
 // Create a shader from vertex and fragment shader files
 GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
@@ -116,6 +132,11 @@ int main() {
     GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
     {
         shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
+        glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
+        glTextureParameterfv(shadowmap, GL_TEXTURE_BORDER_COLOR, border);
+
         glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
         glBindTextureUnit(1, shadowmap);
     }
@@ -171,10 +192,9 @@ int main() {
 
     double last_time_sec = 0.0;
 
-    ma_result result;
-    result = ma_engine_init(NULL, &engine);
-    ma_engine_set_volume(&engine, 1.0f);
-    ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
+    ma_engine_init(NULL, &engine);
+    ma_engine_set_volume(&engine, 0.1f);
+    playSeagullsWithRandomPitch(&engine);
 
     // event loop (each iteration of this loop is one frame of the application)
     while (!glfwWindowShouldClose(window)) {
@@ -185,29 +205,49 @@ int main() {
         double lightAzimuth = glfwGetTime() / 3.0;
         glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
 
-        // check for user input
+        // per-frame input
         glfwPollEvents();
-
-
         windowFocusControl(window);
-        GLFWgamepadstate state;
-        if (glfwGetGamepadState(0, &state)) {
-            moveFreeCamGamepad(window, cam, dt, state);
-            if (state.buttons[4] == GLFW_PRESS) {
-                objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-                    glm::rotate(
-                        glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos + (cam.cam.lookDir() * 4.0f) + glm::vec3(0.0f, -2.0f, 0.0f)), cam.cam.theta + F32(PI),
-                            glm::vec3(0.0f, 1.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-                    ),
-                    glm::vec3(0.1f, 0.1f, 0.1f))
-                ));
 
-                ma_engine_play_sound(&engine, "asset/cat-meow-401729.wav", NULL);
-            }
+        
+        bool trigger = (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS);
+
+     
+        GLFWgamepadstate state{};
+        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+            moveFreeCamGamepad(window, cam, dt, state);
+            trigger |= (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS); 
         }
         else {
             moveFreeCam(window, cam, dt);
         }
+
+        static bool prev = false;
+        if (trigger && !prev) {
+            objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
+                glm::rotate(
+                    glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos + (cam.cam.lookDir() * 4.0f) + glm::vec3(0.0f, -2.0f, 0.0f)),
+                        cam.cam.theta + F32(PI), glm::vec3(0.0f, 1.0f, 0.0f)),
+                    (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
+                ),
+                glm::vec3(0.1f, 0.1f, 0.1f))
+            ));
+            objects.back().start_time = cur_time_sec;
+            objects.back().pretransmodel = objects.back().model;
+            objects.back().update = [](Entity& cat, F64 curtime) {
+                cat.model = toModel(curtime-cat.start_time, 0, 5) * cat.pretransmodel;
+                };
+
+            playMeowWithRandomPitch(&engine);
+        }
+
+        for (int i = 0; i < objects.size(); i++) {
+            if (objects[i].update)
+                objects[i].update(objects[i], cur_time_sec);
+        }
+
+        cleanupFinishedSounds();
+        prev = trigger;
 
         
 
@@ -220,7 +260,9 @@ int main() {
         // Draw to framebuffer (shadow map)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glViewport(0, 0, shadowmap_width, shadowmap_height);
+        glClearDepth(9999999.0);
         glClear(GL_DEPTH_BUFFER_BIT);
+        glClearDepth(1.0);
 
         glUseProgram(shadowShader);
 
@@ -274,6 +316,18 @@ int main() {
             glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
         }
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::Begin("State");
+        ImGui::Text("Time: %lf", cur_time_sec);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // tell the OS to display the frame
         glfwSwapBuffers(window);
     }
@@ -287,6 +341,51 @@ int main() {
     ma_engine_uninit(&engine);
 
     cleanup(window);
+}
+
+
+// MEOW MEOW 
+
+void cleanupFinishedSounds() {
+    for (auto it = liveSounds.begin(); it != liveSounds.end();) {
+        ma_sound* s = *it;
+        if (!ma_sound_is_playing(s) && ma_sound_at_end(s)) {
+            ma_sound_uninit(s);
+            delete s;
+            it = liveSounds.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+}
+
+void playMeowWithRandomPitch(ma_engine* engine) {
+    ma_sound* s = new ma_sound{};
+    if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+        MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+        nullptr, nullptr, s) == MA_SUCCESS) {
+        ma_sound_set_pitch(s, randomPitch(rng));
+        ma_sound_start(s);
+        liveSounds.push_back(s);
+    }
+    else {
+        delete s;
+    }
+}
+
+void playSeagullsWithRandomPitch(ma_engine* engine) {
+    ma_sound* s = new ma_sound{};
+    if (ma_sound_init_from_file(engine, "asset/seagull-flock-sound-effect-206610.wav",
+        MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+        nullptr, nullptr, s) == MA_SUCCESS) {
+        ma_sound_set_pitch(s, randomPitch(rng));
+        ma_sound_start(s);
+        liveSounds.push_back(s);
+    }
+    else {
+        delete s;
+    }
 }
 
 /* Gameplay related functions */
@@ -392,7 +491,7 @@ GLFWwindow* init() {
     glfwSetWindowSizeCallback(window, window_size_callback);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
-    // make OpenGL normal (lol)
+    // make OpenGL normal-style (laugh out loud)
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glCreateVertexArrays(1, &vao);
     glBindVertexArray(vao);

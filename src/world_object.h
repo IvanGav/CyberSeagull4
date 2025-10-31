@@ -163,10 +163,12 @@ struct Entity {
     Mesh* mesh;
     GLuint tex;
     glm::mat4 model;
+    glm::mat4 pretransmodel;
+    F64 start_time;
 
     // You can use "default_tex" if you don't need a texture
     static Entity create(Mesh* mesh, GLuint tex) {
-        Entity o;
+        Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = glm::mat4(1.0f);
@@ -174,7 +176,7 @@ struct Entity {
     }
 
     static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform) {
-        Entity o;
+        Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = initial_transform;
@@ -188,4 +190,6 @@ struct Entity {
     Entity copyWithModel(glm::mat4 model) {
         return Entity{ mesh, tex, model };
     }
+
+    void (*update)(Entity& object, F64 dt);
 };
