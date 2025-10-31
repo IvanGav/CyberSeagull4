@@ -34,6 +34,7 @@ struct ParticleVertex {
 struct ParticleData {
 	alignas(16) glm::vec3 pos;
 	alignas(16) glm::vec4 color;
+	alignas(4) F32 size;
 };
 
 // For cpu
@@ -43,6 +44,7 @@ U32 getUnusedParticlePos();
 struct Particle {
 	glm::vec3 pos, speed;
 	RGBA8 color;
+	F32 size;
 	F32 life;
 
 	F32 camdist;
@@ -65,12 +67,12 @@ struct ParticleSource {
 
 	glm::vec3 init_speed;
 	RGBA8 init_color;
+	F32 init_size;
 	F32 init_life;
 
 	void spawnParticle() {
-		// TODO add random
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
-		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off, init_color, init_life};
+		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off, init_color, init_size, init_life};
 	}
 };
 
@@ -120,5 +122,6 @@ void packParticles() {
 		}
 		pvertex_data[i].pos = particles[i].pos;
 		pvertex_data[i].color = particles[i].color.to_v4f32();
+		pvertex_data[i].size = particles[i].size;
 	}
 }

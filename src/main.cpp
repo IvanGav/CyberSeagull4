@@ -168,7 +168,7 @@ int main() {
 
     // Create static particle sources (later change this to be dynamic or something)
 
-    ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 5.0f }; // live for 5 seconds
+    ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
 
     GLuint buffer;
     glCreateBuffers(1, &buffer);
@@ -177,12 +177,12 @@ int main() {
 
     GLuint pvertex_buffer;
     glCreateBuffers(1, &pvertex_buffer);
-    glNamedBufferStorage(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, 0);
+    glNamedBufferData(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pvertex_buffer);
 
     GLuint pdata_buffer;
     glCreateBuffers(1, &pdata_buffer);
-    glNamedBufferStorage(pdata_buffer, sizeof(pvertex_data), pvertex_data, 0);
+    glNamedBufferData(pdata_buffer, sizeof(pvertex_data), pvertex_data, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, pdata_buffer);
 
     FreeCam cam = FreeCam { Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
@@ -233,7 +233,7 @@ int main() {
         // Update particles
 
         advanceParticles(dt);
-        particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle();
+        particleSource.spawnParticle();
         sortParticles(cam.cam, cam.cam.lookDir());
         packParticles();
 
@@ -306,8 +306,9 @@ int main() {
         // Draw particles
         glUseProgram(particleProgram);
 
-        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * view));
-        glBindTextureUnit(0, objects[0].tex);
+        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+        glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+        glBindTextureUnit(0, textures.green);
 
         glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
