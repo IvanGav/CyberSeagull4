@@ -429,3 +429,4 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+/imgui.ini
