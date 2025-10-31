@@ -168,7 +168,7 @@ int main() {
 
     // Create static particle sources (later change this to be dynamic or something)
 
-    ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(2.0f), RGBA8 { 0,255,0,255 }, 5.0f }; // live for 5 seconds
+    ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 5.0f }; // live for 5 seconds
 
     GLuint buffer;
     glCreateBuffers(1, &buffer);
@@ -201,7 +201,7 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         // calculate delta time
         double cur_time_sec = glfwGetTime();
-        double dt = cur_time_sec - last_time_sec;
+        double dt = std::clamp(cur_time_sec - last_time_sec, 0.0, 0.5);
         last_time_sec = cur_time_sec;
         double lightAzimuth = glfwGetTime() / 3.0;
         glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
@@ -236,7 +236,9 @@ int main() {
         particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle(); particleSource.spawnParticle();
         sortParticles(cam.cam, cam.cam.lookDir());
         packParticles();
-        
+
+        glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+        glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
 
         glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
