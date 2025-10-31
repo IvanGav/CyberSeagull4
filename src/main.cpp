@@ -321,9 +321,14 @@ int main() {
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::SetNextWindowBgAlpha(0.0f);
-		ImGui::Begin("State");
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
+
+		//ImGui::SetNextWindowBgAlpha(0.0f);
+		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
+		ImGui::SetNextWindowPos(ImVec2(500, 500));
+		ImGui::Begin("State", NULL, flags);
 		ImGui::Text("Time: %lf", cur_time_sec);
+		ImGui::Image((ImTextureID)textures.green, ImVec2(200.0f, 200.0f));
 		ImGui::End();
 
 		ImGui::Render();
