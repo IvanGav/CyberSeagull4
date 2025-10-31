@@ -6,6 +6,10 @@
 #include <array>
 #include <unordered_map>
 #include <cmath>
+#include <stdlib.h>
+#include <time.h>
+
+#define NOMINMAX
 
 // GLAD: OpenGL function loader
 #include <glad/glad.h>
@@ -41,6 +45,7 @@
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
+#include "particle.h"
 #include "game.h"
 
 
@@ -125,6 +130,7 @@ int main() {
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
 	GLuint shadowShader = createShader("src/shader/shadow.vert");
 	GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
+  GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
 
 	// Create textures (and frame buffers)
 
@@ -180,11 +186,27 @@ int main() {
 		};
 		textures.skybox = createCubeTexture(cubemap_files);
 	}
+      
+  
+  // Create static particle sources (later change this to be dynamic or something)
 
-	GLuint buffer;
-	glCreateBuffers(1, &buffer);
-	glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+  ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
+
+  GLuint buffer;
+  glCreateBuffers(1, &buffer);
+  glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+
+  GLuint pvertex_buffer;
+  glCreateBuffers(1, &pvertex_buffer);
+  glNamedBufferData(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pvertex_buffer);
+
+  GLuint pdata_buffer;
+  glCreateBuffers(1, &pdata_buffer);
+  glNamedBufferData(pdata_buffer, sizeof(pvertex_data), pvertex_data, GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, pdata_buffer);
+
 
 	DirectionalLight sun = DirectionalLight{};
 	sun.illuminateArea(10.0);
@@ -250,7 +272,17 @@ int main() {
 		cleanupFinishedSounds();
 		prev = trigger;
 
-		
+		// Update particles
+
+    advanceParticles(dt);
+    particleSource.spawnParticle();
+    sortParticles(cam.cam, cam.cam.lookDir());
+    packParticles();
+
+    glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+    glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+    
+    // get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
@@ -349,6 +381,18 @@ int main() {
 	cleanup(window);
 }
 
+        // Draw particles
+        glUseProgram(particleProgram);
+
+        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+        glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+        glBindTextureUnit(0, textures.green);
+
+        glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+
+        // tell the OS to display the frame
+        glfwSwapBuffers(window);
+    }
 
 // MEOW MEOW 
 
