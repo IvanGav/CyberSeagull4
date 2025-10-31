@@ -6,6 +6,10 @@
 #include <array>
 #include <unordered_map>
 #include <cmath>
+#include <stdlib.h>
+#include <time.h>
+
+#define NOMINMAX
 
 // GLAD: OpenGL function loader
 #include <glad/glad.h>
@@ -105,6 +109,7 @@ int main() {
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     initMouse(window); // function in cam.h
     initDefaultTexture();
+    srand(time(NULL));
 
     GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
     GLuint shadowShader = createShader("src/shader/shadow.vert");

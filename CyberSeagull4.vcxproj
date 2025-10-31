@@ -612,6 +612,7 @@
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\particle.h" />
+    <ClInclude Include="src\rng.h" />
     <ClInclude Include="src\util.h" />
     <ClInclude Include="src\world_object.h" />
   </ItemGroup>
