@@ -302,6 +302,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::Begin("State");
         ImGui::Text("Time: %lf", cur_time_sec);
         ImGui::End();
