@@ -48,6 +48,7 @@
 #include "world_object.h"
 #include "particle.h"
 #include "game.h"
+#include "music.h"
 
 
 
@@ -74,8 +75,8 @@ std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
-void playMeowWithRandomPitch(ma_engine* engine);
-void playSeagullsWithRandomPitch(ma_engine* engine);
+void playWithRandomPitch(ma_engine* engine, const char* filePath);
+void playSound(ma_engine* engine, const char* filePath);
 
 
 // Create a shader from vertex and fragment shader files
@@ -159,6 +160,7 @@ int main() {
 		GLuint cat;
 		GLuint skybox;
 		GLuint banner;
+		GLuint weezer;
 	} textures;
 
 	struct {
@@ -171,6 +173,7 @@ int main() {
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
+	textures.cat = createTextureFromImage("asset/weezer.jfif");
 
 	stbi_set_flip_vertically_on_load(false);
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
@@ -228,7 +231,7 @@ int main() {
 
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
-	playSeagullsWithRandomPitch(&engine);
+	playWithRandomPitch(&engine, "asset/seagull-flock-sound-effect-206610.wav");
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -276,7 +279,7 @@ int main() {
 						return (cat.model[3][1] >= 0.0f);
 						};
 
-					playMeowWithRandomPitch(&engine);
+					playWithRandomPitch(&engine, "asset/cat-meow-401729.wav");
 				}
 			}
 		}
@@ -386,13 +389,13 @@ int main() {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		//ImGui::SetNextWindowBgAlpha(0.0f);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width-728.0f) / 2, height * 0.01));
+		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
 		ImGui::Begin("State", NULL, flags);
-		ImGui::Text("Time: %lf", cur_time_sec);
 		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
+
+		//songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -427,9 +430,9 @@ void cleanupFinishedSounds() {
 	}
 }
 
-void playMeowWithRandomPitch(ma_engine* engine) {
+void playWithRandomPitch(ma_engine* engine, const char *filePath) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
 		ma_sound_set_pitch(s, randomPitch(rng));
@@ -441,12 +444,11 @@ void playMeowWithRandomPitch(ma_engine* engine) {
 	}
 }
 
-void playSeagullsWithRandomPitch(ma_engine* engine) {
+void playSound(ma_engine* engine, const char* filePath) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/seagull-flock-sound-effect-206610.wav",
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_pitch(s, randomPitch(rng));
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
@@ -454,6 +456,7 @@ void playSeagullsWithRandomPitch(ma_engine* engine) {
 		delete s;
 	}
 }
+
 
 /* Gameplay related functions */
 
