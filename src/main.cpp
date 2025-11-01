@@ -35,6 +35,7 @@
 #include <imgui/imgui_stdlib.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <glm/gtx/matrix_decompose.hpp>
 
 // miniaudio
 #include <miniaudio.h>
@@ -157,6 +158,7 @@ int main() {
 		GLuint green;
 		GLuint cat;
 		GLuint skybox;
+		GLuint banner;
 	} textures;
 
 	struct {
@@ -170,8 +172,18 @@ int main() {
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
 
+	stbi_set_flip_vertically_on_load(false);
+	textures.banner = createTextureFromImage("asset/seagull_banner.png");
+	stbi_set_flip_vertically_on_load(true);
+
+
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f))));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
+
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	
 
 	genTangents(vertices);
 
@@ -246,22 +258,26 @@ int main() {
 
 		static bool prev = false;
 		if (trigger && !prev) {
-			objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-				glm::rotate(
-					glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos + (cam.cam.lookDir() * 4.0f) + glm::vec3(0.0f, -2.0f, 0.0f)),
-						cam.cam.theta + F32(PI), glm::vec3(0.0f, 1.0f, 0.0f)),
-					(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-				),
-				glm::vec3(0.1f, 0.1f, 0.1f))
-			));
-			objects.back().start_time = cur_time_sec;
-			objects.back().pretransmodel = objects.back().model;
-			objects.back().shoot_angle = cam.cam.theta;
-			objects.back().update = [](Entity& cat, F64 curtime) {
-				cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
-				};
+			int size = objects.size();
+			for (int i = 0; i < size; i++) {
+				if (objects[i].type == CANNON) {
+					objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
+						glm::rotate(
+							glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
+							(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
+						),
+						glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
+					));
+					objects.back().start_time = cur_time_sec;
+					objects.back().pretransmodel = objects.back().model;
+					objects.back().shoot_angle = 0.0f;
+					objects.back().update = [](Entity& cat, F64 curtime) {
+						cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
+						};
 
-			playMeowWithRandomPitch(&engine);
+					playMeowWithRandomPitch(&engine);
+				}
+			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
@@ -349,6 +365,16 @@ int main() {
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
 
+        // Draw particles
+        glUseProgram(particleProgram);
+
+        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+        glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+        glBindTextureUnit(0, textures.green);
+
+        glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+
+
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -357,10 +383,10 @@ int main() {
 
 		//ImGui::SetNextWindowBgAlpha(0.0f);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2(500, 500));
+		ImGui::SetNextWindowPos(ImVec2((width-728.0f) / 2, height * 0.01));
 		ImGui::Begin("State", NULL, flags);
 		ImGui::Text("Time: %lf", cur_time_sec);
-		ImGui::Image((ImTextureID)textures.green, ImVec2(200.0f, 200.0f));
+		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
 
 		ImGui::Render();
@@ -381,20 +407,6 @@ int main() {
 	cleanup(window);
 }
 
-        // Draw particles
-        glUseProgram(particleProgram);
-
-        glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
-        glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-        glBindTextureUnit(0, textures.green);
-
-        glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-
-        // tell the OS to display the frame
-        glfwSwapBuffers(window);
-    }
-
-// MEOW MEOW 
 
 void cleanupFinishedSounds() {
 	for (auto it = liveSounds.begin(); it != liveSounds.end();) {
