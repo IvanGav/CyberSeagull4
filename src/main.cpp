@@ -49,6 +49,8 @@
 #include "particle.h"
 #include "game.h"
 
+#include "midi.h"
+
 
 
 #include <random>
@@ -226,6 +228,15 @@ int main() {
 
 	double last_time_sec = 0.0;
 
+	/// Initialize midi
+	libremidi::observer obs;
+	libremidi::midi_in midi{
+		libremidi::input_configuration{ .on_message = midi_callback }
+	};
+	if (obs.get_input_ports().size()) {
+		midi_init(midi);
+	}
+
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
 	playSeagullsWithRandomPitch(&engine);
@@ -254,6 +265,9 @@ int main() {
 		}
 		else {
 			moveFreeCam(window, cam, dt);
+		}
+		if (midi_exists) {
+			moveFreeCamMidi(window, cam, dt);
 		}
 
 		static bool prev = false;
