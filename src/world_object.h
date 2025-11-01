@@ -202,5 +202,5 @@ struct Entity {
         return Entity{ mesh, tex, model };
     }
 
-    void (*update)(Entity& object, F64 dt);
+    bool (*update)(Entity& object, F64 dt);
 };

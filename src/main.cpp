@@ -273,6 +273,7 @@ int main() {
 					objects.back().shoot_angle = 0.0f;
 					objects.back().update = [](Entity& cat, F64 curtime) {
 						cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
+						return (cat.model[3][1] >= 0.0f);
 						};
 
 					playMeowWithRandomPitch(&engine);
@@ -281,8 +282,12 @@ int main() {
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
-			if (objects[i].update)
-				objects[i].update(objects[i], cur_time_sec);
+			if (objects[i].update) {
+				if (!objects[i].update(objects[i], cur_time_sec)) {
+					objects.erase(objects.begin() + i);
+					i--;
+				}
+			}
 		}
 
 		cleanupFinishedSounds();
