@@ -173,9 +173,9 @@ int main() {
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
-	textures.cat = createTextureFromImage("asset/weezer.jfif");
 
 	stbi_set_flip_vertically_on_load(false);
+	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
 
@@ -395,7 +395,9 @@ int main() {
 		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
 
-		//songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
+		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
+
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

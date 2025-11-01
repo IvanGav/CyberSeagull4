@@ -22,7 +22,7 @@ void songSelect(GLuint display, const char* filepath, ImVec2 dim) {
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((dim[0] - 728.0f) / 2, dim[1] * 0.1));
+		ImGui::SetNextWindowPos(ImVec2((1920 - dim[0]) / 2, 1080 * 0.1));
 		ImGui::Begin("Song", NULL, flags);
 		ImGui::Image((ImTextureID)display, dim);
 		ImGui::End();
