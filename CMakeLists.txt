@@ -9,6 +9,7 @@ add_executable(CyberSeagull4
 	lib/imgui_widgets.cpp
 	lib/imgui_impl_glfw.cpp
 	lib/imgui_impl_opengl3.cpp
+	lib/miniaudio.cpp
 	lib/tiny_obj_loader.cpp
 	lib/stb_image.c
 	src/main.cpp)
