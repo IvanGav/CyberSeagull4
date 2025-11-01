@@ -77,6 +77,7 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playMeowWithRandomPitch(ma_engine* engine);
+void playMeowWithPitch(ma_engine* engine, float pitch);
 void playSeagullsWithRandomPitch(ma_engine* engine);
 
 
@@ -267,7 +268,14 @@ int main() {
 			moveFreeCam(window, cam, dt);
 		}
 		if (midi_exists) {
+			extern std::vector<char> midi_keys_velocity;
 			moveFreeCamMidi(window, cam, dt);
+			trigger |= (midi_keys_velocity[62] != 0);
+			for (int i = 0; i < midi_keys_velocity.size(); i++) {
+				if (midi_keys_velocity[i]) {
+					playMeowWithPitch(&engine, i / 128.f);
+				}
+			}
 		}
 
 		static bool prev = false;
@@ -442,6 +450,20 @@ void playMeowWithRandomPitch(ma_engine* engine) {
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
 		ma_sound_set_pitch(s, randomPitch(rng));
+		ma_sound_start(s);
+		liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
+}
+
+void playMeowWithPitch(ma_engine* engine, float pitch) {
+	ma_sound* s = new ma_sound{};
+	if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_pitch(s, pitch);
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
