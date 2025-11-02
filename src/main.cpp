@@ -76,7 +76,7 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
-void playSound(ma_engine* engine, const char* filePath);
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop);
 
 
 // Create a shader from vertex and fragment shader files
@@ -228,10 +228,11 @@ int main() {
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	double last_time_sec = 0.0;
+	int songstart;
 
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
-	playWithRandomPitch(&engine, "asset/seagull-flock-sound-effect-206610.wav");
+	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -298,15 +299,15 @@ int main() {
 
 		// Update particles
 
-    advanceParticles(dt);
-    particleSource.spawnParticle();
-    sortParticles(cam.cam, cam.cam.lookDir());
-    packParticles();
+		advanceParticles(dt);
+		particleSource.spawnParticle();
+		sortParticles(cam.cam, cam.cam.lookDir());
+		packParticles();
 
-    glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-    glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+		glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+		glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
     
-    // get cam matrices
+		// get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
@@ -395,8 +396,11 @@ int main() {
 		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
 
-		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+
+		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
+			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
+		}
 
 
 		ImGui::Render();
@@ -446,8 +450,9 @@ void playWithRandomPitch(ma_engine* engine, const char *filePath) {
 	}
 }
 
-void playSound(ma_engine* engine, const char* filePath) {
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop) {
 	ma_sound* s = new ma_sound{};
+	//ma_data_source_set_looping(s, loop);
 	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
