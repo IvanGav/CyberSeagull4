@@ -131,7 +131,7 @@ int main() {
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
 	GLuint shadowShader = createShader("src/shader/shadow.vert");
 	GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
-  GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
+	GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
 
 	// Create textures (and frame buffers)
 
@@ -139,7 +139,7 @@ int main() {
 	glCreateFramebuffers(1, &framebuffer);
 	GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
 	{
-		shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, nullptr);
+		shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
 		glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
@@ -147,6 +147,38 @@ int main() {
 
 		glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, shadowmap, 0);
 		glBindTextureUnit(1, shadowmap);
+	}
+
+	// create buffer objects for water reflection and refraction; later on they will be rendered to and combined to create the water texture
+	GLuint refraction_framebuffer;
+	glCreateFramebuffers(1, &refraction_framebuffer);
+	GLuint refraction_tex, refraction_depth_tex;
+	{
+		refraction_tex = createTexture(width, height, GL_RGBA8, false, false, nullptr);
+		refraction_depth_tex = createTexture(width, height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
+		glTextureParameteri(refraction_tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTextureParameteri(refraction_tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
+		glTextureParameterfv(refraction_tex, GL_TEXTURE_BORDER_COLOR, border);
+
+		glNamedFramebufferTexture(refraction_framebuffer, GL_COLOR_ATTACHMENT0, refraction_tex, 0);
+		glNamedFramebufferTexture(refraction_framebuffer, GL_DEPTH_ATTACHMENT, refraction_depth_tex, 0);
+		glBindTextureUnit(3, refraction_tex);
+	}
+	GLuint reflection_framebuffer;
+	glCreateFramebuffers(1, &reflection_framebuffer);
+	GLuint reflection_tex, reflection_depth_tex;
+	{
+		reflection_tex = createTexture(width, height, GL_RGBA8, false, false, nullptr);
+		reflection_depth_tex = createTexture(width, height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
+		glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
+		glTextureParameterfv(reflection_tex, GL_TEXTURE_BORDER_COLOR, border);
+
+		glNamedFramebufferTexture(reflection_framebuffer, GL_COLOR_ATTACHMENT0, reflection_tex, 0);
+		glNamedFramebufferTexture(reflection_framebuffer, GL_DEPTH_ATTACHMENT, reflection_depth_tex, 0);
+		glBindTextureUnit(4, reflection_tex);
 	}
 
 	// Create geometry
@@ -164,10 +196,12 @@ int main() {
 	struct {
 		Mesh test_scene;
 		Mesh cat;
+		Mesh quad;
 	} meshes;
 
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
+	meshes.quad = Mesh::xzQuad(vertices);
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -184,6 +218,9 @@ int main() {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	
+	objects.push_back(Entity::create(&meshes.quad, reflection_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, 0.0f)), glm::vec3(4.0f * width / height, 4.0f, 4.0f)), NONEMITTER));
+	//Entity water = Entity::create(&meshes.quad, shadowmap, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, -2.0f, 0.0f)), glm::vec3(5.0f, 5.0f, 5.0f)), NONEMITTER);
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, -5.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.03f, 0.03f, 0.03f)), NONEMITTER));
 
 	genTangents(vertices);
 
@@ -200,24 +237,24 @@ int main() {
 	}
       
   
-  // Create static particle sources (later change this to be dynamic or something)
+	// Create static particle sources (later change this to be dynamic or something)
 
-  ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
+	ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
 
-  GLuint buffer;
-  glCreateBuffers(1, &buffer);
-  glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+	GLuint buffer;
+	glCreateBuffers(1, &buffer);
+	glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
 
-  GLuint pvertex_buffer;
-  glCreateBuffers(1, &pvertex_buffer);
-  glNamedBufferData(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pvertex_buffer);
+	GLuint pvertex_buffer;
+	glCreateBuffers(1, &pvertex_buffer);
+	glNamedBufferData(pvertex_buffer, sizeof(pvertex_vertex), pvertex_vertex, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pvertex_buffer);
 
-  GLuint pdata_buffer;
-  glCreateBuffers(1, &pdata_buffer);
-  glNamedBufferData(pdata_buffer, sizeof(pvertex_data), pvertex_data, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, pdata_buffer);
+	GLuint pdata_buffer;
+	glCreateBuffers(1, &pdata_buffer);
+	glNamedBufferData(pdata_buffer, sizeof(pvertex_data), pvertex_data, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, pdata_buffer);
 
 
 	DirectionalLight sun = DirectionalLight{};
@@ -295,15 +332,15 @@ int main() {
 
 		// Update particles
 
-    advanceParticles(dt);
-    particleSource.spawnParticle();
-    sortParticles(cam.cam, cam.cam.lookDir());
-    packParticles();
+		advanceParticles(dt);
+		particleSource.spawnParticle();
+		sortParticles(cam.cam, cam.cam.lookDir());
+		packParticles();
 
-    glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-    glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+		glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+		glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
     
-    // get cam matrices
+		// get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
@@ -311,7 +348,7 @@ int main() {
 		// Update the light direction
 		sun.setLightDirVec3(lightDir);
 
-		// Draw to framebuffer (shadow map)
+		// Draw to shadow map framebuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 		glViewport(0, 0, shadowmap_width, shadowmap_height);
 		glClearDepth(9999999.0);
@@ -328,6 +365,43 @@ int main() {
 
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
+
+		// Draw to water texture framebuffers
+		glBindFramebuffer(GL_FRAMEBUFFER, reflection_framebuffer);
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		//glEnable(GL_CLIP_DISTANCE0);
+
+		// janky
+		{
+			glUseProgram(program);
+
+			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = 0.0f - modified_pos.y;
+			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
+			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f,-1.0f,0.0f));
+
+			glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * modified_view));
+			glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
+			glProgramUniform3fv(program, 15, 1, glm::value_ptr(modified_pos));
+			glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
+			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
+			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
+
+			for (int i = 0; i < objects.size(); i++) {
+				Entity& o = objects[i];
+				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+				glBindTextureUnit(0, objects[i].tex);
+
+				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+
+				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
+			}
+		}
+
+		//glDisable(GL_CLIP_DISTANCE0);
 
 		// Draw to screen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -379,7 +453,7 @@ int main() {
 
         glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
-
+		// Draw UI
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();

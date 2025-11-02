@@ -78,7 +78,7 @@ int loadObj(std::vector<Vertex>& vertices, const char* path) {
 }
 
 // Create a texture; if no pixels specified, blank texture
-GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool genMips, void* pixels = nullptr, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
+GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool genMips, bool doDepthComp, void* pixels = nullptr, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
     GLuint tex;
     int numMips = genMips ? std::log2(std::max(texWidth, texHeight)) + 1 : 1;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex);
@@ -91,7 +91,7 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool ge
         glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
     }
-    else {
+    else if (doDepthComp) {
         glTextureParameteri(tex, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE); // TODO SHADOW HERE
         glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -103,7 +103,7 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool ge
 GLuint createTextureFromImage(const char* path) {
     int texWidth, texHeight;
     stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
-    GLuint tex = createTexture(texWidth, texHeight, GL_RGBA8, true, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
+    GLuint tex = createTexture(texWidth, texHeight, GL_RGBA8, true, false, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
     stbi_image_free(pixels);
     return tex;
 }
@@ -144,7 +144,7 @@ void initDefaultTexture() {
             hardcodedTextureData[y * 16 + x] = x < 8 == y < 8 ? 0b11111111111111110000000011111111 : 0b11111111000000000000000000000000;
         }
     }
-    default_tex = createTexture(16, 16, GL_RGBA8, false, hardcodedTextureData);
+    default_tex = createTexture(16, 16, GL_RGBA8, false, false, hardcodedTextureData);
 }
 
 struct Mesh {
@@ -152,9 +152,21 @@ struct Mesh {
     int size;
 
     static Mesh create(std::vector<Vertex>& vertices, const char* obj_path) {
-        Mesh o;
+        Mesh o{};
         o.offset = vertices.size();
         o.size = loadObj(vertices, obj_path);
+        return o;
+    }
+    static Mesh xzQuad(std::vector<Vertex>& vertices) {
+        Mesh o{};
+        o.offset = vertices.size();
+        o.size = 6;
+        vertices.push_back(Vertex{ {-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {}, {0.0f, 0.0f} });
+        vertices.push_back(Vertex{ {-1.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {}, {0.0f, 1.0f} });
+        vertices.push_back(Vertex{ {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {}, {1.0f, 1.0f} });
+        vertices.push_back(Vertex{ {-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {}, {0.0f, 0.0f} });
+        vertices.push_back(Vertex{ {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {}, {1.0f, 1.0f} });
+        vertices.push_back(Vertex{ {1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {}, {1.0f, 0.0f} });
         return o;
     }
 };
