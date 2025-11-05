@@ -94,7 +94,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
-void throw_cat();
+void throw_cat(int cat_num);
 
 
 // Create a shader from vertex and fragment shader files
@@ -286,7 +286,7 @@ int main() {
 		// get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 1000.0f);
 
 		// Update the light direction
 		sun.setLightDirVec3(lightDir);
@@ -411,7 +411,7 @@ void throw_cat(int cat_num) {
 			objects.back().pretransmodel = objects.back().model;
 			objects.back().shoot_angle = 0.0f;
 			objects.back().update = [](Entity& cat, F64 curtime) {
-				cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
+				cat.model = toModel((curtime - cat.start_time) * 50, 0, 100, cat.shoot_angle) * cat.pretransmodel;
 				return (cat.model[3][1] >= 0.0f);
 				};
 
