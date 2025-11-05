@@ -13,6 +13,7 @@
 static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
+extern ma_engine engine;
 
 F32 mouse_sensitivity = 0.005;
 F64 lastx; F64 lasty;
@@ -186,6 +187,13 @@ void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
         cam.buttonPress(KeyboardAction::MOVE_DOWN, dt);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        /*ma_sound sound;
+        ma_result result;
+        result = ma_sound_init_from_file(&engine, "asset/seagull-in-the-morning-60127.wav", 0, NULL, NULL, &sound);
+        ma_sound_start(&sound);*/
+        ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
+    }
 
     // mouse input
     F64 xpos, ypos;

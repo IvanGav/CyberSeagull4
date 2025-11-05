@@ -91,6 +91,11 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool ge
         glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
     }
+    else {
+        glTextureParameteri(tex, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE); // TODO SHADOW HERE
+        glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
 
     return tex;
 }
@@ -154,25 +159,38 @@ struct Mesh {
     }
 };
 
+enum EmitterType {
+    NONEMITTER,
+    CANNON,
+    PROECTILE
+};
+
 struct Entity {
     Mesh* mesh;
     GLuint tex;
     glm::mat4 model;
+    glm::mat4 pretransmodel;
+    F64 start_time;
+    F32 shoot_angle;
+    EmitterType type;
+
 
     // You can use "default_tex" if you don't need a texture
     static Entity create(Mesh* mesh, GLuint tex) {
-        Entity o;
+        Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = glm::mat4(1.0f);
+        o.type = NONEMITTER;
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform) {
-        Entity o;
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type) {
+        Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = initial_transform;
+        o.type = type;
         return o;
     }
 
@@ -183,4 +201,6 @@ struct Entity {
     Entity copyWithModel(glm::mat4 model) {
         return Entity{ mesh, tex, model };
     }
+
+    bool (*update)(Entity& object, F64 dt);
 };
