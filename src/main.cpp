@@ -126,6 +126,7 @@ int main() {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
+	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b0,b:b1,x:b2,y:b3,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
@@ -198,8 +199,7 @@ int main() {
 		};
 		textures.skybox = createCubeTexture(cubemap_files);
 	}
-      
-  
+
   // Create static particle sources (later change this to be dynamic or something)
 
   ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
