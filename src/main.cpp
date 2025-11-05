@@ -49,6 +49,7 @@
 #include "particle.h"
 #include "game.h"
 #include "music.h"
+#include "input.h"
 
 
 
@@ -61,6 +62,9 @@ static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 std::vector<ma_sound*> liveSounds;
 
 FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
+
+
+// F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
 
 // Static data
 static int width = 1920;
@@ -76,7 +80,7 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
-void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop);
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
 
 
 // Create a shader from vertex and fragment shader files
@@ -397,10 +401,10 @@ int main() {
 		ImGui::End();
 
 
-		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
 			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
-		}
+		}*/
 
 
 		ImGui::Render();
@@ -450,12 +454,13 @@ void playWithRandomPitch(ma_engine* engine, const char *filePath) {
 	}
 }
 
-void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop) {
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
 	ma_sound* s = new ma_sound{};
 	//ma_data_source_set_looping(s, loop);
 	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_pitch(s, pitch);
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
@@ -566,6 +571,7 @@ GLFWwindow* init() {
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(glDebugOutput, nullptr);
 	glfwSetWindowSizeCallback(window, window_size_callback);
+	glfwSetKeyCallback(window, key_callback);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
 	// make OpenGL normal-style (laugh out loud)
