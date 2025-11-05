@@ -26,12 +26,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[3]);
+		throw_cat(3);
     }
     if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[4]);
+		throw_cat(4);
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[5]);
+		throw_cat(5);
     }
 
 }
