@@ -425,6 +425,28 @@ int main() {
 	cleanup(window);
 }
 
+void throw_cat(std::vector<Entity> objects, ) {
+	for (int i = 0; i < objects.size(); i++) {
+		if (objects[i].type == CANNON) {
+			objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
+				glm::rotate(
+					glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
+					(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
+				),
+				glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
+			));
+			objects.back().start_time = cur_time_sec;
+			objects.back().pretransmodel = objects.back().model;
+			objects.back().shoot_angle = 0.0f;
+			objects.back().update = [](Entity& cat, F64 curtime) {
+				cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
+				return (cat.model[3][1] >= 0.0f);
+				};
+
+			playWithRandomPitch(&engine, "asset/cat-meow-401729.wav");
+		}
+	}
+}
 
 void cleanupFinishedSounds() {
 	for (auto it = liveSounds.begin(); it != liveSounds.end();) {
