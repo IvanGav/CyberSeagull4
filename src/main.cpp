@@ -415,7 +415,6 @@ void throw_cat(int cat_num) {
 				return (cat.model[3][1] >= 0.0f);
 				};
 
-			playWithRandomPitch(&engine, "asset/cat-meow-401729.wav");
 		}
 	}
 }
