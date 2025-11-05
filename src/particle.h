@@ -93,7 +93,7 @@ void advanceParticles(F32 dt) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
 			particles[i].life -= dt;
-			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(-INFINITY); // so that when doing std::sort, it'll be the last particle
+			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(INFINITY); // so that when doing std::sort, it'll be the last particle
 			particles[i].pos += particles[i].speed * dt;
 		}
 	}
