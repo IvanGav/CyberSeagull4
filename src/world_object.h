@@ -170,6 +170,7 @@ struct Entity {
     GLuint tex;
     glm::mat4 model;
     glm::mat4 pretransmodel;
+    int cat_id = -1;
     F64 start_time;
     F32 shoot_angle;
     EmitterType type;
@@ -185,12 +186,13 @@ struct Entity {
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type) {
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type, int cat_id = -1) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = initial_transform;
         o.type = type;
+        o.cat_id = cat_id;
         return o;
     }
 

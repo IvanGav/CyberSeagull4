@@ -71,6 +71,19 @@ static int width = 1920;
 static int height = 1080;
 static GLuint vao;
 ma_engine engine;
+double cur_time_sec;
+std::vector<Entity> objects;
+static struct {
+	Mesh test_scene;
+	Mesh cat;
+} meshes;
+static struct {
+		GLuint green;
+		GLuint cat;
+		GLuint skybox;
+		GLuint banner;
+		GLuint weezer;
+} textures;
 
 // forward declarations
 GLFWwindow* init();
@@ -81,6 +94,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void throw_cat();
 
 
 // Create a shader from vertex and fragment shader files
@@ -156,21 +170,7 @@ int main() {
 
 	// Create geometry
 
-	std::vector<Entity> objects;
 	std::vector<Vertex> vertices;
-
-	struct {
-		GLuint green;
-		GLuint cat;
-		GLuint skybox;
-		GLuint banner;
-		GLuint weezer;
-	} textures;
-
-	struct {
-		Mesh test_scene;
-		Mesh cat;
-	} meshes;
 
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
@@ -187,10 +187,10 @@ int main() {
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, 1));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, 2));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, 3));
+
 
 	genTangents(vertices);
 
@@ -241,7 +241,7 @@ int main() {
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
-		double cur_time_sec = glfwGetTime();
+		cur_time_sec = glfwGetTime();
 		double dt = cur_time_sec - last_time_sec;
 		last_time_sec = cur_time_sec;
 		double lightAzimuth = glfwGetTime() / 3.0;
@@ -251,42 +251,12 @@ int main() {
 		glfwPollEvents();
 		windowFocusControl(window);
 
-		
-		bool trigger = (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS);
-
-	 
 		GLFWgamepadstate state{};
 		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 			moveFreeCamGamepad(window, cam, dt, state);
-			trigger |= (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS); 
 		}
 		else {
 			moveFreeCam(window, cam, dt);
-		}
-
-		static bool prev = false;
-		if (trigger && !prev) {
-			int size = objects.size();
-			for (int i = 0; i < size; i++) {
-				if (objects[i].type == CANNON) {
-					objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-						glm::rotate(
-							glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
-							(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-						),
-						glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
-					));
-					objects.back().start_time = cur_time_sec;
-					objects.back().pretransmodel = objects.back().model;
-					objects.back().shoot_angle = 0.0f;
-					objects.back().update = [](Entity& cat, F64 curtime) {
-						cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
-						return (cat.model[3][1] >= 0.0f);
-						};
-
-					playWithRandomPitch(&engine, "asset/cat-meow-401729.wav");
-				}
-			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
@@ -299,7 +269,6 @@ int main() {
 		}
 
 		cleanupFinishedSounds();
-		prev = trigger;
 
 		// Update particles
 
@@ -425,9 +394,9 @@ int main() {
 	cleanup(window);
 }
 
-void throw_cat(std::vector<Entity> objects, ) {
+void throw_cat(int cat_num) {
 	for (int i = 0; i < objects.size(); i++) {
-		if (objects[i].type == CANNON) {
+		if (objects[i].type == CANNON && cat_num == objects[i].cat_id) {
 			objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
 				glm::rotate(
 					glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
