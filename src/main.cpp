@@ -26,6 +26,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
 // ImGUI: gui library
 #include <imgui/imgui.h>
 #include <imgui/imgui_stdlib.h>
@@ -38,6 +39,7 @@
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
+
 
 // Static data
 static int width = 1920;
@@ -271,6 +273,7 @@ int main() {
     //glDeleteTextures(1, &tex); // TODO delete all textures here
     glDeleteProgram(program);
     glDeleteProgram(shadowShader);
+
 
     cleanup(window);
 }

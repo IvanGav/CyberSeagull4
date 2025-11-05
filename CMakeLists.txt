@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+
 project(CyberSeagull4)
 
 add_executable(CyberSeagull4
