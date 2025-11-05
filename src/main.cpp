@@ -67,6 +67,9 @@ static int height = 1080;
 static GLuint vao;
 ma_engine engine;
 
+GLuint reflection_framebuffer;
+GLuint reflection_tex, reflection_depth_tex;
+
 // forward declarations
 GLFWwindow* init();
 void cleanup(GLFWwindow* window);
@@ -76,6 +79,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playMeowWithRandomPitch(ma_engine* engine);
 void playSeagullsWithRandomPitch(ma_engine* engine);
+void initWaterFramebuffer();
 
 
 // Create a shader from vertex and fragment shader files
@@ -124,6 +128,8 @@ int main() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
 	initDefaultTexture();
@@ -132,6 +138,7 @@ int main() {
 	GLuint shadowShader = createShader("src/shader/shadow.vert");
 	GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
 	GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
+	GLuint waterProgram = createShader("src/shader/water.vert", "src/shader/water.frag");
 
 	// Create textures (and frame buffers)
 
@@ -150,36 +157,8 @@ int main() {
 	}
 
 	// create buffer objects for water reflection and refraction; later on they will be rendered to and combined to create the water texture
-	GLuint refraction_framebuffer;
-	glCreateFramebuffers(1, &refraction_framebuffer);
-	GLuint refraction_tex, refraction_depth_tex;
-	{
-		refraction_tex = createTexture(width, height, GL_RGBA8, false, false, nullptr);
-		refraction_depth_tex = createTexture(width, height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
-		glTextureParameteri(refraction_tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTextureParameteri(refraction_tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
-		glTextureParameterfv(refraction_tex, GL_TEXTURE_BORDER_COLOR, border);
-
-		glNamedFramebufferTexture(refraction_framebuffer, GL_COLOR_ATTACHMENT0, refraction_tex, 0);
-		glNamedFramebufferTexture(refraction_framebuffer, GL_DEPTH_ATTACHMENT, refraction_depth_tex, 0);
-		glBindTextureUnit(3, refraction_tex);
-	}
-	GLuint reflection_framebuffer;
 	glCreateFramebuffers(1, &reflection_framebuffer);
-	GLuint reflection_tex, reflection_depth_tex;
-	{
-		reflection_tex = createTexture(width, height, GL_RGBA8, false, false, nullptr);
-		reflection_depth_tex = createTexture(width, height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
-		glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		F32 border[]{ 9999999.0F, 9999999.0F, 9999999.0F, 9999999.0F };
-		glTextureParameterfv(reflection_tex, GL_TEXTURE_BORDER_COLOR, border);
-
-		glNamedFramebufferTexture(reflection_framebuffer, GL_COLOR_ATTACHMENT0, reflection_tex, 0);
-		glNamedFramebufferTexture(reflection_framebuffer, GL_DEPTH_ATTACHMENT, reflection_depth_tex, 0);
-		glBindTextureUnit(4, reflection_tex);
-	}
+	initWaterFramebuffer();
 
 	// Create geometry
 
@@ -191,6 +170,8 @@ int main() {
 		GLuint cat;
 		GLuint skybox;
 		GLuint banner;
+		GLuint waterNormal;
+		GLuint waterOffset;
 	} textures;
 
 	struct {
@@ -206,6 +187,9 @@ int main() {
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
 
+	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
+	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
+
 	stbi_set_flip_vertically_on_load(false);
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
@@ -217,10 +201,9 @@ int main() {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	
-	objects.push_back(Entity::create(&meshes.quad, reflection_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, 0.0f)), glm::vec3(4.0f * width / height, 4.0f, 4.0f)), NONEMITTER));
-	//Entity water = Entity::create(&meshes.quad, shadowmap, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, -2.0f, 0.0f)), glm::vec3(5.0f, 5.0f, 5.0f)), NONEMITTER);
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, -5.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.03f, 0.03f, 0.03f)), NONEMITTER));
+	//objects.push_back(Entity::create(&meshes.quad, reflection_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, 0.0f)), glm::vec3(4.0f * width / height, 4.0f, 4.0f)), NONEMITTER));
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER);
 
 	genTangents(vertices);
 
@@ -258,7 +241,7 @@ int main() {
 
 
 	DirectionalLight sun = DirectionalLight{};
-	sun.illuminateArea(10.0);
+	sun.illuminateArea(50.0);
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	double last_time_sec = 0.0;
@@ -367,20 +350,35 @@ int main() {
 		}
 
 		// Draw to water texture framebuffers
-		glBindFramebuffer(GL_FRAMEBUFFER, reflection_framebuffer);
-		glViewport(0, 0, width, height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-		//glEnable(GL_CLIP_DISTANCE0);
-
-		// janky
 		{
-			glUseProgram(program);
-
 			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = 0.0f - modified_pos.y;
 			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
-			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f,-1.0f,0.0f));
+			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
+
+			glBindFramebuffer(GL_FRAMEBUFFER, reflection_framebuffer);
+
+			glViewport(0, 0, width, height);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			glDisable(GL_DEPTH_TEST);
+			glDepthMask(GL_FALSE);
+
+			// Draw the skybox
+			glUseProgram(cubeProgram);
+
+			glBindTextureUnit(2, textures.skybox);
+
+			glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(modified_view))));
+
+			glDrawArrays(GL_TRIANGLES, 0, 36); // number of vertices in a cube; aka a magic number
+
+			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
+
+			glEnable(GL_CLIP_DISTANCE0);
+
+			// Draw scene
+			glUseProgram(program);
 
 			glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * modified_view));
 			glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
@@ -388,6 +386,7 @@ int main() {
 			glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
+			glProgramUniform1i(program, 19, true);
 
 			for (int i = 0; i < objects.size(); i++) {
 				Entity& o = objects[i];
@@ -399,9 +398,9 @@ int main() {
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
-		}
 
-		//glDisable(GL_CLIP_DISTANCE0);
+			glDisable(GL_CLIP_DISTANCE0);
+		}
 
 		// Draw to screen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -432,6 +431,7 @@ int main() {
 		glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
 		glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 		glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
+		glProgramUniform1i(program, 19, false);
 
 		for (int i = 0; i < objects.size(); i++) {
 			Entity& o = objects[i];
@@ -452,6 +452,31 @@ int main() {
         glBindTextureUnit(0, textures.green);
 
         glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+
+		// Draw water
+		glUseProgram(waterProgram);
+
+		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
+		glProgramUniformMatrix4fv(waterProgram, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
+		glProgramUniform3fv(waterProgram, 15, 1, glm::value_ptr(cam.cam.pos));
+		glProgramUniform3fv(waterProgram, 16, 1, glm::value_ptr(lightDir));
+		glProgramUniform3fv(waterProgram, 17, 1, glm::value_ptr(lightColor));
+		glProgramUniform2f(waterProgram, 18, (F32)shadowmap_height, (F32)shadowmap_width);
+		glProgramUniform1f(waterProgram, 19, cur_time_sec);
+
+		glBindTextureUnit(2, textures.waterNormal);
+		glBindTextureUnit(3, textures.waterOffset);
+
+		{
+			Entity& o = water;
+			glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+			glBindTextureUnit(0, reflection_tex);
+
+			glProgramUniformMatrix4fv(waterProgram, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+			glProgramUniformMatrix3fv(waterProgram, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+
+			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
+		}
 
 		// Draw UI
 		ImGui_ImplOpenGL3_NewFrame();
@@ -550,6 +575,17 @@ glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
 
 /* Graphics Functions */
 
+void initWaterFramebuffer() {
+	reflection_tex = createTexture(width, height, GL_RGBA8, false, false, nullptr);
+	reflection_depth_tex = createTexture(width, height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
+	glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTextureParameteri(reflection_tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glNamedFramebufferTexture(reflection_framebuffer, GL_COLOR_ATTACHMENT0, reflection_tex, 0);
+	glNamedFramebufferTexture(reflection_framebuffer, GL_DEPTH_ATTACHMENT, reflection_depth_tex, 0);
+	glBindTextureUnit(0, reflection_tex);
+}
+
 void genTangents(std::vector<Vertex>& vertices) {
 	std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
 	std::unordered_map<VertexKey, int> counts;
@@ -602,6 +638,7 @@ std::string readFile(const char* path) {
 void window_size_callback(GLFWwindow* window, int new_width, int new_height) {
 	width = new_width;
 	height = new_height;
+	initWaterFramebuffer();
 }
 
 /* Window */
