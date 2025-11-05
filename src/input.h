@@ -14,15 +14,15 @@ extern ma_engine engine;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[0]);
-		throw_cat(1);
+		throw_cat(0);
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[1]);
-		throw_cat(2);
+		throw_cat(1);
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[2]);
-		throw_cat(3);
+		throw_cat(2);
     }
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
         playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[3]);

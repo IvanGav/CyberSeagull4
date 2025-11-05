@@ -164,7 +164,7 @@ enum EmitterType {
     CANNON,
     PROECTILE
 };
-
+static int current_cat_id = 0;
 struct Entity {
     Mesh* mesh;
     GLuint tex;
@@ -186,13 +186,16 @@ struct Entity {
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type, int cat_id = -1) {
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.model = initial_transform;
         o.type = type;
-        o.cat_id = cat_id;
+        if (type == CANNON) {
+            std::cout << "Set cannon id: " << current_cat_id << "\n";
+            o.cat_id = current_cat_id++;
+        }
         return o;
     }
 
