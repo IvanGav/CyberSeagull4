@@ -41,12 +41,13 @@
 // miniaudio
 #include <miniaudio.h>
 
-// Networking
-#include "server.h"
-#include "client.h"
-
 // This project
 #include "util.h"
+
+#include "server.h"
+#include "client.h"
+#include "message.h"
+
 #include "cam.h"
 #include "debug.h"
 #include "light.h"
@@ -89,6 +90,10 @@ static struct {
 		GLuint banner;
 		GLuint weezer;
 } textures;
+servergull server(1951);
+bool is_server = false;
+U16 player_id = 0xffff;
+seaclient client;
 
 // forward declarations
 GLFWwindow* init();
@@ -99,7 +104,12 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
-void throw_cat(int cat_num);
+void throw_cat(int cat_num, bool owned = true);
+
+const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
+const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
+const U16 numcats = 6;
+const F64 distbetweencats = -5;
 
 
 // Create a shader from vertex and fragment shader files
@@ -140,7 +150,11 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 	return program;
 }
 
-int main() {
+int main(int argc, char** argv) {
+	if (argc <= 1) {
+		std::cout << "To host please pass -S\nTo connect to a host please pass ip\n";
+		return 1;
+	}
 	GLFWwindow* window = init();
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -193,17 +207,25 @@ int main() {
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	for (int i = 0; i < 6; i++) {
+		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	}
 
-	servergull s(1951);
-	s.Start();
+	std::string server_ip = argv[1];
+	if (argv[1][0] == '-' && argv[1][1] == 'S') {
+		server.Start();
+		server_ip = "127.0.0.1";
+		is_server = true;
+	}
 
-	seaclient c;
-	c.Connect("127.0.0.1", 1951);
+	client.Connect(server_ip, 1951);
+
+
+	while (player_id == 0xffff) {
+		client.check_messages();
+	}
+
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 
 
@@ -283,6 +305,11 @@ int main() {
 		}
 
 		cleanupFinishedSounds();
+
+
+		if (is_server) {
+			server.Update();
+		}
 
 		// Update particles
 
@@ -408,21 +435,16 @@ int main() {
 	cleanup(window);
 }
 
-void throw_cat(int cat_num) {
+void throw_cat(int cat_num, bool owned) {
 	for (int i = 0; i < objects.size(); i++) {
-		if (objects[i].type == CANNON && cat_num == objects[i].cat_id) {
-			objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-				glm::rotate(
-					glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
-					(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-				),
-				glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
+		if (objects[i].type == CANNON && cat_num == objects[i].cat_id && objects[i].owned == owned) {
+			objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
 			));
 			objects.back().start_time = cur_time_sec;
 			objects.back().pretransmodel = objects.back().model;
 			objects.back().shoot_angle = 0.0f;
 			objects.back().update = [](Entity& cat, F64 curtime) {
-				cat.model = toModel((curtime - cat.start_time) * 50, 0, 100, cat.shoot_angle) * cat.pretransmodel;
+				cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
 				return (cat.model[3][1] >= 0.0f);
 				};
 
