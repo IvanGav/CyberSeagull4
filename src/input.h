@@ -16,36 +16,34 @@ extern seaclient client;
 extern double cur_time_sec;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	std::vector<U8> cats_fired = {};
+	U8 cat_fired = 0xff;
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		cats_fired.push_back(0);
+		cat_fired = 0;
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		cats_fired.push_back(1);
+		cat_fired = 1;
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		cats_fired.push_back(2);
+		cat_fired = 2;
     }
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
-		cats_fired.push_back(3);
+		cat_fired = 3;
     }
     if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
-		cats_fired.push_back(4);
+		cat_fired = 4;
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
-		cats_fired.push_back(5);
+		cat_fired = 5;
     }
 
 	if (!cats_fired.empty()) {
-		std::vector<U8> message = {player_id & 0xff, (player_id >> 8) && 0xff};
+		std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
 		for (int i = 0; i < sizeof(cur_time_sec); i++) {
 			message.push_back(((*(U64*)&cur_time_sec) >> (8 * i)) & 0xff);
 		}
-		for (auto& cat_fired : cats_fired) {
-			playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_fired]);
-			throw_cat(cat_fired, true);
-			message.push_back(cat_fired);
-		}
+		playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_fired]);
+		throw_cat(cat_fired, true);
+		message.push_back(cat_fired);
 		client.send_message(PLAYER_CAT_FIRE, message);
 	}
 
