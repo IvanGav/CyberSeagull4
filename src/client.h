@@ -3,7 +3,7 @@
 #include "message.h"
 extern U16 player_id;
 
-void throw_cat(int, bool);
+void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<char> {
 	public:
 	void send_message(message_code mc, std::vector<uint8_t> msg) {
@@ -19,6 +19,7 @@ class seaclient : public cgull::net::client_interface<char> {
 
 
 	void handle_message(const cgull::net::owned_message<char>& msg) {
+		std::cout << "msg\n";
 		switch (msg.msg.header.id) {
 			case GIVE_PLAYER_ID: {
 				int index = 0;
@@ -31,7 +32,8 @@ class seaclient : public cgull::net::client_interface<char> {
 					if (fired_player_id == player_id) return;
 					F64 timestamp = message_read_f64(msg.msg, index);
 					for (; index < msg.msg.size();) {
-						throw_cat(msg.msg.body[index++], false);
+						std::cout << "throwing cat: " << (int)msg.msg.body[index] << "\n";
+						throw_cat((int)msg.msg.body[index++], false, timestamp);
 					}
 				}
 				break;

@@ -21,7 +21,12 @@ class servergull : public cgull::net::server_interface<char> {
 			}
 
 			void OnMessage(std::shared_ptr<cgull::net::connection<char>> client, cgull::net::message<char>& msg) override {
-				std::cout << "Got message: " << msg << "\n";
+				switch (msg.header.id) {
+					case PLAYER_CAT_FIRE: {
+						this->MessageAllClients(msg, client);
+					}
+					break;
+				}
 			}
 
 

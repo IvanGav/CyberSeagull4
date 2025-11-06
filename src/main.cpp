@@ -104,7 +104,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
-void throw_cat(int cat_num, bool owned = true);
+void throw_cat(int cat_num, bool owned, F64);
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 
 	client.Connect(server_ip, 1951);
 
-
+	/// Ensure we get a client id
 	while (player_id == 0xffff) {
 		client.check_messages();
 	}
@@ -310,6 +310,7 @@ int main(int argc, char** argv) {
 		if (is_server) {
 			server.Update();
 		}
+		client.check_messages();
 
 		// Update particles
 
@@ -435,14 +436,17 @@ int main(int argc, char** argv) {
 	cleanup(window);
 }
 
-void throw_cat(int cat_num, bool owned) {
+void throw_cat(int cat_num, bool owned, F64 start_time) {
+	if (start_time == 0) {
+		start_time = cur_time_sec;
+	}
 	for (int i = 0; i < objects.size(); i++) {
 		if (objects[i].type == CANNON && cat_num == objects[i].cat_id && objects[i].owned == owned) {
 			objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
 			));
 			objects.back().start_time = cur_time_sec;
 			objects.back().pretransmodel = objects.back().model;
-			objects.back().shoot_angle = 0.0f;
+			objects.back().shoot_angle = owned ? 0.0f : PI;
 			objects.back().update = [](Entity& cat, F64 curtime) {
 				cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
 				return (cat.model[3][1] >= 0.0f);
