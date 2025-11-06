@@ -41,6 +41,10 @@
 // miniaudio
 #include <miniaudio.h>
 
+// Networking
+#include "server.h"
+#include "client.h"
+
 // This project
 #include "util.h"
 #include "cam.h"
@@ -133,7 +137,7 @@ int main() {
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
 	GLuint shadowShader = createShader("src/shader/shadow.vert");
 	GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
-  GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
+	GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
 
 	// Create textures (and frame buffers)
 
@@ -185,7 +189,13 @@ int main() {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	
+
+	servergull s(1951);
+	s.Start();
+
+	seaclient c;
+	c.Connect("127.0.0.1", 1951);
+
 
 	genTangents(vertices);
 
