@@ -7,7 +7,7 @@ void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<char> {
 	public:
 	void send_message(message_code mc, std::vector<uint8_t> msg) {
-		cgull::net::message<char> m; 
+		cgull::net::message<char> m;
 		m.header = { (char)mc, (U32)msg.size() };
 		m.body = msg;
 		this->Send(m);
@@ -33,10 +33,12 @@ class seaclient : public cgull::net::client_interface<char> {
 					U16 fired_player_id = message_read_u16(msg.msg, index);
 					if (fired_player_id == player_id) return;
 					F64 timestamp = message_read_f64(msg.msg, index);
-					for (; index < msg.msg.size();) {
-						std::cout << "throwing cat: " << (int)msg.msg.body[index] << "\n";
-						throw_cat((int)msg.msg.body[index++], false, timestamp);
+					std::cout << "throwing cat: ";
+					for (; index < msg.msg.size(); index++) {
+						std::cout << (int)msg.msg.body[index] << "  ";
+						throw_cat((int)msg.msg.body[index], false, timestamp);
 					}
+					std::cout << "\n";
 				}
 				break;
 		}

@@ -151,9 +151,14 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 }
 
 int main(int argc, char** argv) {
-	if (argc <= 1) {
-		std::cout << "To host please pass -S\nTo connect to a host please pass ip\n";
-		return 1;
+	if (argc > 1) {
+		if (argv[1][0] == '-' && argv[1][1] == 'S') {
+			server.Start();
+			while (true) {
+				server.Update();
+			}
+			return 0;
+		}
 	}
 	GLFWwindow* window = init();
 	glEnable(GL_DEPTH_TEST);
@@ -213,12 +218,6 @@ int main(int argc, char** argv) {
 	}
 
 	std::string server_ip = argv[1];
-	if (argv[1][0] == '-' && argv[1][1] == 'S') {
-		server.Start();
-		server_ip = "127.0.0.1";
-		is_server = true;
-	}
-
 	client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
@@ -303,10 +302,6 @@ int main(int argc, char** argv) {
 
 		cleanupFinishedSounds();
 
-
-		if (is_server) {
-			server.Update();
-		}
 		client.check_messages();
 
 		// Update particles
@@ -445,10 +440,12 @@ void throw_cats() {
 			throw_cat(i, true);
 			message.push_back(i);
 			cats_thrown[i] = false;
+			std::cout << "sending cat: " << i << "\n";
 			send = true;
 		}
 	}
 	if (send) {
+		std::cout << "end\n";
 		client.send_message(PLAYER_CAT_FIRE, message);
 	}
 }
