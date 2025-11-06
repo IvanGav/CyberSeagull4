@@ -7,7 +7,9 @@ void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<char> {
 	public:
 	void send_message(message_code mc, std::vector<uint8_t> msg) {
-		cgull::net::message m = (cgull::net::message<char>){{mc, (U32)msg.size()}, msg};
+		cgull::net::message<char> m; 
+		m.header = { (char)mc, (U32)msg.size() };
+		m.body = msg;
 		this->Send(m);
 	}
 
