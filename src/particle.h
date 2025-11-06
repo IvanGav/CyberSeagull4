@@ -74,6 +74,10 @@ struct ParticleSource {
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
 		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off, init_color, init_size, init_life};
 	}
+	void spawnParticles(int num) {
+		for (int i = 0; i < num; i++)
+			spawnParticle();
+	}
 };
 
 // Assume that requested index will now be used
