@@ -10,41 +10,30 @@ void throw_cat(int, bool, F64 time = 0);
 F32 weezer_notes[] = { 0.79367809502, 0.89087642854, 1.f, 1.05943508007, 1.33482398807, 1.4982991247 };
 F32 weezer[] = { weezer_notes[2], weezer_notes[3], weezer_notes[2], weezer_notes[4], weezer_notes[5], weezer_notes[4], weezer_notes[2], weezer_notes[1], weezer_notes[0]/*, 1.f*/};
 I32 weezer_index = 0;
+constexpr U16 numcats = 6;
+B8 cats_thrown[numcats];
 extern ma_engine engine;
 extern U16 player_id;
 extern seaclient client;
 extern double cur_time_sec;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	U8 cat_fired = 0xff;
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		cat_fired = 0;
+		cats_thrown[0] = true;
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		cat_fired = 1;
+		cats_thrown[1] = true;
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		cat_fired = 2;
+		cats_thrown[2] = true;
     }
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
-		cat_fired = 3;
+		cats_thrown[3] = true;
     }
     if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
-		cat_fired = 4;
+		cats_thrown[4] = true;
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
-		cat_fired = 5;
+		cats_thrown[5] = true;
     }
-
-	if (cat_fired != 0xff) {
-		F64 timestep = cur_time_sec + 1;
-		std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
-		for (int i = 0; i < sizeof(timestep); i++) {
-			message.push_back(((*(U64*)&timestep) >> (8 * i)) & 0xff);
-		}
-		throw_cat(cat_fired, true);
-		message.push_back(cat_fired);
-		client.send_message(PLAYER_CAT_FIRE, message);
-	}
-
 }

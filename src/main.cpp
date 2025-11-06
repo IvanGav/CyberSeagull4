@@ -104,11 +104,11 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void throw_cats();
 void throw_cat(int cat_num, bool owned, F64);
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
-const U16 numcats = 6;
 const F64 distbetweencats = -5;
 
 
@@ -287,6 +287,8 @@ int main(int argc, char** argv) {
 		glfwPollEvents();
 		windowFocusControl(window);
 
+		throw_cats();
+
 		GLFWgamepadstate state{};
 		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 			moveFreeCamGamepad(window, cam, dt, state);
@@ -434,6 +436,22 @@ int main(int argc, char** argv) {
 	ma_engine_uninit(&engine);
 
 	cleanup(window);
+}
+
+void throw_cats() {
+	F64 timestep = cur_time_sec + 1;
+	std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
+	for (int i = 0; i < sizeof(timestep); i++) {
+		message.push_back(((*(U64*)&timestep) >> (8 * i)) & 0xff);
+	}
+	for (int i = 0; i < numcats; i++) {
+		if (cats_thrown[i]) {
+			throw_cat(i, true);
+			message.push_back(i);
+			cats_thrown[i] = false;
+		}
+	}
+	client.send_message(PLAYER_CAT_FIRE, message);
 }
 
 void throw_cat(int cat_num, bool owned, F64 start_time) {
