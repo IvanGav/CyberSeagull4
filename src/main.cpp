@@ -53,6 +53,8 @@
 #include "world_object.h"
 #include "particle.h"
 #include "game.h"
+#include "music.h"
+#include "input.h"
 
 
 
@@ -66,11 +68,27 @@ std::vector<ma_sound*> liveSounds;
 
 FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
 
+
+// F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
+
 // Static data
 static int width = 1920;
 static int height = 1080;
 static GLuint vao;
 ma_engine engine;
+double cur_time_sec;
+std::vector<Entity> objects;
+static struct {
+	Mesh test_scene;
+	Mesh cat;
+} meshes;
+static struct {
+		GLuint green;
+		GLuint cat;
+		GLuint skybox;
+		GLuint banner;
+		GLuint weezer;
+} textures;
 
 // forward declarations
 GLFWwindow* init();
@@ -79,8 +97,9 @@ std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
-void playMeowWithRandomPitch(ma_engine* engine);
-void playSeagullsWithRandomPitch(ma_engine* engine);
+void playWithRandomPitch(ma_engine* engine, const char* filePath);
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void throw_cat(int cat_num);
 
 
 // Create a shader from vertex and fragment shader files
@@ -157,20 +176,7 @@ int main() {
 
 	// Create geometry
 
-	std::vector<Entity> objects;
 	std::vector<Vertex> vertices;
-
-	struct {
-		GLuint green;
-		GLuint cat;
-		GLuint skybox;
-		GLuint banner;
-	} textures;
-
-	struct {
-		Mesh test_scene;
-		Mesh cat;
-	} meshes;
 
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
@@ -179,6 +185,7 @@ int main() {
 	textures.cat = createTextureFromImage("asset/cat.jpg");
 
 	stbi_set_flip_vertically_on_load(false);
+	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
 
@@ -187,7 +194,9 @@ int main() {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 
 	servergull s(1951);
@@ -195,6 +204,7 @@ int main() {
 
 	seaclient c;
 	c.Connect("127.0.0.1", 1951);
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 
 
 	genTangents(vertices);
@@ -236,15 +246,16 @@ int main() {
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	double last_time_sec = 0.0;
+	int songstart;
 
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
-	playSeagullsWithRandomPitch(&engine);
+	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
-		double cur_time_sec = glfwGetTime();
+		cur_time_sec = glfwGetTime();
 		double dt = cur_time_sec - last_time_sec;
 		last_time_sec = cur_time_sec;
 		double lightAzimuth = glfwGetTime() / 3.0;
@@ -254,42 +265,12 @@ int main() {
 		glfwPollEvents();
 		windowFocusControl(window);
 
-		
-		bool trigger = (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS);
-
-	 
 		GLFWgamepadstate state{};
 		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 			moveFreeCamGamepad(window, cam, dt, state);
-			trigger |= (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS); 
 		}
 		else {
 			moveFreeCam(window, cam, dt);
-		}
-
-		static bool prev = false;
-		if (trigger && !prev) {
-			int size = objects.size();
-			for (int i = 0; i < size; i++) {
-				if (objects[i].type == CANNON) {
-					objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-						glm::rotate(
-							glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
-							(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-						),
-						glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
-					));
-					objects.back().start_time = cur_time_sec;
-					objects.back().pretransmodel = objects.back().model;
-					objects.back().shoot_angle = 0.0f;
-					objects.back().update = [](Entity& cat, F64 curtime) {
-						cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
-						return (cat.model[3][1] >= 0.0f);
-						};
-
-					playMeowWithRandomPitch(&engine);
-				}
-			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
@@ -302,22 +283,21 @@ int main() {
 		}
 
 		cleanupFinishedSounds();
-		prev = trigger;
 
 		// Update particles
 
-    advanceParticles(dt);
-    particleSource.spawnParticle();
-    sortParticles(cam.cam, cam.cam.lookDir());
-    packParticles();
+		advanceParticles(dt);
+		particleSource.spawnParticle();
+		sortParticles(cam.cam, cam.cam.lookDir());
+		packParticles();
 
-    glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-    glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+		glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+		glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
     
-    // get cam matrices
+		// get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 1000.0f);
 
 		// Update the light direction
 		sun.setLightDirVec3(lightDir);
@@ -397,13 +377,18 @@ int main() {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		//ImGui::SetNextWindowBgAlpha(0.0f);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width-728.0f) / 2, height * 0.01));
+		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
 		ImGui::Begin("State", NULL, flags);
-		ImGui::Text("Time: %lf", cur_time_sec);
 		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
+
+
+		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
+			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
+		}*/
+
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -423,6 +408,27 @@ int main() {
 	cleanup(window);
 }
 
+void throw_cat(int cat_num) {
+	for (int i = 0; i < objects.size(); i++) {
+		if (objects[i].type == CANNON && cat_num == objects[i].cat_id) {
+			objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
+				glm::rotate(
+					glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
+					(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
+				),
+				glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
+			));
+			objects.back().start_time = cur_time_sec;
+			objects.back().pretransmodel = objects.back().model;
+			objects.back().shoot_angle = 0.0f;
+			objects.back().update = [](Entity& cat, F64 curtime) {
+				cat.model = toModel((curtime - cat.start_time) * 50, 0, 100, cat.shoot_angle) * cat.pretransmodel;
+				return (cat.model[3][1] >= 0.0f);
+				};
+
+		}
+	}
+}
 
 void cleanupFinishedSounds() {
 	for (auto it = liveSounds.begin(); it != liveSounds.end();) {
@@ -438,9 +444,9 @@ void cleanupFinishedSounds() {
 	}
 }
 
-void playMeowWithRandomPitch(ma_engine* engine) {
+void playWithRandomPitch(ma_engine* engine, const char *filePath) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
 		ma_sound_set_pitch(s, randomPitch(rng));
@@ -452,12 +458,13 @@ void playMeowWithRandomPitch(ma_engine* engine) {
 	}
 }
 
-void playSeagullsWithRandomPitch(ma_engine* engine) {
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/seagull-flock-sound-effect-206610.wav",
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_pitch(s, randomPitch(rng));
+		ma_sound_set_pitch(s, pitch);
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
@@ -465,6 +472,7 @@ void playSeagullsWithRandomPitch(ma_engine* engine) {
 		delete s;
 	}
 }
+
 
 /* Gameplay related functions */
 
@@ -567,6 +575,7 @@ GLFWwindow* init() {
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(glDebugOutput, nullptr);
 	glfwSetWindowSizeCallback(window, window_size_callback);
+	glfwSetKeyCallback(window, key_callback);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
 	// make OpenGL normal-style (laugh out loud)
