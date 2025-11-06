@@ -96,6 +96,9 @@
     <ClCompile Include="lib\window.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lib\miniaudio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\glm\detail\func_common.inl">
@@ -1421,5 +1424,21 @@
     <ClInclude Include="src\util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\particle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rng.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="lib\libremidi\CMakeCache.txt" />
+    <Text Include="lib\libremidi\CMakeLists.txt" />
   </ItemGroup>
 </Project>

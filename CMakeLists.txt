@@ -17,4 +17,4 @@ add_executable(CyberSeagull4
 	src/main.cpp)
 
 target_include_directories(CyberSeagull4 PUBLIC include lib/libremidi/include)
-target_link_libraries(CyberSeagull4 PUBLIC libremidi GL GLU glfw)
+target_link_libraries(CyberSeagull4 PUBLIC libremidi GLU glfw)

@@ -1,13 +1,12 @@
 #pragma once
-#include <libremidi/libremidi.cpp>
+#include <libremidi/libremidi.hpp>
 
 std::vector<char> midi_keys_velocity(128, 0);
 std::vector<char> midi_control_velocity(128, 0);
 bool midi_exists = false;
 
 void midi_callback(const libremidi::message&& message) {
-	// std::cout << "Got message status: " << (int)(message[0]) << " \n";
-	// how many bytes
+	std::cout << "Got message status: " << (int)(message[0]) << " \n";
 	if (message.size() == 0) {
 		return;
 	}
@@ -30,7 +29,9 @@ void midi_callback(const libremidi::message&& message) {
 void midi_init(libremidi::midi_in& midi) {
 		// Open a given midi port.
 		// Alternatively, to get the default port for the system:
+		std::cout << "init\n";
 		if(auto port = libremidi::midi1::in_default_port()) {
+			std::cout << "int2\n";
 			midi.open_port(*port);
 			midi_exists = true;
 		}

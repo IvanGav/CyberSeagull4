@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef _MSC_VER
+#pragma comment( lib, "Winmm.lib" )
+#endif
+
 #define NOMINMAX
 
 // GLAD: OpenGL function loader
@@ -234,6 +238,7 @@ int main() {
 	libremidi::midi_in midi{
 		libremidi::input_configuration{ .on_message = midi_callback }
 	};
+	std::cout << "midi\n";
 	if (obs.get_input_ports().size()) {
 		midi_init(midi);
 	}
