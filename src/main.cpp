@@ -183,6 +183,13 @@ int main() {
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
 
+	std::string song_name;
+	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
+
+	for (int i = 0; i < notes.size(); i++) {
+		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";
+	}
+
 
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
