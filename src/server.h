@@ -11,7 +11,9 @@ class servergull : public cgull::net::server_interface<char> {
 				bool OnClientConnect(std::shared_ptr<cgull::net::connection<char>> client) override {
 					std::cout << "Client connected\n";
 
-				cgull::net::message m = (cgull::net::message<char>){{GIVE_PLAYER_ID, message_header_sizes[GIVE_PLAYER_ID]}, (std::vector<U8>){(U8)(num_players & 0xff), (U8)((num_players >> 8) & 0xff)}};
+					cgull::net::message<char> m;
+					m.header = { GIVE_PLAYER_ID, message_header_sizes[GIVE_PLAYER_ID] };
+					m.body = { (U8)(num_players & 0xff), (U8)((num_players >> 8) & 0xff) };
 				this->MessageClient(client, m);
 				return true;
 			}

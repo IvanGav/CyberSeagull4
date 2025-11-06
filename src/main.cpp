@@ -437,6 +437,7 @@ int main(int argc, char** argv) {
 }
 
 void throw_cat(int cat_num, bool owned, F64 start_time) {
+	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 	if (start_time == 0) {
 		start_time = cur_time_sec;
 	}

@@ -37,11 +37,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
 	if (cat_fired != 0xff) {
+		F64 timestep = cur_time_sec + 1;
 		std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
-		for (int i = 0; i < sizeof(cur_time_sec); i++) {
-			message.push_back(((*(U64*)&cur_time_sec) >> (8 * i)) & 0xff);
+		for (int i = 0; i < sizeof(timestep); i++) {
+			message.push_back(((*(U64*)&timestep) >> (8 * i)) & 0xff);
 		}
-		playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_fired]);
 		throw_cat(cat_fired, true);
 		message.push_back(cat_fired);
 		client.send_message(PLAYER_CAT_FIRE, message);
