@@ -241,6 +241,8 @@ int main() {
 	ma_engine_set_volume(&engine, 0.1f);
 	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
 
+	int note1=0, note2=0;
+
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -270,6 +272,26 @@ int main() {
 				}
 			}
 		}
+
+		/*
+
+		1,00000,00000
+
+		1 one
+		10 ten
+		100 hundred
+		1000 thousand
+		10000 kleep klop
+		1,00000 quinto
+		10,00000 ten quintos
+		...
+		10000,00000 kleep klop quintos = 1,000,000,000 billion
+		45000,00000 4.5 kleep klop quintos = age of universe
+		1,00000,00000 flippo = 10,000,000,000 ten billion
+		10000,00000,00000 kleep klop flippos = 100,000,000,000,000 hundred trillion
+
+		*/
+
 
 		cleanupFinishedSounds();
 
@@ -377,6 +399,14 @@ int main() {
 			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
 			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
 		}*/
+
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowPos(ImVec2(200, 200));
+		ImGui::Begin("note multiplier", NULL, flags);
+		ImGui::SliderInt("note 1", &note1, 0, 127);
+		ImGui::SliderInt("note 2", &note2, 0, 127);
+		ImGui::Text("The note multiplier value is %f", noteMultiplier((U8)note1, (U8)note2));
+		ImGui::End();
 
 
 		ImGui::Render();
