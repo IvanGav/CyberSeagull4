@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
 	}
 
 	std::string server_ip = argv[1];
-	client.Connect(server_ip, 1951);
+	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 
@@ -267,6 +267,7 @@ int main(int argc, char** argv) {
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
 	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
+	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -410,6 +411,28 @@ int main(int argc, char** argv) {
 		}*/
 
 
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowPos(ImVec2(20, 20));
+		ImGui::Begin("ip", NULL, flags);
+		ImGui::SliderInt("val 1", &val1, 0, 256);
+		ImGui::SliderInt("val 2", &val2, 0, 256);
+		ImGui::SliderInt("val 3", &val3, 0, 256);
+		ImGui::SliderInt("val 4", &val4, 0, 256);
+		ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
+		if (!client.IsConnected()) {
+			if (ImGui::Button("Connect")) {
+				server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
+				client.Connect(server_ip, 1951);
+			}
+		}
+		else {
+			if (ImGui::Button("Disconnect")) {
+				client.Disconnect();
+			}
+		}
+		ImGui::End();
+
+
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -429,10 +452,11 @@ int main(int argc, char** argv) {
 }
 
 void throw_cats() {
-	F64 timestep = cur_time_sec + 1;
+	F64 test = cur_time_sec;
+	U64 timestep = *(U64*)&test;
 	std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
 	for (int i = 0; i < sizeof(timestep); i++) {
-		message.push_back(((*(U64*)&timestep) >> (8 * i)) & 0xff);
+		message.push_back(((timestep) >> (8 * i)) & 0xff);
 	}
 	bool send = false;
 	for (int i = 0; i < numcats; i++) {
@@ -445,6 +469,10 @@ void throw_cats() {
 		}
 	}
 	if (send) {
+		std::cout << "heyo friend im outputting the timestamp: " << std::hex << timestep << "\n" << std::endl;
+		for (int i = 0; i < sizeof(timestep); i++) {
+			std::cout << std::hex << (((timestep) >> (8 * i)) & 0xff) << "\n";
+		}
 		std::cout << "end\n";
 		client.send_message(PLAYER_CAT_FIRE, message);
 	}
