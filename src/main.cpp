@@ -221,11 +221,6 @@ int main(int argc, char** argv) {
 
 	client.Connect(server_ip, 1951);
 
-	/// Ensure we get a client id
-	while (player_id == 0xffff) {
-		client.check_messages();
-	}
-
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 
 
@@ -444,14 +439,18 @@ void throw_cats() {
 	for (int i = 0; i < sizeof(timestep); i++) {
 		message.push_back(((*(U64*)&timestep) >> (8 * i)) & 0xff);
 	}
+	bool send = false;
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
 			throw_cat(i, true);
 			message.push_back(i);
 			cats_thrown[i] = false;
+			send = true;
 		}
 	}
-	client.send_message(PLAYER_CAT_FIRE, message);
+	if (send) {
+		client.send_message(PLAYER_CAT_FIRE, message);
+	}
 }
 
 void throw_cat(int cat_num, bool owned, F64 start_time) {
