@@ -1,12 +1,21 @@
 #pragma once
-#include "cgullnet/cgull_net.h"
+#include <cgullnet/cgull_net.h>
 #include "message.h"
-
 #include <vector>
 #include <cstdint>
 
-extern uint16_t player_id;
-void throw_cat(int cat_num, bool owned, double start_time);
+extern U16 player_id;
+extern F64 cur_time_sec;
+extern std::vector<Entity> objects;
+void make_seagull(U8 cannon, F64 timestamp);
+
+F64 song_start_time;
+F64 song_spb = .20; // seconds/beat
+static constexpr U8 SHOW_NUM_BEATS = 4;
+static constexpr F64 SEAGULL_MOVE_PER_BEAT = 30;
+
+void throw_cat(int, bool, F64);
+
 class seaclient : public cgull::net::client_interface<message_code> {
 public:
     // Call this regularly in the main loop
@@ -53,11 +62,10 @@ private:
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
             uint32_t cid = 0;
-            m >> cid;                           
-            player_id = static_cast<uint16_t>(cid & 0xffff); 
+            m >> cid;
+            player_id = static_cast<uint16_t>(cid & 0xffff);
             break;
         }
-
         case message_code::PLAYER_CAT_FIRE: {
             if (m.body.size() < sizeof(uint16_t) + sizeof(double) + sizeof(uint16_t)) break;
             uint16_t who = 0; double timestamp = 0.0; uint16_t count = 0;
@@ -69,7 +77,7 @@ private:
 
             if (who != player_id) {
                 std::cout << "[CLIENT] PLAYER_CAT_FIRE from " << who
-                    << " counts=" << count << "ts=" << timestamp << "\n"; 
+                    << " counts=" << count << "ts=" << timestamp << "\n";
                 for (uint8_t c : cats) {
                     // Spawn remote projectilees
                     throw_cat((int)c, false, -1);
@@ -77,10 +85,19 @@ private:
             }
             break;
         }
+        case message_code::NEW_NOTE: {
+            //int index = 0;
+            //U8 note = msg.msg.body[index++];
+            //U8 cannon = msg.msg.body[index++];
+            //F64 timestamp = message_read_f64(msg.msg, index);
 
-
-
-
+            //make_seagull(cannon, timestamp);
+        }
+                                   break;
+        case message_code::SONG_START: {
+            song_spb = 1;
+            song_start_time = cur_time_sec;
+        }
         default:
             std::cerr << "[CLIENT] Unknown message id\n";
             break;
@@ -89,4 +106,3 @@ private:
 
     bool hello_sent_ = false;
 };
-

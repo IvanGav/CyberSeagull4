@@ -1,10 +1,10 @@
 #pragma once
-#include "cgullnet/cgull_net.h"
+#include <cgullnet/cgull_net.h>
 
-enum class message_code : uint32_t {
-    HELLO,           
-    GIVE_PLAYER_ID, 
-    PLAYER_CAT_FIRE,
-    NEW_NOTE,      
+enum class message_code : U32 {
+	HELLO,
+	GIVE_PLAYER_ID,	/// Player id
+	PLAYER_CAT_FIRE,	/// Player id, cat id, timestep
+	NEW_NOTE,			/// note value, cat id, timestep
+	SONG_START,		/// no data
 };
-
