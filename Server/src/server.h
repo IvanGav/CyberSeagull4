@@ -1,6 +1,9 @@
 #pragma once
+#include <iostream>
+#include <cstdint>
 #include "cgullnet/cgull_net.h"
 #include "message.h"
+#include "util.h"
 
 class servergull : public cgull::net::server_interface<message_code> {
 public:
@@ -10,35 +13,40 @@ public:
 protected:
     bool OnClientConnect(std::shared_ptr<connection_t> client) override {
         std::cout << "[SERVER] Client attempting connection\n";
-        return true;
+        return true; // accept all clients
     }
 
     void OnClientDisconnect(std::shared_ptr<connection_t> client) override {
-        std::cout << "[SERVER] Client disconnected ["
-            << (client ? client->GetID() : 0) << "]\n";
+        std::cout << "[SERVER] Client [" << (client ? client->GetID() : 0) << "] disconnected\n";
     }
 
-    void OnMessage(std::shared_ptr<connection_t> client,
-        cgull::net::message<message_code>& msg) override {
+    void OnMessage(std::shared_ptr<connection_t> client, cgull::net::message<message_code>& msg) override {
+        using cgull::net::message;
+
         switch (msg.header.id) {
         case message_code::HELLO: {
-            cgull::net::message<message_code> m;
-            m.header.id = message_code::GIVE_PLAYER_ID;
-            uint32_t cid = client ? client->GetID() : 0;
-            m << cid;
-            this->MessageClient(client, m);
-            std::cout << "[SERVER] Sent player id " << cid << " to client\n";
+            std::cout << "[SERVER] HELLO from client [" << (client ? client->GetID() : 0) << "]\n";
+            message<message_code> reply;
+            reply.header.id = message_code::GIVE_PLAYER_ID;
+            U16 assigned = NextPlayerId();
+            reply << assigned;
+            MessageClient(client, reply);
             break;
         }
 
         case message_code::PLAYER_CAT_FIRE: {
-            this->MessageAllClients(msg, client);
-            std::cout << "[SERVER] Relayed PLAYER_CAT_FIRE from ["
-                << (client ? client->GetID() : 0) << "]\n";
+            // Fan-out to all clients, including sender
+            MessageAllClients(msg);
             break;
         }
 
         case message_code::NEW_NOTE: {
+            MessageAllClients(msg);
+            break;
+        }
+
+        case message_code::SONG_START: {
+            MessageAllClients(msg);
             break;
         }
 
@@ -47,5 +55,12 @@ protected:
             break;
         }
     }
-};
 
+private:
+    U16 NextPlayerId() {
+        // Very simple allocator, wraps around if needed
+        return ++last_player_id_;
+    }
+
+    U16 last_player_id_ = 0;
+};

@@ -1,7 +1,4 @@
 // Headless server entrypoint for Cyber Seagull
-// Starts the cgull server and relays gameplay messages.
-// Build as its own executable.
-
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -17,24 +14,23 @@ int main(int argc, char** argv) {
             if (p > 0 && p < 65536) port = static_cast<uint16_t>(p);
         }
         catch (...) {
-            std::cout << "[SERVER] Invalid port arg, using default 1951\n";
+            std::cerr << "[SERVER] Invalid port arg, falling back to 1951\n";
         }
     }
 
     servergull server(port);
     if (!server.Start()) {
-        std::cerr << "[SERVER] Failed to start on port " << port << "\n";
+        std::cerr << "[SERVER] Failed to start listener on port " << port << "\n";
         return 1;
     }
 
     std::cout << "[SERVER] Listening on port " << port << "\n";
-    // Run until stopped (Ctrl+C)
+    // Run until killed
     while (true) {
-        server.Update(); // processes incoming/outgoing messages
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        server.Update(-1, true); // block until a message then process
     }
 
-    // Not reached
     server.Stop();
     return 0;
 }
+
