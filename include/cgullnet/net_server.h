@@ -114,7 +114,11 @@ namespace cgull
 					client.reset();
 					m_deqConnections.erase(
 						std::remove(m_deqConnections.begin(), m_deqConnections.end(), client), m_deqConnections.end());
-					
+					// Notify once and erase the actual stored element
+					OnClientDisconnect(client);
+					auto it = std::find(m_deqConnections.begin(), m_deqConnections.end(), client);
+					if (it != m_deqConnections.end())
+						m_deqConnections.erase(it);
 				}
 
 			}
@@ -124,7 +128,7 @@ namespace cgull
 			{
 				bool bInvalidClientExists = false;
 
-				for (auto client : m_deqConnections)
+				for (auto& client : m_deqConnections)
 				{
 					// Check client is connected... 
 					if (client && client->IsConnected())
@@ -138,6 +142,8 @@ namespace cgull
 						// The client couldnt be contacted, so assume it has
 						// disconnected.
 						OnClientDisconnect(client);
+						client.reset();
+						if (client) OnClientDisconnect(client);
 						client.reset();
 						bInvalidClientExists = true; 
 					}
