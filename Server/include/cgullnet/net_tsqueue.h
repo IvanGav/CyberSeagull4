@@ -1,84 +1,96 @@
 #pragma once
 #include "net_common.h"
 
-namespace cgull
-{
-	namespace net
-	{
-		template<typename T>
-		class tsqueue
-		{
-		public: 
-			tsqueue() = default;
-			tsqueue(const tsqueue<T>&) = delete;
-			virtual ~tsqueue() { clear(); }
+namespace cgull {
+    namespace net {
 
-		public:
-			// Returns and maintains item at front of Queue
-			const T& front()
-			{
-				std::scoped_lock lock(muxQueue);
-				return deqQueue.front();
-			}
+        template<typename T>
+        class tsqueue
+        {
+        public:
+            tsqueue() = default;
+            tsqueue(const tsqueue<T>&) = delete;
+            virtual ~tsqueue() { clear(); }
 
-			// Returns and maintains item at back of Queue
-			const T& back()
-			{
-				std::scoped_lock lock(muxQueue);
-				return deqQueue.back();
-			}
+        public:
+            const T& front()
+            {
+                std::scoped_lock lock(muxQueue);
+                return deqQueue.front();
+            }
 
-			// Adds an item to back of Queue
-			void push_back(const T& item)
-			{
-				std::scoped_lock lock(muxQueue);
-				deqQueue.emplace_back(item);
-			}
+            const T& back()
+            {
+                std::scoped_lock lock(muxQueue);
+                return deqQueue.back();
+            }
 
-			/// Returns true if Queue has no items
-			bool empty()
-			{
-				std::scoped_lock lock(muxQueue);
-				return deqQueue.empty();
-			}
+            void push_back(const T& item)
+            {
+                std::scoped_lock lock(muxQueue);
+                deqQueue.emplace_back(item);
+                std::unique_lock<std::mutex> ul(muxBlocking);
+                cvBlocking.notify_one();
+            }
 
-			// Returns number of items in Queue
-			size_t count()
-			{
-				std::scoped_lock lock(muxQueue);
-				return deqQueue.size();
-			}
+            void push_front(const T& item)
+            {
+                std::scoped_lock lock(muxQueue);
+                deqQueue.emplace_front(item);
+                std::unique_lock<std::mutex> ul(muxBlocking);
+                cvBlocking.notify_one();
+            }
 
-			// Clears Queue
-			void clear()
-			{
-				std::scoped_lock lock(muxQueue);
-				deqQueue.clear();
-			}
+            bool empty()
+            {
+                std::scoped_lock lock(muxQueue);
+                return deqQueue.empty();
+            }
 
-			// Removes and returns items from front of Queue
-			T pop_front()
-			{
-				std::scoped_lock lock(muxQueue);
-				auto t = std::move(deqQueue.front());
-				deqQueue.pop_front();
-				return t;
-			}
+            size_t count()
+            {
+                std::scoped_lock lock(muxQueue);
+                return deqQueue.size();
+            }
 
-			// Removes and returns item from bakc of Queue
-			T pop_back()
-			{
-				std::scoped_lock lock(muxQueue);
-				auto t = std::move(deqQueue.back());
-				deqQueue.pop_back();
-				return t;
-			}
+            void clear()
+            {
+                std::scoped_lock lock(muxQueue);
+                deqQueue.clear();
+            }
 
+            T pop_front()
+            {
+                std::scoped_lock lock(muxQueue);
+                auto t = std::move(deqQueue.front());
+                deqQueue.pop_front();
+                return t;
+            }
 
+            T pop_back()
+            {
+                std::scoped_lock lock(muxQueue);
+                auto t = std::move(deqQueue.back());
+                deqQueue.pop_back();
+                return t;
+            }
 
-		protected:
-			std::mutex muxQueue;
-			std::deque<T> deqQueue;
-		};
-	}
-}
+            void wait()
+            {
+                while (empty())
+                {
+                    std::unique_lock<std::mutex> ul(muxBlocking);
+                    cvBlocking.wait(ul);
+                }
+            }
+
+        private:
+            std::mutex muxQueue;
+            std::deque<T> deqQueue;
+            std::condition_variable cvBlocking;
+            std::mutex muxBlocking;
+        };
+
+    }
+} // namespace cgull::net
+
