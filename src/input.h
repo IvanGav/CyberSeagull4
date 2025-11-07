@@ -41,10 +41,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         m.msg.header = { SONG_START, 0 };
         client.handle_message(m);
         m.msg.body = { 81, 1 };
-        F64 timestep__ = cur_time_sec + 4;
+        F64 timestep__ = 5;
         U64 timestep = *(U64*)&timestep__;
-        for (int i = 0; i < sizeof(cur_time_sec); i++) {
-            std::cout << std::hex << (((timestep) >> (8 * i)) & 0xff) << "\n";
+        for (int i = 0; i < sizeof(timestep); i++) {
+            m.msg.body.push_back((((timestep) >> (8 * i)) & 0xff));
         }
         m.msg.header = { NEW_NOTE, (U32)m.msg.body.size() };
         client.handle_message(m);

@@ -47,6 +47,7 @@
 
 // This project
 #include "util.h"
+#include "world_object.h"
 
 #include "server.h"
 #include "client.h"
@@ -55,7 +56,6 @@
 #include "cam.h"
 #include "debug.h"
 #include "light.h"
-#include "world_object.h"
 #include "particle.h"
 #include "game.h"
 #include "music.h"
@@ -127,10 +127,28 @@ const F64 distbetweencats = -5.0; // offset to catstartingpos's x axis
 const U32 catnumber = 6;
 
 glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
-    if (friendly)
-        return glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z));
-    else
-        return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	if (friendly)
+		return glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z));
+	else
+		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
+void make_seagull(U8 cannon, F64 timestamp) {
+	// create an entity a while away from the cannon and move towards the cannon
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE));
+	objects.back().start_time = timestamp;
+	objects.back().pretransmodel = objects.back().model;
+	objects.back().update = [](Entity& cat, F64 curtime) {
+		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
+
+		if(beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		else {
+			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0));
+		}
+
+		//return (cat.model[3][1] >= 0.0f);
+		return beats_left < 0xf0;
+	};
 }
 // Create a shader from vertex and fragment shader files
 

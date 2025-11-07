@@ -20,7 +20,7 @@ U16 message_read_u16(const cgull::net::message<char>& msg, int& index) {
 F64 message_read_f64(const cgull::net::message<char>& msg, int& index) {
 	U64 out = msg.body[index++];
 	for (int i = 1; i < 8; i++) {
-		out |= (((U64)msg.body[index++]) << (8 * i));
+		out |= (((U64)msg.body[index++]) << (U64)(8 * i));
 	}
 	return *(F64*)&out;
 }
