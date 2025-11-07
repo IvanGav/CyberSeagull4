@@ -1,6 +1,7 @@
 #pragma once
 #include <libremidi/libremidi.hpp>
 #include <libremidi/reader.hpp>
+#include <fstream>
 
 std::vector<char> midi_keys_velocity(128, 0);
 std::vector<char> midi_control_velocity(128, 0);
