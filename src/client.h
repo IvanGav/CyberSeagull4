@@ -90,10 +90,9 @@ private:
             //U8 note = msg.msg.body[index++];
             //U8 cannon = msg.msg.body[index++];
             //F64 timestamp = message_read_f64(msg.msg, index);
-
             //make_seagull(cannon, timestamp);
         }
-                                   break;
+        break;
         case message_code::SONG_START: {
             song_spb = 1;
             song_start_time = cur_time_sec;
