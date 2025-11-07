@@ -107,25 +107,3 @@ private:
 
     bool hello_sent_ = false;
 };
-
-// NOT A CLIENT - A SERVER CODE SNIPPET
-
-//void server_send_seagulls() {
-//    // assume a global variable `track`; time should be tracked with `track.tick(dt);` every tick
-//
-//    while (track.next_note_in() < 2.0) {
-//        cgull::net::message<message_code> m;
-//        m.header.id = message_code::NEW_NOTE;
-//
-//        F64 timestamp = track.next_note().time;
-//        U8 note = track.next_note().note;
-//        U8 cannon = track.play_note();
-//
-//        // Pack in reverse: last thing you want to read goes in first
-//        m << timestamp;
-//        m << cannon;
-//        m << note;
-//
-//        this->Send(m);
-//    }
-//}
