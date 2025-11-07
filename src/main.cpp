@@ -121,11 +121,18 @@ void throw_cat(int cat_num, bool owned, F64);
 void initWaterFramebuffer();
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
-const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
-const F64 distbetweencats = -5;
+const glm::vec3 catstartingpos(10.0, 0.0, 10.0);
+const F64 distbetweencats = -5.0; // offset to catstartingpos's x axis
+const U32 catnumber = 6;
 
-
+glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
+    if (friendly)
+        return glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z));
+    else
+        return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+}
 // Create a shader from vertex and fragment shader files
+
 GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fs = 0;
@@ -244,8 +251,8 @@ int main(int argc, char** argv) {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	for (int i = 0; i < 6; i++) {
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+        objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+        objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	}
 
 	std::string server_ip;

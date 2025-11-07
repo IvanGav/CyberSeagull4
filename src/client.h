@@ -2,6 +2,9 @@
 #include <cgullnet/cgull_net.h>
 #include "message.h"
 extern U16 player_id;
+extern F64 cur_time_sec;
+
+F64 song_start_time;
 
 void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<char> {
@@ -36,11 +39,33 @@ class seaclient : public cgull::net::client_interface<char> {
 					std::cout << "throwing cat: ";
 					for (; index < msg.msg.size(); index++) {
 						std::cout << (int)msg.msg.body[index] << "  ";
-						throw_cat((int)msg.msg.body[index], false, timestamp);
+						throw_cat((int)msg.msg.body[index], false, song_start_time + timestamp);
 					}
 					std::cout << "\n";
 				}
 				break;
+			case NEW_NOTE: {
+				int index = 0;
+				U8 note = msg.msg.body[index++];
+				U8 cannon = msg.msg.body[index++];
+				F64 timestamp = message_read_f64(msg.msg, index);
+				/*
+				objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
+												 ));
+				objects.back().start_time = cur_time_sec;
+				objects.back().pretransmodel = objects.back().model;
+				objects.back().shoot_angle = owned ? 0.0f : PI;
+				objects.back().update = [](Entity& cat, F64 curtime) {
+					cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
+					return (cat.model[3][1] >= 0.0f);
+				};
+				*/
+			}
+			break;
+			case SONG_START: {
+				song_start_time = cur_time_sec;
+			}
+			break;
 		}
 	}
 };
