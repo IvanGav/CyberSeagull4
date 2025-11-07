@@ -16,6 +16,8 @@
 // miniaudio
 #include <miniaudio.h>
 
+#include <cmath>
+
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
 extern ma_engine engine;
 
@@ -29,4 +31,33 @@ void songSelect(GLuint display, const char* filepath, ImVec2 dim) {
 		ImGui::Image((ImTextureID)display, dim);
 		ImGui::End();
 	}
+}
+
+/*
+
+1,00000,00000
+
+1 one
+10 ten
+100 hundred
+1000 thousand
+10000 kleep klop
+1,00000 quinto
+10,00000 ten quintos
+...
+10000,00000 kleep klop quintos = 1,000,000,000 billion
+45000,00000 4.5 kleep klop quintos = age of universe
+1,00000,00000 flippo = 10,000,000,000 ten billion
+10000,00000,00000 kleep klop flippos = 100,000,000,000,000 hundred trillion
+
+*/
+
+F32 noteMultiplier(U8 start, U8 end) {
+	F32 freq1 = 440.f * pow((double)2, (start - 57) / 12.f), freq2 = 440.f * pow((double)2, (end - 57) / 12.f);
+	return freq2 / freq1;
+}
+
+F32 noteMultiplier(F32 start, U8 end) {
+	F32 freq2 = 440.f * pow((double)2, (end - 57) / 12.f);
+	return freq2 / start;
 }
