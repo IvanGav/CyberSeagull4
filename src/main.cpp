@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <time.h>
 
+extern "C"
+{
+__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 #ifdef _MSC_VER
 #pragma comment( lib, "Winmm.lib" )
 #endif
@@ -580,6 +586,7 @@ int main(int argc, char** argv) {
 		ImGui::SliderInt("note 1", &note1, 0, 127);
 		ImGui::SliderInt("note 2", &note2, 0, 127);
 		ImGui::Text("The note multiplier value is %f", noteMultiplier((U8)note1, (U8)note2));
+		ImGui::Text("Frame time: %f", dt * 1000.0);
 		ImGui::End();
 
 
