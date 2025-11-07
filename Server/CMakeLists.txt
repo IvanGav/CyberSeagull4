@@ -7,7 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(CyberSeagull4Server
-	src/Server.cpp)
+        src/Server.cpp)
 
-target_include_directories(CyberSeagull4Server PUBLIC include)
-target_link_libraries(CyberSeagull4Server PRIVATE libremid)
+target_include_directories(CyberSeagull4Server PUBLIC include src)
+
+target_compile_definitions(CyberSeagull4Server PRIVATE
+  LIBREMIDI_HEADER_ONLY=1
+)
+target_link_libraries(CyberSeagull4Server)
+
+
+
+
