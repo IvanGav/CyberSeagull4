@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	bool menu_open = true;
-	char buf[64];
+	static char buf[64];
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
