@@ -1,46 +1,92 @@
 #pragma once
-#include <cgullnet/cgull_net.h>
+#include "cgullnet/cgull_net.h"
 #include "message.h"
-extern U16 player_id;
 
-void throw_cat(int, bool, F64);
-class seaclient : public cgull::net::client_interface<char> {
-	public:
-	void send_message(message_code mc, std::vector<uint8_t> msg) {
-		cgull::net::message<char> m;
-		m.header = { (char)mc, (U32)msg.size() };
-		m.body = msg;
-		this->Send(m);
-	}
+#include <vector>
+#include <cstdint>
 
-	void check_messages() {
-		while (!this->Incoming().empty()) {
-			handle_message(this->Incoming().pop_front());
-		}
-	}
+extern uint16_t player_id;
+void throw_cat(int cat_num, bool owned, double start_time);
+class seaclient : public cgull::net::client_interface<message_code> {
+public:
+    // Call this regularly in the main loop
+    void check_messages() {
+        // If not connected, make sure we will handshake next time
+        if (!this->IsConnected())
+        {
+            hello_sent_ = false;
+            return;
+        };
+
+        // If connected but dont have an id, ask server
+        if (!hello_sent_ && player_id == 0xffff)
+        {
+            cgull::net::message<message_code> hello;
+            hello.header.id = message_code::HELLO;
+            this->Send(hello);
+            hello_sent_ = true;
+        }
+
+        while (!this->Incoming().empty()) {
+            handle_message(this->Incoming().pop_front());
+        }
+    }
+
+    // Optional helper to send a "cat fire" event 
+    void send_player_cat_fire(uint16_t who, double timestamp, const std::vector<uint8_t>& cats) {
+        cgull::net::message<message_code> m;
+        m.header.id = message_code::PLAYER_CAT_FIRE;
+
+        // Pack in reverse: last thing you want to read goes in first
+        for (int i = (int)cats.size() - 1; i >= 0; --i) m << cats[(size_t)i];
+        m << static_cast<uint16_t>(cats.size());
+        m << timestamp;
+        m << who;
+
+        this->Send(m);
+    }
+
+private:
+    void handle_message(const cgull::net::owned_message<message_code>& owned) {
+        auto m = owned.msg;
+
+        switch (m.header.id) {
+        case message_code::GIVE_PLAYER_ID: {
+            uint32_t cid = 0;
+            m >> cid;                           
+            player_id = static_cast<uint16_t>(cid & 0xffff); 
+            break;
+        }
+
+        case message_code::PLAYER_CAT_FIRE: {
+            if (m.body.size() < sizeof(uint16_t) + sizeof(double) + sizeof(uint16_t)) break;
+            uint16_t who = 0; double timestamp = 0.0; uint16_t count = 0;
+            m >> who; m >> timestamp; m >> count;
+
+            if (m.body.size() < (size_t)count) break;
+            std::vector<uint8_t> cats(count);
+            for (uint16_t i = 0; i < count; ++i) m >> cats[i];
+
+            if (who != player_id) {
+                std::cout << "[CLIENT] PLAYER_CAT_FIRE from " << who
+                    << " counts=" << count << "ts=" << timestamp << "\n"; 
+                for (uint8_t c : cats) {
+                    // Spawn remote projectilees
+                    throw_cat((int)c, false, -1.0);
+                }
+            }
+            break;
+        }
 
 
-	void handle_message(const cgull::net::owned_message<char>& msg) {
-		std::cout << "msg\n";
-		switch (msg.msg.header.id) {
-			case GIVE_PLAYER_ID: {
-				int index = 0;
-				player_id = message_read_u16(msg.msg, index);
-				}
-				break;
-			case PLAYER_CAT_FIRE: {
-					int index = 0;
-					U16 fired_player_id = message_read_u16(msg.msg, index);
-					if (fired_player_id == player_id) return;
-					F64 timestamp = message_read_f64(msg.msg, index);
-					std::cout << "throwing cat: ";
-					for (; index < msg.msg.size(); index++) {
-						std::cout << (int)msg.msg.body[index] << "  ";
-						throw_cat((int)msg.msg.body[index], false, timestamp);
-					}
-					std::cout << "\n";
-				}
-				break;
-		}
-	}
+
+
+        default:
+            std::cerr << "[CLIENT] Unknown message id\n";
+            break;
+        }
+    }
+
+    bool hello_sent_ = false;
 };
+
