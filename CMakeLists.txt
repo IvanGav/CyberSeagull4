@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
+
 project(CyberSeagull4)
+
+add_subdirectory(lib/libremidi)
 
 add_executable(CyberSeagull4
 	lib/glad.c
@@ -14,5 +17,5 @@ add_executable(CyberSeagull4
 	lib/stb_image.c
 	src/main.cpp)
 
-target_include_directories(CyberSeagull4 PUBLIC include)
-target_link_libraries(CyberSeagull4 GL GLU glfw)
+target_include_directories(CyberSeagull4 PUBLIC include lib/libremidi/include)
+target_link_libraries(CyberSeagull4 PUBLIC libremidi GLU glfw)

@@ -102,10 +102,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;LIBREMIDI_HEADER_ONLY=1;LIBREMIDI_WINMM=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/lib/libremidi/include;$(ProjectDir)/include</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -612,10 +612,15 @@
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\light.h" />
+    <ClInclude Include="src\music.h" />
     <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\rng.h" />
     <ClInclude Include="src\util.h" />
     <ClInclude Include="src\world_object.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="lib\libremidi\CMakeCache.txt" />
+    <Text Include="lib\libremidi\CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
