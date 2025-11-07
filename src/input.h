@@ -6,7 +6,6 @@
 #include "message.h"
 
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
-void throw_cat(int, bool, F64 time = 0);
 F32 weezer_notes[] = { 0.79367809502, 0.89087642854, 1.f, 1.05943508007, 1.33482398807, 1.4982991247 };
 F32 weezer[] = { weezer_notes[2], weezer_notes[3], weezer_notes[2], weezer_notes[4], weezer_notes[5], weezer_notes[4], weezer_notes[2], weezer_notes[1], weezer_notes[0]/*, 1.f*/};
 I32 weezer_index = 0;
@@ -35,5 +34,19 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
 		cats_thrown[5] = true;
+    }
+
+    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+        cgull::net::owned_message<char> m;
+        m.msg.header = { SONG_START, 0 };
+        client.handle_message(m);
+        m.msg.body = { 81, 1 };
+        F64 timestep__ = cur_time_sec + 4;
+        U64 timestep = *(U64*)&timestep__;
+        for (int i = 0; i < sizeof(cur_time_sec); i++) {
+            std::cout << std::hex << (((timestep) >> (8 * i)) & 0xff) << "\n";
+        }
+        m.msg.header = { NEW_NOTE, (U32)m.msg.body.size() };
+        client.handle_message(m);
     }
 }

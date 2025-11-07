@@ -5,6 +5,10 @@ extern U16 player_id;
 extern F64 cur_time_sec;
 
 F64 song_start_time;
+F64 song_spb; // seconds/beat
+static constexpr U8 SHOW_NUM_BEATS = 4;
+static constexpr F64 SEAGULL_MOVE_PER_BEAT = 5.0;
+
 
 void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<char> {
@@ -49,17 +53,21 @@ class seaclient : public cgull::net::client_interface<char> {
 				U8 note = msg.msg.body[index++];
 				U8 cannon = msg.msg.body[index++];
 				F64 timestamp = message_read_f64(msg.msg, index);
-				/*
-				objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
-												 ));
-				objects.back().start_time = cur_time_sec;
+				
+				// TODO will not compile
+				// create an entity a while away from the cannon and move towards the cannon
+				objects.push_back(Entity::create(&meshes.cat, textures.cat, get_cannon_pos(cannon, true), PROECTILE));
+				objects.back().start_time = timestamp;
 				objects.back().pretransmodel = objects.back().model;
-				objects.back().shoot_angle = owned ? 0.0f : PI;
 				objects.back().update = [](Entity& cat, F64 curtime) {
-					cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
-					return (cat.model[3][1] >= 0.0f);
+					U8 beats_left = glm::floor((song_start_time + cat.start_time - cur_time_sec) / song_spb);
+
+					if(beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(INFINITY));
+					else cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * beats_left));
+					
+					//return (cat.model[3][1] >= 0.0f);
+					return true;
 				};
-				*/
 			}
 			break;
 			case SONG_START: {

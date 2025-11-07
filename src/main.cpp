@@ -75,7 +75,8 @@ std::vector<ma_sound*> liveSounds;
 
 FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
 
-
+Entity* cannons_friend[6];
+Entity* cannons_enemy[6];
 // F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
 
 // Static data
@@ -117,7 +118,7 @@ void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
 void throw_cats();
-void throw_cat(int cat_num, bool owned, F64);
+void throw_cat(int cat_num, bool owned, F64 = 0.0);
 void initWaterFramebuffer();
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
@@ -252,7 +253,9 @@ int main(int argc, char** argv) {
 
 	for (int i = 0; i < 6; i++) {
         objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		cannons_friend[i] = &objects.back();
         objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+		cannons_enemy[i] = &objects.back();
 	}
 
 	std::string server_ip;
@@ -663,16 +666,16 @@ void throw_cat(int cat_num, bool owned, F64 start_time) {
 		start_time = cur_time_sec;
 	}
 	for (int i = 0; i < objects.size(); i++) {
+		// TODO from now on use `cannon_friend` or `cannon_enemy`
 		if (objects[i].type == CANNON && cat_num == objects[i].cat_id && objects[i].owned == owned) {
-			objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
-			));
+			objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE));
 			objects.back().start_time = cur_time_sec;
 			objects.back().pretransmodel = objects.back().model;
 			objects.back().shoot_angle = owned ? 0.0f : PI;
 			objects.back().update = [](Entity& cat, F64 curtime) {
 				cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
 				return (cat.model[3][1] >= 0.0f);
-				};
+			};
 
 		}
 	}
