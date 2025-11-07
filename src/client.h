@@ -1,6 +1,8 @@
 #pragma once
 #include <cgullnet/cgull_net.h>
 #include "message.h"
+#include "util.h"
+#include "world_object.h"
 #include <vector>
 #include <cstdint>
 
@@ -42,13 +44,13 @@ public:
     }
 
     // Optional helper to send a "cat fire" event 
-    void send_player_cat_fire(uint16_t who, double timestamp, const std::vector<uint8_t>& cats) {
+    void send_player_cat_fire(U16 who, double timestamp, const std::vector<U8>& cats) {
         cgull::net::message<message_code> m;
         m.header.id = message_code::PLAYER_CAT_FIRE;
 
         // Pack in reverse: last thing you want to read goes in first
-        for (int i = (int)cats.size() - 1; i >= 0; --i) m << cats[(size_t)i];
-        m << static_cast<uint16_t>(cats.size());
+        for (int i = (int)cats.size() - 1; i >= 0; --i) m << cats[(U32)i];
+        m << static_cast<U16>(cats.size());
         m << timestamp;
         m << who;
 
@@ -61,36 +63,36 @@ private:
 
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
-            uint32_t cid = 0;
+            U32 cid = 0;
             m >> cid;
-            player_id = static_cast<uint16_t>(cid & 0xffff);
+            player_id = static_cast<U16>(cid & 0xffff);
             break;
         }
         case message_code::PLAYER_CAT_FIRE: {
-            if (m.body.size() < sizeof(uint16_t) + sizeof(double) + sizeof(uint16_t)) break;
-            uint16_t who = 0; double timestamp = 0.0; uint16_t count = 0;
+            if (m.body.size() < sizeof(U16) + sizeof(F64) + sizeof(U16)) break;
+            U16 who = 0; F64 timestamp = 0.0; U16 count = 0;
             m >> who; m >> timestamp; m >> count;
 
-            if (m.body.size() < (size_t)count) break;
-            std::vector<uint8_t> cats(count);
-            for (uint16_t i = 0; i < count; ++i) m >> cats[i];
+            if (m.body.size() < (U32)count) break;
+            std::vector<U8> cats(count);
+            for (U16 i = 0; i < count; ++i) m >> cats[i];
 
             if (who != player_id) {
                 std::cout << "[CLIENT] PLAYER_CAT_FIRE from " << who
                     << " counts=" << count << "ts=" << timestamp << "\n";
-                for (uint8_t c : cats) {
+                for (U8 c : cats) {
                     // Spawn remote projectilees
-                    throw_cat((int)c, false, -1);
+                    throw_cat((U32)c, false, -1);
                 }
             }
             break;
         }
         case message_code::NEW_NOTE: {
-            //int index = 0;
-            //U8 note = msg.msg.body[index++];
-            //U8 cannon = msg.msg.body[index++];
-            //F64 timestamp = message_read_f64(msg.msg, index);
-            //make_seagull(cannon, timestamp);
+            if (m.body.size() < sizeof(U8) + sizeof(F64) + sizeof(U8)) break;
+            int index = 0;
+            U8 note; U8 cannon; F64 timestamp;
+            m >> note; m >> cannon; m >> timestamp;
+            make_seagull(cannon, timestamp);
         }
         break;
         case message_code::SONG_START: {
@@ -105,3 +107,25 @@ private:
 
     bool hello_sent_ = false;
 };
+
+// NOT A CLIENT - A SERVER CODE SNIPPET
+
+//void server_send_seagulls() {
+//    // assume a global variable `track`; time should be tracked with `track.tick(dt);` every tick
+//
+//    while (track.next_note_in() < 2.0) {
+//        cgull::net::message<message_code> m;
+//        m.header.id = message_code::NEW_NOTE;
+//
+//        F64 timestamp = track.next_note().time;
+//        U8 note = track.next_note().note;
+//        U8 cannon = track.play_note();
+//
+//        // Pack in reverse: last thing you want to read goes in first
+//        m << timestamp;
+//        m << cannon;
+//        m << note;
+//
+//        this->Send(m);
+//    }
+//}

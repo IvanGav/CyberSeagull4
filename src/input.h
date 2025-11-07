@@ -21,37 +21,21 @@ extern double cur_time_sec;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		cats_thrown[0] = true;
+        cats_thrown[0] = true;
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		cats_thrown[1] = true;
+        cats_thrown[1] = true;
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		cats_thrown[2] = true;
+        cats_thrown[2] = true;
     }
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
-		cats_thrown[3] = true;
+        cats_thrown[3] = true;
     }
     if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
-		cats_thrown[4] = true;
+        cats_thrown[4] = true;
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
-		cats_thrown[5] = true;
+        cats_thrown[5] = true;
     }
-
-    /*
-    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-    cgull::net::owned_message<char> m;
-    m.msg.header = { message_code::SONG_START, 0 };
-    client.handle_message(m);
-    m.msg.body = { 81, 1 };
-    F64 timestep__ = 5;
-    U64 timestep = *(U64*)&timestep__;
-    for (int i = 0; i < sizeof(timestep); i++) {
-        m.msg.body.push_back((((timestep) >> (8 * i)) & 0xff));
-    }
-    m.msg.header = { message_code::NEW_NOTE, (U32)m.msg.body.size() };
-    client.handle_message(m);
-    }
-    */
 }

@@ -1,5 +1,5 @@
 // Headless server entrypoint for Cyber Seagull
-// Starts the cgull server and relays gameplay messages.
+// S8tarts the cgull server and relays gameplay messages.
 // Build as its own executable.
 
 #include <iostream>
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    // Not reached
+        // Not reached
     server.Stop();
     return 0;
 }
