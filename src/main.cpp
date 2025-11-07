@@ -118,6 +118,7 @@ void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
 void throw_cats();
 void throw_cat(int cat_num, bool owned, F64);
+void initWaterFramebuffer();
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
