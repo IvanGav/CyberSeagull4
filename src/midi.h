@@ -130,3 +130,96 @@ std::vector<midi_note> midi_parse_file(std::string filename, std::string& song_n
 
 	return notes;
 }
+
+/*
+// midi_track usage guide:
+// I didn't want to put even more merge conflicts to main.cpp
+
+
+U32 lanes = 6; // we have 6 cannons
+std::string track_name;
+midi_track track = midi_track::create(midi_parse_file("example.midi", track_name), lanes);
+
+{
+	...
+	// game loop
+	
+	track.tick(dt);
+	
+	// while the next note needs to be played within 2 seconds,
+	while(track.next_note_in() < 2.0) {
+		// assuming the function `send_seagull(U8 note, U32 lane)` will put a seagull in a queue to be loaded into the cannon in exactly 2 seconds
+		send_seagull(
+			track.next_note().note, // note (correlated to pitch, look https://computermusicresource.com/midikeys.html)
+			track.play_note() // lane
+		);
+	}
+
+	// continue game loop
+	...
+}
+*/
+
+// at most 12 lanes supported, since currently it will not differentiate on octaves
+// for mapping, go here https://computermusicresource.com/midikeys.html
+struct midi_track {
+	std::vector<midi_note> notes;
+	U32 lanes; // how many lanes we have
+
+	F64 time; // current time from start of this track
+	U32 index; // index into `notes`, where we're at
+	U8 note_lane_map[12]; // note_lane_map[n] = lane on which to send a given note
+
+	static midi_track create(std::vector<midi_note> notes, U32 lanes) {
+		midi_track self = { notes, lanes };
+		self.time = 0.0;
+		self.find_note_lane_mapping();
+		return self;
+	}
+	void tick(F64 dt) {
+		time += dt;
+	}
+	// get the next note to be played
+	midi_note next_note() {
+		return notes[index];
+	}
+	// time until the next note is played (if overdue, negative time)
+	F64 next_note_in() {
+		return notes[index].time - time;
+	}
+	// we played this note
+	// return which lane to play it on
+	U32 play_note() {
+		midi_note n = notes[index];
+		index++;
+		return note_lane_map[n.note % 12];
+	}
+	// rewind to the beginning of this track
+	void play_again() {
+		time = 0.0;
+		index = 0;
+	}
+private:
+	void find_note_lane_mapping() {
+		U8 notes_found[12] = {}; // mod 12
+		// find used notes
+		for (U32 i = 0; i < notes.size(); i++)
+			notes_found[notes[i].note % 12]++;
+		U8 notes_found_count = 0;
+		// count how many were used
+		for (U32 i = 0; i < 12; i++) notes_found_count += notes_found[i] != 0;
+		if (notes_found_count == lanes) {
+			// assign notes to lanes
+			U8 lane_num = 0;
+			for (U32 i = 0; i < 12; i++) {
+				note_lane_map[i] = lane_num;
+				lane_num += notes_found != 0;
+			}
+		}
+		else {
+			// TODO fix this, it can be mapped properly
+			printf("Wrong note count. Need %d, but found %d", lanes, notes_found_count);
+			exit(1);
+		}
+	}
+};
