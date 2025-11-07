@@ -11,6 +11,16 @@
 #include <atomic>
 #include <thread>
 
+extern "C"
+{
+__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
+#ifdef _MSC_VER
+#pragma comment( lib, "Winmm.lib" )
+#endif
+
 #define NOMINMAX
 
 // GLAD: OpenGL function loader
@@ -44,6 +54,7 @@
 
 // This project
 #include "util.h"
+#include "world_object.h"
 
 #include "client.h"
 #include "message.h"
@@ -51,7 +62,6 @@
 #include "cam.h"
 #include "debug.h"
 #include "light.h"
-#include "world_object.h"
 #include "particle.h"
 #include "game.h"
 #include "music.h"
@@ -115,6 +125,9 @@ void try_connect(const std::string& ip, uint16_t port) {
 }
 
 
+GLuint reflection_framebuffer;
+GLuint reflection_tex, reflection_depth_tex;
+
 // forward declarations
 GLFWwindow* init();
 void cleanup(GLFWwindow* window);
@@ -133,7 +146,17 @@ const F64  distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
 const F64  distbetweencats = -5;
 
+		if(beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		else {
+			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0));
+		}
+
+		//return (cat.model[3][1] >= 0.0f);
+		return beats_left < 0xf0;
+	};
+}
 // Create a shader from vertex and fragment shader files
+
 GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
     GLuint fs = 0;
@@ -524,7 +547,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 
     playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
-    // Spawn projectile using the chosen cannon’s transform
+    // Spawn projectile using the chosen cannonï¿½s transform
     objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE));
     Entity& p = objects.back();
 
