@@ -88,6 +88,7 @@ std::vector<Entity> objects;
 static struct {
 	Mesh test_scene;
 	Mesh cat;
+	Mesh quad;
 } meshes;
 static struct {
 		GLuint green;
@@ -95,6 +96,8 @@ static struct {
 		GLuint skybox;
 		GLuint banner;
 		GLuint weezer;
+		GLuint waterNormal;
+		GLuint waterOffset;
 } textures;
 servergull server(1951);
 bool is_server = false;
@@ -248,7 +251,7 @@ int main(int argc, char** argv) {
 	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER);
 
 	genTangents(vertices);
 
