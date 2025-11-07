@@ -72,7 +72,7 @@ private:
                     << " counts=" << count << "ts=" << timestamp << "\n"; 
                 for (uint8_t c : cats) {
                     // Spawn remote projectilees
-                    throw_cat((int)c, false, timestamp);
+                    throw_cat((int)c, false, -1);
                 }
             }
             break;

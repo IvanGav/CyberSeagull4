@@ -32,7 +32,7 @@ namespace cgull
 			void push_back(const T& item)
 			{
 				std::scoped_lock lock(muxQueue);
-				deqQueue.emplace_front(std::move(item));
+				deqQueue.emplace_back(item);
 			}
 
 			/// Returns true if Queue has no items
