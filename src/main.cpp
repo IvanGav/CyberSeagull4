@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
 		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	}
 
-	std::string server_ip = argv[1];
+	std::string server_ip;
 	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
@@ -319,10 +319,9 @@ int main(int argc, char** argv) {
 		if (midi_exists) {
 			extern std::vector<char> midi_keys_velocity;
 			moveFreeCamMidi(window, cam, dt);
-			trigger |= (midi_keys_velocity[62] != 0);
 			for (int i = 0; i < midi_keys_velocity.size(); i++) {
 				if (midi_keys_velocity[i]) {
-					playMeowWithPitch(&engine, i / 128.f);
+					playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)i));
 				}
 			}
 		}

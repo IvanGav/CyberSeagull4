@@ -53,11 +53,11 @@ void songSelect(GLuint display, const char* filepath, ImVec2 dim) {
 */
 
 F32 noteMultiplier(U8 start, U8 end) {
-	F32 freq1 = 440.f * pow((double)2, (start - 57) / 12.f), freq2 = 440.f * pow((double)2, (end - 57) / 12.f);
+	F32 freq1 = 440.f * pow((double)2, (start - 81) / 12.f), freq2 = 440.f * pow((double)2, (end - 81) / 12.f);
 	return freq2 / freq1;
 }
 
 F32 noteMultiplier(F32 start, U8 end) {
-	F32 freq2 = 440.f * pow((double)2, (end - 57) / 12.f);
+	F32 freq2 = 440.f * pow((double)2, (end - 81) / 12.f);
 	return freq2 / start;
 }
