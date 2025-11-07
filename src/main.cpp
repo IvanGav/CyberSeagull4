@@ -116,6 +116,12 @@ static struct {
 U16 player_id = 0xffff;
 seaclient client;
 
+// overlay state
+int  g_my_health = 5;
+int  g_enemy_health = 5;
+bool g_game_over = false;
+U16  g_winner = 0xffff;
+
 // connect gate
 static std::atomic<bool> g_connecting = false;
 static std::string g_last_connect_error;
@@ -709,6 +715,18 @@ int main(int argc, char** argv) {
 		}
 		ImGui::End();
 
+		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::Text("My HP: %d", g_my_health);
+		ImGui::Text("Enemy HP: %d", g_enemy_health);
+		if (g_game_over) {
+			ImGui::Separator();
+			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
+			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
+			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+		}
+		ImGui::End();
+
+
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -763,7 +781,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE));
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE, owned));
 	Entity& p = objects.back();
 
 	p.start_time = start_time;

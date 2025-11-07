@@ -1,7 +1,4 @@
-// Headless server entrypoint for Cyber Seagull
-// Starts the cgull server and relays gameplay messages.
-// Build as its own executable.
-
+// Server.cpp
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -11,6 +8,8 @@
 
 int main(int argc, char** argv) {
     uint16_t port = 1951;
+    std::string midi_path = "asset/Buddy Holly riff.mid"; // default demo
+
     if (argc > 1) {
         try {
             int p = std::stoi(argv[1]);
@@ -20,6 +19,9 @@ int main(int argc, char** argv) {
             std::cerr << "[SERVER] Invalid port arg, falling back to 1951\n";
         }
     }
+    if (argc > 2) {
+        midi_path = argv[2];
+    }
 
     servergull server(port);
     if (!server.Start()) {
@@ -27,33 +29,19 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "[SERVER] Listening on port " << port << "\n";
-    // Run until killed
-    while (true) {
-        server.Update(-1, true); // block until a message then process
+    if (!server.LoadSong(midi_path)) {
+        std::cerr << "[SERVER] Failed to load MIDI '" << midi_path << "'\n";
+        return 2;
     }
 
-    // Not reached
+    // Start the song (broadcast schedule and begin damage checkin)
+    server.StartSong();
+
+    std::cout << "[SERVER] Listening on port " << port << "\n";
+    while (true) {
+        server.Update(-1, true); // process network messages as they arrive
+    }
+
     server.Stop();
     return 0;
 }
-
-//void server_send_seagulls() {
-//    // assume a global variable `track`; time should be tracked with `track.tick(dt);` every tick
-//
-//    while (track.next_note_in() < 2.0) {
-//        cgull::net::message<message_code> m;
-//        m.header.id = message_code::NEW_NOTE;
-//
-//        F64 timestamp = track.next_note().time;
-//        U8 note = track.next_note().note;
-//        U8 cannon = track.play_note();
-//
-//        // Pack in reverse: last thing you want to read goes in first
-//        m << timestamp;
-//        m << cannon;
-//        m << note;
-//
-//        this->Send(m);
-//    }
-//}

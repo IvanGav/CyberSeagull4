@@ -11,6 +11,12 @@ extern F64 cur_time_sec;
 extern std::vector<Entity> objects;
 void make_seagull(U8 cannon, F64 timestamp);
 
+
+extern int g_my_health; 
+extern int g_enemy_health;
+extern bool g_game_over;
+extern U16 g_winner;
+
 F64 song_start_time;
 F64 song_spb = .20; // seconds/beat
 static constexpr U8 SHOW_NUM_BEATS = 4;
@@ -78,10 +84,8 @@ private:
             for (U16 i = 0; i < count; ++i) m >> cats[i];
 
             if (who != player_id) {
-                std::cout << "[CLIENT] PLAYER_CAT_FIRE from " << who
-                    << " counts=" << count << "ts=" << timestamp << "\n";
                 for (U8 c : cats) {
-                    // Spawn remote projectilees
+                    // Spawn remote projectiles
                     throw_cat((U32)c, false, -1);
                 }
             }
@@ -89,15 +93,43 @@ private:
         }
         case message_code::NEW_NOTE: {
             if (m.body.size() < sizeof(U8) + sizeof(F64) + sizeof(U8)) break;
-            int index = 0;
-            U8 note; U8 cannon; F64 timestamp;
+            U8 note, cannon; F64 timestamp;
             m >> note; m >> cannon; m >> timestamp;
             make_seagull(cannon, timestamp);
+            break;
         }
-        break;
         case message_code::SONG_START: {
-            song_spb = 1;
+            // Use local clock to anchor visual
+            song_spb = 1;                 // adjust if you want real BPM
             song_start_time = cur_time_sec;
+            break;
+        }
+        case message_code::HEALTH_UPDATE: {
+            U16 p0_id = 0xffff; U16 p1_id = 0xffff; U16 p0_hp = 0; U16 p1_hp = 0;
+            m >> p1_hp; m >> p1_id; m >> p0_hp; m >> p0_id;
+
+            // Are we p0 or p1
+            if (player_id == p0_id) {
+                g_my_health = (int)p0_hp;
+                g_enemy_health = (int)p1_hp;
+            }
+            else if (player_id == p1_id) {
+                g_my_health = (int)p1_hp;
+                g_enemy_health = (int)p0_hp;
+            }
+            else {
+                // spectator: just take p0/p1 as shown
+                g_my_health = (int)p0_hp;
+                g_enemy_health = (int)p1_hp;
+            }
+            break;
+        }
+        case message_code::GAME_OVER: {
+            U16 winner = 0xffff;
+            m >> winner;
+            g_winner = winner;
+            g_game_over = true;
+            break;
         }
         default:
             std::cerr << "[CLIENT] Unknown message id\n";
