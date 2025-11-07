@@ -2,13 +2,6 @@
 
 #include <cstdint>
 
-// glm: linear algebra library
-#define GLM_ENABLE_EXPERIMENTAL 1
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 typedef int8_t I8;
 typedef uint8_t U8;
 typedef int16_t I16;
@@ -53,63 +46,3 @@ typedef U8 Flags8;
 #define B32_FALSE 0
 #define B8_TRUE 1
 #define B8_FALSE 0
-
-//F32 clamp01(F32 f) {
-//    return std::max(std::min(0.0f, f), 1.0f);
-//}
-
-#pragma pack(push, 1)
-struct RGBA8 {
-    U8 r, g, b, a;
-
-    B32 operator==(const RGBA8& other) {
-        return r == other.r && g == other.g && b == other.b && a == other.a;
-    }
-    glm::vec4 to_v4f32() {
-        F32 scale = 1.0F / 255.0F;
-        return glm::vec4{ F32(r) * scale, F32(g) * scale, F32(b) * scale, F32(a) * scale };
-    }
-    RGBA8 to_rgba8() {
-        return *this;
-    }
-};
-//RGBA8 to_rgba8() {
-//    return RGBA8{ U8(clamp01(x) * 255.0F), U8(clamp01(y) * 255.0F), U8(clamp01(z) * 255.0F), U8(clamp01(w) * 255.0F) };
-//}
-struct RGB8 {
-    U8 r, g, b;
-
-    B32 operator==(const RGB8& other) {
-        return r == other.r && g == other.g && b == other.b;
-    }
-    RGB8 operator+(RGB8 other) {
-        return RGB8{ U8(r + other.r), U8(g + other.g), U8(b + other.b) };
-    }
-    RGB8 operator-(RGB8 other) {
-        return RGB8{ U8(r - other.r), U8(g - other.g), U8(b - other.b) };
-    }
-    RGBA8 to_rgba8() {
-        return RGBA8{ r, g, b, 255 };
-    }
-};
-struct RG8 {
-    U8 r, g;
-
-    B32 operator==(RG8 other) {
-        return r == other.r && g == other.g;
-    }
-    RGBA8 to_rgba8() {
-        return RGBA8{ r, 0, 0, g };
-    }
-};
-struct R8 {
-    U8 r;
-
-    B32 operator==(R8 other) {
-        return r == other.r;
-    }
-    RGBA8 to_rgba8() {
-        return RGBA8{ r, 0, 0, 255 };
-    }
-};
-#pragma pack(pop)
