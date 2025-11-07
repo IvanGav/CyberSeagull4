@@ -463,6 +463,19 @@ int main(int argc, char** argv) {
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
 
+			// Draw the player as a cat
+			{
+				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
+				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
+				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+				glBindTextureUnit(0, o.tex);
+
+				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+
+				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
+			}
+
 			glDisable(GL_CLIP_DISTANCE0);
 		}
 
