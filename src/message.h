@@ -2,12 +2,13 @@
 #include <cgullnet/cgull_net.h>
 
 //// platform dependent header size in networking code :p
-U32 message_header_sizes[] = {sizeof(U16), 0, sizeof(U8) + sizeof(double)};
+U32 message_header_sizes[] = {sizeof(U16), 0, sizeof(U8) + sizeof(U8) + sizeof(double), 0};
 
 enum message_code {
 	GIVE_PLAYER_ID,	/// Player id
 	PLAYER_CAT_FIRE,	/// Player id, cat id, timestep
-	NEW_NOTE,			/// note value / cat id, timestep
+	NEW_NOTE,			/// note value, cat id, timestep
+	SONG_START,		/// no data
 };
 
 U16 message_read_u16(const cgull::net::message<char>& msg, int& index) {
@@ -19,7 +20,7 @@ U16 message_read_u16(const cgull::net::message<char>& msg, int& index) {
 F64 message_read_f64(const cgull::net::message<char>& msg, int& index) {
 	U64 out = msg.body[index++];
 	for (int i = 1; i < 8; i++) {
-		out |= (((U64)msg.body[index++]) << (8 * i));
+		out |= (((U64)msg.body[index++]) << (U64)(8 * i));
 	}
 	return *(F64*)&out;
 }
