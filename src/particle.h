@@ -74,6 +74,10 @@ struct ParticleSource {
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
 		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off, init_color, init_size, init_life};
 	}
+	void spawnParticles(int num) {
+		for (int i = 0; i < num; i++)
+			spawnParticle();
+	}
 };
 
 // Assume that requested index will now be used
@@ -93,7 +97,7 @@ void advanceParticles(F32 dt) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
 			particles[i].life -= dt;
-			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(-INFINITY); // so that when doing std::sort, it'll be the last particle
+			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(INFINITY); // so that when doing std::sort, it'll be the last particle
 			particles[i].pos += particles[i].speed * dt;
 		}
 	}
