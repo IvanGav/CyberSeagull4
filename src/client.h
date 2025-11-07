@@ -69,7 +69,7 @@ private:
 
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
-            U32 cid = 0;
+            U16 cid = 0;
             m >> cid;
             player_id = static_cast<U16>(cid & 0xffff);
             break;
