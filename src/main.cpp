@@ -34,6 +34,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
 // ImGUI: gui library
 #include <imgui/imgui.h>
 #include <imgui/imgui_stdlib.h>
@@ -46,12 +47,19 @@
 
 // This project
 #include "util.h"
+
+#include "server.h"
+#include "client.h"
+#include "message.h"
+
 #include "cam.h"
 #include "debug.h"
 #include "light.h"
 #include "world_object.h"
 #include "particle.h"
 #include "game.h"
+#include "music.h"
+#include "input.h"
 
 #include "midi.h"
 
@@ -67,11 +75,31 @@ std::vector<ma_sound*> liveSounds;
 
 FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
 
+
+// F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
+
 // Static data
 static int width = 1920;
 static int height = 1080;
 static GLuint vao;
 ma_engine engine;
+double cur_time_sec;
+std::vector<Entity> objects;
+static struct {
+	Mesh test_scene;
+	Mesh cat;
+} meshes;
+static struct {
+		GLuint green;
+		GLuint cat;
+		GLuint skybox;
+		GLuint banner;
+		GLuint weezer;
+} textures;
+servergull server(1951);
+bool is_server = false;
+U16 player_id = 0xffff;
+seaclient client;
 
 // forward declarations
 GLFWwindow* init();
@@ -80,9 +108,14 @@ std::string readFile(const char* path);
 glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
-void playMeowWithRandomPitch(ma_engine* engine);
-void playMeowWithPitch(ma_engine* engine, float pitch);
-void playSeagullsWithRandomPitch(ma_engine* engine);
+void playWithRandomPitch(ma_engine* engine, const char* filePath);
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void throw_cats();
+void throw_cat(int cat_num, bool owned, F64);
+
+const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
+const glm::vec3 catstartingpos(10.0f, 0, 10.0f);
+const F64 distbetweencats = -5;
 
 
 // Create a shader from vertex and fragment shader files
@@ -123,7 +156,16 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 	return program;
 }
 
-int main() {
+int main(int argc, char** argv) {
+	if (argc > 1) {
+		if (argv[1][0] == '-' && argv[1][1] == 'S') {
+			server.Start();
+			while (true) {
+				server.Update();
+			}
+			return 0;
+		}
+	}
 	GLFWwindow* window = init();
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -133,12 +175,13 @@ int main() {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
+	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b0,b:b1,x:b2,y:b3,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
 	GLuint shadowShader = createShader("src/shader/shadow.vert");
 	GLuint cubeProgram = createShader("src/shader/cube.vert", "src/shader/cube.frag");
-  GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
+	GLuint particleProgram = createShader("src/shader/particle.vert", "src/shader/particle.frag");
 
 	// Create textures (and frame buffers)
 
@@ -158,20 +201,7 @@ int main() {
 
 	// Create geometry
 
-	std::vector<Entity> objects;
 	std::vector<Vertex> vertices;
-
-	struct {
-		GLuint green;
-		GLuint cat;
-		GLuint skybox;
-		GLuint banner;
-	} textures;
-
-	struct {
-		Mesh test_scene;
-		Mesh cat;
-	} meshes;
 
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
@@ -180,6 +210,7 @@ int main() {
 	textures.cat = createTextureFromImage("asset/cat.jpg");
 
 	stbi_set_flip_vertically_on_load(false);
+	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
 
@@ -194,10 +225,16 @@ int main() {
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	
+	for (int i = 0; i < 6; i++) {
+		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * i), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)  ), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+	}
+
+	std::string server_ip = argv[1];
+	//client.Connect(server_ip, 1951);
+
+	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+
 
 	genTangents(vertices);
 
@@ -212,8 +249,7 @@ int main() {
 		};
 		textures.skybox = createCubeTexture(cubemap_files);
 	}
-      
-  
+
   // Create static particle sources (later change this to be dynamic or something)
 
   ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
@@ -239,6 +275,7 @@ int main() {
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	double last_time_sec = 0.0;
+	int songstart;
 
 	/// Initialize midi
 	libremidi::observer obs;
@@ -252,12 +289,15 @@ int main() {
 
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
-	playSeagullsWithRandomPitch(&engine);
+	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
+	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
+
+	int note1=0, note2=0;
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
-		double cur_time_sec = glfwGetTime();
+		cur_time_sec = glfwGetTime();
 		double dt = cur_time_sec - last_time_sec;
 		last_time_sec = cur_time_sec;
 		double lightAzimuth = glfwGetTime() / 3.0;
@@ -267,14 +307,11 @@ int main() {
 		glfwPollEvents();
 		windowFocusControl(window);
 
-		
-		bool trigger = (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS);
+		throw_cats();
 
-	 
 		GLFWgamepadstate state{};
 		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 			moveFreeCamGamepad(window, cam, dt, state);
-			trigger |= (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS); 
 		}
 		else {
 			moveFreeCam(window, cam, dt);
@@ -290,52 +327,53 @@ int main() {
 			}
 		}
 
-		static bool prev = false;
-		if (trigger && !prev) {
-			int size = objects.size();
-			for (int i = 0; i < size; i++) {
-				if (objects[i].type == CANNON) {
-					objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(
-						glm::rotate(
-							glm::translate(glm::mat4(1.0f), glm::vec3(objects[i].model[3][0], objects[i].model[3][1], objects[i].model[3][2])),
-							(float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)
-						),
-						glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE
-					));
-					objects.back().start_time = cur_time_sec;
-					objects.back().pretransmodel = objects.back().model;
-					objects.back().shoot_angle = 0.0f;
-					objects.back().update = [](Entity& cat, F64 curtime) {
-						cat.model = toModel((curtime - cat.start_time) * 4.0, 0, 20, cat.shoot_angle) * cat.pretransmodel;
-						};
-
-					playMeowWithRandomPitch(&engine);
+		for (int i = 0; i < objects.size(); i++) {
+			if (objects[i].update) {
+				if (!objects[i].update(objects[i], cur_time_sec)) {
+					objects.erase(objects.begin() + i);
+					i--;
 				}
 			}
 		}
 
-		for (int i = 0; i < objects.size(); i++) {
-			if (objects[i].update)
-				objects[i].update(objects[i], cur_time_sec);
-		}
+		/*
+
+		1,00000,00000
+
+		1 one
+		10 ten
+		100 hundred
+		1000 thousand
+		10000 kleep klop
+		1,00000 quinto
+		10,00000 ten quintos
+		...
+		10000,00000 kleep klop quintos = 1,000,000,000 billion
+		45000,00000 4.5 kleep klop quintos = age of universe
+		1,00000,00000 flippo = 10,000,000,000 ten billion
+		10000,00000,00000 kleep klop flippos = 100,000,000,000,000 hundred trillion
+
+		*/
+
 
 		cleanupFinishedSounds();
-		prev = trigger;
+
+		client.check_messages();
 
 		// Update particles
 
-    advanceParticles(dt);
-    particleSource.spawnParticle();
-    sortParticles(cam.cam, cam.cam.lookDir());
-    packParticles();
+		advanceParticles(dt);
+		particleSource.spawnParticle();
+		sortParticles(cam.cam, cam.cam.lookDir());
+		packParticles();
 
-    glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-    glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+		glNamedBufferSubData(pvertex_buffer, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+		glNamedBufferSubData(pdata_buffer, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
     
-    // get cam matrices
+		// get cam matrices
 
 		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) (width) / height, 0.1f, 1000.0f);
 
 		// Update the light direction
 		sun.setLightDirVec3(lightDir);
@@ -415,13 +453,48 @@ int main() {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		//ImGui::SetNextWindowBgAlpha(0.0f);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width-728.0f) / 2, height * 0.01));
+		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
 		ImGui::Begin("State", NULL, flags);
-		ImGui::Text("Time: %lf", cur_time_sec);
 		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		ImGui::End();
+
+
+		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
+			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
+		}*/
+
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowPos(ImVec2(200, 200));
+		ImGui::Begin("note multiplier", NULL, flags);
+		ImGui::SliderInt("note 1", &note1, 0, 127);
+		ImGui::SliderInt("note 2", &note2, 0, 127);
+		ImGui::Text("The note multiplier value is %f", noteMultiplier((U8)note1, (U8)note2));
+		ImGui::End();
+
+
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowPos(ImVec2(20, 20));
+		ImGui::Begin("ip", NULL, flags);
+		ImGui::SliderInt("val 1", &val1, 0, 256);
+		ImGui::SliderInt("val 2", &val2, 0, 256);
+		ImGui::SliderInt("val 3", &val3, 0, 256);
+		ImGui::SliderInt("val 4", &val4, 0, 256);
+		ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
+		if (!client.IsConnected()) {
+			if (ImGui::Button("Connect")) {
+				server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
+				client.Connect(server_ip, 1951);
+			}
+		}
+		else {
+			if (ImGui::Button("Disconnect")) {
+				client.Disconnect();
+			}
+		}
+		ImGui::End();
+
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -441,6 +514,53 @@ int main() {
 	cleanup(window);
 }
 
+void throw_cats() {
+	F64 test = cur_time_sec;
+	U64 timestep = *(U64*)&test;
+	std::vector<U8> message = {(U8)(player_id & 0xff), (U8)((player_id >> 8) && 0xff)};
+	for (int i = 0; i < sizeof(timestep); i++) {
+		message.push_back(((timestep) >> (8 * i)) & 0xff);
+	}
+	bool send = false;
+	for (int i = 0; i < numcats; i++) {
+		if (cats_thrown[i]) {
+			throw_cat(i, true);
+			message.push_back(i);
+			cats_thrown[i] = false;
+			std::cout << "sending cat: " << i << "\n";
+			send = true;
+		}
+	}
+	if (send) {
+		std::cout << "heyo friend im outputting the timestamp: " << std::hex << timestep << "\n" << std::endl;
+		for (int i = 0; i < sizeof(timestep); i++) {
+			std::cout << std::hex << (((timestep) >> (8 * i)) & 0xff) << "\n";
+		}
+		std::cout << "end\n";
+		client.send_message(PLAYER_CAT_FIRE, message);
+	}
+}
+
+void throw_cat(int cat_num, bool owned, F64 start_time) {
+	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+	if (start_time == 0) {
+		start_time = cur_time_sec;
+	}
+	for (int i = 0; i < objects.size(); i++) {
+		if (objects[i].type == CANNON && cat_num == objects[i].cat_id && objects[i].owned == owned) {
+			objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE
+			));
+			objects.back().start_time = cur_time_sec;
+			objects.back().pretransmodel = objects.back().model;
+			objects.back().shoot_angle = owned ? 0.0f : PI;
+			objects.back().update = [](Entity& cat, F64 curtime) {
+				cat.model = toModel((curtime - cat.start_time) * 50, 0, distancebetweenthetwoshipswhichshallherebyshootateachother, cat.shoot_angle) * cat.pretransmodel;
+				return (cat.model[3][1] >= 0.0f);
+				};
+
+		}
+	}
+}
 
 void cleanupFinishedSounds() {
 	for (auto it = liveSounds.begin(); it != liveSounds.end();) {
@@ -456,9 +576,9 @@ void cleanupFinishedSounds() {
 	}
 }
 
-void playMeowWithRandomPitch(ma_engine* engine) {
+void playWithRandomPitch(ma_engine* engine, const char *filePath) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
 		ma_sound_set_pitch(s, randomPitch(rng));
@@ -470,9 +590,10 @@ void playMeowWithRandomPitch(ma_engine* engine) {
 	}
 }
 
-void playMeowWithPitch(ma_engine* engine, float pitch) {
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
 	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/cat-meow-401729.wav",
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
 		ma_sound_set_pitch(s, pitch);
@@ -484,19 +605,6 @@ void playMeowWithPitch(ma_engine* engine, float pitch) {
 	}
 }
 
-void playSeagullsWithRandomPitch(ma_engine* engine) {
-	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, "asset/seagull-flock-sound-effect-206610.wav",
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_pitch(s, randomPitch(rng));
-		ma_sound_start(s);
-		liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
 
 /* Gameplay related functions */
 
@@ -599,6 +707,7 @@ GLFWwindow* init() {
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(glDebugOutput, nullptr);
 	glfwSetWindowSizeCallback(window, window_size_callback);
+	glfwSetKeyCallback(window, key_callback);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
 	// make OpenGL normal-style (laugh out loud)

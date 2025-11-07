@@ -1440,5 +1440,8 @@
   <ItemGroup>
     <Text Include="lib\libremidi\CMakeCache.txt" />
     <Text Include="lib\libremidi\CMakeLists.txt" />
+    <ClInclude Include="src\music.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -598,7 +598,7 @@ void _glfwPlatformTerminate(void)
         UnregisterDeviceNotification(_glfw.win32.deviceNotificationHandle);
 
     if (_glfw.win32.helperWindowHandle)
-        DestroyWindow(_glfw.win32.helperWindowHandle);
+            DestroyWindow(_glfw.win32.helperWindowHandle);
 
     _glfwUnregisterWindowClassWin32();
 
