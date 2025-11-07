@@ -6,4 +6,4 @@ add_executable(CyberSeagull4Server
 	src/Server.cpp)
 
 target_include_directories(CyberSeagull4Server PUBLIC include)
-target_link_libraries(CyberSeagull4Server)
+target_link_libraries(CyberSeagull4Server PRIVATE libremidi)
