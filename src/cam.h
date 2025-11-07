@@ -163,6 +163,56 @@ void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepad
     lastx = xpos; lasty = ypos;
 }
 
+extern std::vector<char> midi_keys_velocity;
+extern std::vector<char> midi_control_velocity;
+void moveFreeCamMidi(GLFWwindow* window, FreeCam& cam, double dt) {
+    double look_multiplier = 10.f;
+    double move_multiplier = 10.f;
+    if (midi_keys_velocity[55]) {
+        double ndt = (dt * midi_keys_velocity[55] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::MOVE_FORWARD, ndt);
+    }
+    if (midi_keys_velocity[57]) {
+        double ndt = (dt * midi_keys_velocity[57] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::MOVE_BACKWARD, ndt);
+    }
+    if (midi_keys_velocity[59]) {
+        double ndt = (dt * midi_keys_velocity[59] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::STRAFE_LEFT, ndt);
+    }
+    if (midi_keys_velocity[60]) {
+        double ndt = (dt * midi_keys_velocity[60] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::STRAFE_RIGHT, ndt);
+    }
+
+
+    if (midi_control_velocity[74]) {
+        double ndt = (dt * midi_control_velocity[74] / 128.f) * look_multiplier;
+		cam.buttonPress(KeyboardAction::TURN_LEFT, ndt);
+    }
+    if (midi_control_velocity[71]) {
+        double ndt = (dt * midi_control_velocity[71] / 128.f) * look_multiplier;
+		cam.buttonPress(KeyboardAction::TURN_DOWN, ndt);
+    }
+    if (midi_control_velocity[5]) {
+        double ndt = (dt * midi_control_velocity[5] / 128.f) * look_multiplier;
+		cam.buttonPress(KeyboardAction::TURN_UP, ndt);
+    }
+    if (midi_control_velocity[84]) {
+        double ndt = (dt * midi_control_velocity[84] / 128.f) * look_multiplier;
+		cam.buttonPress(KeyboardAction::TURN_RIGHT, ndt);
+    }
+
+    if (midi_control_velocity[78]) {
+        double ndt = (dt * midi_control_velocity[78] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::MOVE_DOWN, ndt);
+    }
+    if (midi_control_velocity[76]) {
+        double ndt = (dt * midi_control_velocity[76] / 128.f) * move_multiplier;
+		cam.buttonPress(KeyboardAction::MOVE_UP, ndt);
+    }
+}
+
 void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
     dt *= 5.0;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)

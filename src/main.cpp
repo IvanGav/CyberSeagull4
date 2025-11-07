@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef _MSC_VER
+#pragma comment( lib, "Winmm.lib" )
+#endif
+
 #define NOMINMAX
 
 // GLAD: OpenGL function loader
@@ -56,6 +60,8 @@
 #include "game.h"
 #include "music.h"
 #include "input.h"
+
+#include "midi.h"
 
 
 
@@ -208,6 +214,13 @@ int main(int argc, char** argv) {
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
 
+	std::string song_name;
+	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
+
+	for (int i = 0; i < notes.size(); i++) {
+		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";
+	}
+
 
 	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
@@ -264,6 +277,16 @@ int main(int argc, char** argv) {
 	double last_time_sec = 0.0;
 	int songstart;
 
+	/// Initialize midi
+	libremidi::observer obs;
+	libremidi::midi_in midi{
+		libremidi::input_configuration{ .on_message = midi_callback }
+	};
+	std::cout << "midi\n";
+	if (obs.get_input_ports().size()) {
+		midi_init(midi);
+	}
+
 	ma_engine_init(NULL, &engine);
 	ma_engine_set_volume(&engine, 0.1f);
 	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
@@ -292,6 +315,16 @@ int main(int argc, char** argv) {
 		}
 		else {
 			moveFreeCam(window, cam, dt);
+		}
+		if (midi_exists) {
+			extern std::vector<char> midi_keys_velocity;
+			moveFreeCamMidi(window, cam, dt);
+			trigger |= (midi_keys_velocity[62] != 0);
+			for (int i = 0; i < midi_keys_velocity.size(); i++) {
+				if (midi_keys_velocity[i]) {
+					playMeowWithPitch(&engine, i / 128.f);
+				}
+			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
