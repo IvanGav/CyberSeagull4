@@ -51,28 +51,32 @@ public:
     }
 
     void StartSong() {
-        std::lock_guard<std::mutex> lk(song_mtx_);
-        if (schedule_.empty()) {
-            std::cerr << "[SERVER] StartSong() called with empty schedule.\n";
-            return;
-        }
-        song_started_ = true;
-        song_start_tp_ = std::chrono::steady_clock::now();
+        {
+            std::lock_guard<std::mutex> lk(song_mtx_);
+            if (schedule_.empty()) {
+                std::cerr << "[SERVER] StartSong() called with empty schedule.\n";
+                return;
+            }
+            song_started_ = true;
+            song_start_tp_ = std::chrono::steady_clock::now();
 
-        // Tell clients to start their local clocks now.
-        cgull::net::message<message_code> m;
-        m.header.id = message_code::SONG_START;
-        MessageAllClients(m);
-
-        // Broadcast the entire schedule so clients can spawn seagulls early and sync visually
-        std::lock_guard<std::mutex> lk(song_mtx_);
-        for (const auto& s : schedule_) {
+            // Tell clients to start their local clocks now.
             cgull::net::message<message_code> m;
-            m.header.id = message_code::NEW_NOTE;
-            m << s.rel_time;
-            m << s.lane;
-            m << s.note;
+            m.header.id = message_code::SONG_START;
             MessageAllClients(m);
+        }
+
+        {
+            // Broadcast the entire schedule so clients can spawn seagulls early and sync visually
+            std::lock_guard<std::mutex> lk(song_mtx_);
+            for (const auto& s : schedule_) {
+                cgull::net::message<message_code> m;
+                m.header.id = message_code::NEW_NOTE;
+                m << s.rel_time;
+                m << s.lane;
+                m << s.note;
+                MessageAllClients(m);
+            }
         }
 
         // Launch stupidknowitall thread (damage calculation)
@@ -303,7 +307,7 @@ private:
     std::atomic<bool> stupidknowitall_thread_running_{ false };
     std::thread stupidknowitall_thread_;
 
-    U16 NextPlayerId() {
+    U16 PlayerId() {
         return ++last_player_id_;
     }
     U16 last_player_id_ = 0;
