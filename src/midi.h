@@ -18,6 +18,7 @@ void midi_callback(const libremidi::message&& message) {
 	}
 	if ((message[0] & 0b11110000) == 0b10010000) {
 		midi_keys_velocity[message[1]] = message[2];
+		playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)message[1]));
 		std::cout << "Note On: " << (int)message[1] << " vel: " << (int)message[2] << "\n";
 	}
 	if ((message[0] & 0b11110000) == 0b10110000) {

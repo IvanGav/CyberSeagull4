@@ -116,6 +116,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume = 1);
 void throw_cats();
 void throw_cat(int cat_num, bool owned, F64);
 void initWaterFramebuffer();
@@ -306,11 +307,9 @@ int main(int argc, char** argv) {
 	}
 
 	ma_engine_init(NULL, &engine);
-	ma_engine_set_volume(&engine, 0.1f);
-	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
+	ma_engine_set_volume(&engine, 0.75f);
+	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
-
-	int note1=0, note2=0;
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -337,11 +336,6 @@ int main(int argc, char** argv) {
 		if (midi_exists) {
 			extern std::vector<char> midi_keys_velocity;
 			moveFreeCamMidi(window, cam, dt);
-			for (int i = 0; i < midi_keys_velocity.size(); i++) {
-				if (midi_keys_velocity[i]) {
-					playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)i));
-				}
-			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
@@ -561,14 +555,6 @@ int main(int argc, char** argv) {
 			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
 		}*/
 
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(200, 200));
-		ImGui::Begin("note multiplier", NULL, flags);
-		ImGui::SliderInt("note 1", &note1, 0, 127);
-		ImGui::SliderInt("note 2", &note2, 0, 127);
-		ImGui::Text("The note multiplier value is %f", noteMultiplier((U8)note1, (U8)note2));
-		ImGui::End();
-
 
 		ImGui::SetNextWindowSize(ImVec2(500, 500));
 		ImGui::SetNextWindowPos(ImVec2(20, 20));
@@ -692,7 +678,24 @@ void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitc
 	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
 		ma_sound_set_pitch(s, pitch);
+		ma_sound_start(s);
+		liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
+}
+
+void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume) {
+	ma_sound* s = new ma_sound{};
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
+		ma_sound_set_volume(s, volume);
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
