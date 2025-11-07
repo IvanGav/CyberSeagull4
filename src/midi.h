@@ -189,6 +189,7 @@ struct midi_track {
 	}
 	// we played this note
 	// return which lane to play it on
+	// # TO GET INFO ABOUT THIS NOTE, CALL next_note BEFORE THIS FUNCTION
 	U32 play_note() {
 		midi_note n = notes[index];
 		index++;
