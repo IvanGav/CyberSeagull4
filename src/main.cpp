@@ -152,7 +152,7 @@ void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
 void throw_cats();
-void throw_cat(int cat_num, bool owned, F64 = 0.0);
+void throw_cat(int cat_num, bool owned, F64);
 void initWaterFramebuffer();
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
 		cannons_enemy[i] = &objects.back();
 	}
 
-	std::string server_ip;
+	std::string server_ip = "136.112.101.5";
 	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
