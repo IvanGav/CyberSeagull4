@@ -504,7 +504,15 @@ void throw_cats() {
     }
 
     if (send && client.IsConnected() && player_id != 0xffff) {
-        client.send_player_cat_fire(player_id, cur_time_sec, cats);
+        // soft burst cap: max 4 lanes per packet
+        if (cats.size() > 4) cats.resize(4);
+        // soft rate limit: one packet every 50ms
+        static double last_tx = 0.0;
+        if (cur_time_sec - last_tx >= 0.05) 
+        {
+            client.send_player_cat_fire(player_id, cur_time_sec, cats);
+            last_tx = cur_time_sec;
+        }
     }
 }
 
