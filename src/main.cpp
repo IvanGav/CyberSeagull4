@@ -310,6 +310,8 @@ int main(int argc, char** argv) {
 	ma_engine_set_volume(&engine, 0.75f);
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
+	bool menu_open = true;
+	char* buf = ;
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -327,15 +329,17 @@ int main(int argc, char** argv) {
 		throw_cats();
 
 		GLFWgamepadstate state{};
-		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
-			moveFreeCamGamepad(window, cam, dt, state);
-		}
-		else {
-			moveFreeCam(window, cam, dt);
-		}
-		if (midi_exists) {
-			extern std::vector<char> midi_keys_velocity;
-			moveFreeCamMidi(window, cam, dt);
+		if (!menu_open) {
+			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+				moveFreeCamGamepad(window, cam, dt, state);
+			}
+			else {
+				moveFreeCam(window, cam, dt);
+			}
+			if (midi_exists) {
+				extern std::vector<char> midi_keys_velocity;
+				moveFreeCamMidi(window, cam, dt);
+			}
 		}
 
 		for (int i = 0; i < objects.size(); i++) {
@@ -556,26 +560,45 @@ int main(int argc, char** argv) {
 		}*/
 
 
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(20, 20));
-		ImGui::Begin("ip", NULL, flags);
-		ImGui::SliderInt("val 1", &val1, 0, 256);
-		ImGui::SliderInt("val 2", &val2, 0, 256);
-		ImGui::SliderInt("val 3", &val3, 0, 256);
-		ImGui::SliderInt("val 4", &val4, 0, 256);
-		ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
-		if (!client.IsConnected()) {
-			if (ImGui::Button("Connect")) {
-				server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
-				client.Connect(server_ip, 1951);
+		if (menu_open) {
+			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+
+			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
+			ImGui::SetNextWindowPos(ImVec2(100, 100));
+			ImGui::Begin("menu", NULL, flags);
+			ImGui::Text("This sis the omenu");
+			ImGui::SliderInt("val 1", &val1, 0, 256);
+			ImGui::SliderInt("val 2", &val2, 0, 256);
+			ImGui::SliderInt("val 3", &val3, 0, 256);
+			ImGui::SliderInt("val 4", &val4, 0, 256);
+			ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf));
+			ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
+			if (!client.IsConnected()) {
+				if (ImGui::Button("Connect")) {
+					server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
+					client.Connect(server_ip, 1951);
+				}
 			}
+			else {
+				if (ImGui::Button("Disconnect")) {
+					client.Disconnect();
+				}
+			}
+			if (ImGui::Button("Close Menu")) {
+				menu_open = false;
+			}
+			ImGui::End();
 		}
 		else {
-			if (ImGui::Button("Disconnect")) {
-				client.Disconnect();
+			ImGui::SetNextWindowSize(ImVec2(50, 50));
+			ImGui::SetNextWindowPos(ImVec2(50, 50));
+			ImGui::Begin("open menu", NULL, flags);
+			if (ImGui::Button("Menu")) {
+				menu_open = true;
 			}
+			ImGui::End();
+
 		}
-		ImGui::End();
 
 
 		ImGui::Render();
