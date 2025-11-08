@@ -10,6 +10,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <functional>
+
 struct Vertex {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
@@ -242,5 +244,5 @@ struct Entity {
         return Entity::create(mesh, tex, default_normal, initial_transform, type, owned);
     }
 
-    bool (*update)(Entity& object, F64 dt);
+    std::function<bool(Entity&, F64)> update;
 };

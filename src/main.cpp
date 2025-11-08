@@ -196,7 +196,10 @@ void initWaterFramebuffer();
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0, 0.0, 10.0);
 const F64 distbetweencats = -5.0; // offset to catstartingpos's x axis
-const U32 catnumber = 6;
+constexpr U32 catnumber = 6;
+const F64 beats_grace = 1;
+B8 cannon_can_fire[catnumber];
+
 
 glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 	if (friendly)
@@ -210,8 +213,10 @@ void make_seagull(U8 cannon, F64 timestamp) {
 	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagull, glm::translate(glm::rotate(get_cannon_pos(cannon, true), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
-	objects.back().update = [](Entity& cat, F64 curtime) {
-		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
+	objects.back().update = [cannon](Entity& cat, F64 curtime) {
+		F64 beats_from_fire = (((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
+		U8 beats_left = (U8)glm::floor(beats_from_fire);
+
 
 		glm::mat4 transform(1.0);
 		if (beats_left > SHOW_NUM_BEATS) {
@@ -240,8 +245,15 @@ void make_seagull(U8 cannon, F64 timestamp) {
 		}
 		cat.model = transform * cat.pretransmodel;
 
+		F64 grace_period = beats_grace * song_spb;
+		B8 ccf = (abs(beats_from_fire - 1) < beats_grace);
+		if (cats_thrown[cannon] && ccf) {
+			return false;
+		}
+		cannon_can_fire[cannon] = ccf;
+
 		//return (cat.model[3][1] >= 0.0f);
-		return beats_left > 0;
+		return beats_from_fire > 1-beats_grace;
 		};
 }
 // Create a shader from vertex and fragment shader files
@@ -491,6 +503,8 @@ int main(int argc, char** argv) {
 				}
 			}
 		}
+
+		throw_cats();
 
 		/*
 
@@ -965,10 +979,13 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			throw_cat(i, true); // local projectile + sfx 
-			cats.push_back(static_cast<uint8_t>(i));
+			if (cannon_can_fire[i]) {
+				throw_cat(i, true); // local projectile + sfx
+				cats.push_back(static_cast<uint8_t>(i));
+				send = true;
+				cannon_can_fire[i] = false;
+			}
 			cats_thrown[i] = false;
-			send = true;
 		}
 	}
 
