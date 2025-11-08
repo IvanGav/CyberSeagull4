@@ -217,6 +217,7 @@ void make_seagull(U8 cannon, F64 timestamp) {
 		if (beats_left > SHOW_NUM_BEATS) {
 			transform = glm::translate(glm::mat4(1.0), glm::vec3(100000));
 		} else if (beats_left <= 1) {
+			cat.mesh = &meshes.seagBall;
 			F64 dist = SEAGULL_MOVE_PER_BEAT;
 			// TODO do the jumping animation here
 			transform = glm::translate(toModel(
