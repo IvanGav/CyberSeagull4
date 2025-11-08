@@ -197,7 +197,7 @@ const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
 const glm::vec3 catstartingpos(10.0, 0.0, 10.0);
 const F64 distbetweencats = -5.0; // offset to catstartingpos's x axis
 constexpr U32 catnumber = 6;
-const F64 beats_grace = 1;
+const F64 beats_grace = .5;
 B8 cannon_can_fire[catnumber];
 
 
