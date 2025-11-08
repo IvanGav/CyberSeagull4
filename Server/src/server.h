@@ -67,7 +67,7 @@ public:
             return false;
         }
 
-        std::lock_guard<std::mutex> lk(song_mtx_);
+        std::lock_guard<std::recursive_mutex> lk(song_mtx_);
         lanes_ = lanes;
         spb_ = midi.seconds_per_beat;
         schedule_.clear();
@@ -119,7 +119,7 @@ public:
         }
 
         {
-            std::lock_guard<std::mutex> lk(song_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(song_mtx_);
             for (const auto& s : schedule_) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::NEW_NOTE;
@@ -155,7 +155,7 @@ protected:
 
         std::optional<U16> pid;
         {
-            std::lock_guard<std::mutex> lk(players_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(players_mtx_);
             auto it = conn_to_pid_.find(client->GetID());
             if (it != conn_to_pid_.end()) {
                 pid = it->second;
@@ -192,7 +192,7 @@ protected:
             reply << assigned;
             // Record mapping and initialize health if one of first two players
             {
-                std::lock_guard<std::mutex> lk(players_mtx_);
+                std::lock_guard<std::recursive_mutex> lk(players_mtx_);
                 conn_to_pid_[client->GetID()] = assigned;
               
                 // first 2 become players
@@ -230,7 +230,7 @@ protected:
             for (U16 i = 0; i < count; ++i) msg >> cats[i];
 
             {
-                std::lock_guard<std::mutex> lk(song_mtx_);
+                std::lock_guard<std::recursive_mutex> lk(song_mtx_);
                 cats.erase(std::remove_if(cats.begin(), cats.end(),
                     [this](U8 lane) { return lane >= lanes_; }),
                     cats.end());
@@ -241,7 +241,7 @@ protected:
 
             std::optional<U16> pid_from_conn;
             {
-                std::lock_guard<std::mutex> lk(players_mtx_);
+                std::lock_guard<std::recursive_mutex> lk(players_mtx_);
                 auto it = conn_to_pid_.find(client->GetID());
                 if (it != conn_to_pid_.end()) pid_from_conn = it->second;
             }
@@ -254,7 +254,7 @@ protected:
         case message_code::PLAYER_READY: {
             std::optional<U16> pid_from_conn;
             {
-                std::lock_guard<std::mutex> lk(players_mtx_);
+                std::lock_guard<std::recursive_mutex> lk(players_mtx_);
                 auto it = conn_to_pid_.find(client->GetID());
                 if (it != conn_to_pid_.end()) pid_from_conn = it->second;
             }
@@ -275,7 +275,7 @@ private:
         std::optional<int> idx = playerIndex(pid);
         if (!idx.has_value()) return; // spectators can't ready
         {
-            std::lock_guard<std::mutex> lk(players_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(players_mtx_);
             ready_[*idx] = true;
         }
         SendLobbyState();
@@ -285,7 +285,7 @@ private:
     void MaybeStartMatch() {
         bool should_start = false;
         {
-            std::lock_guard<std::mutex> lk(players_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(players_mtx_);
             if (!song_started_ && players_.size() >= 2 && ready_[0] && ready_[1]) {
                 ready_[0] = ready_[1] = false;
                 should_start = true;
@@ -304,7 +304,7 @@ private:
 
         U16 p0 = 0xffff, p1 = 0xffff; U8 r0 = 0, r1 = 0;
         {
-            std::lock_guard<std::mutex> lk(players_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(players_mtx_);
             if (players_.size() >= 1) { p0 = players_[0]; r0 = ready_[0] ? 1 : 0; }
             if (players_.size() >= 2) { p1 = players_[1]; r1 = ready_[1] ? 1 : 0; }
         }
@@ -331,7 +331,7 @@ private:
 
     // map a game player_id (U16) to index 0/1
     std::optional<int> playerIndex(U16 pid) {
-        std::lock_guard<std::mutex> lk(players_mtx_);
+        std::lock_guard<std::recursive_mutex> lk(players_mtx_);
         for (size_t i = 0; i < players_.size(); ++i) if (players_[i] == pid) return static_cast<int>(i);
         return std::nullopt;
     }
@@ -342,7 +342,7 @@ private:
 
         int pidx = -1;
         {
-            std::lock_guard<std::mutex> lk(players_mtx_);
+            std::lock_guard<std::recursive_mutex> lk(players_mtx_);
             for (size_t i = 0; i < players_.size(); ++i)
             {
                 if (players_[i] == who)
@@ -354,7 +354,7 @@ private:
             if (pidx == -1) return; // spectators no blockkk
         }
 
-        std::lock_guard<std::mutex> lk(song_mtx_);
+        std::lock_guard<std::recursive_mutex> lk(song_mtx_);
         for (U8 lane : cats) {
             for (auto& s : schedule_) {
                 if (s.resolved || s.lane != lane) continue;
@@ -403,6 +403,7 @@ private:
                     };
 
                     if (b0 ^ b1) {
+                        std::cout << "damage: " << (int)b0  << "\n";
                         // Exactly one blocked,  punish the other
                         apply_damage(b0 ? 1 : 0);
                     }
@@ -494,7 +495,7 @@ private:
 
 
     std::optional<U16> getPlayerId(int index) {
-        std::lock_guard<std::mutex> lk(players_mtx_);
+        std::lock_guard<std::recursive_mutex> lk(players_mtx_);
         if (index < 0 || index >= (int)players_.size()) return std::nullopt;
         return players_[index];
     }
@@ -505,7 +506,7 @@ private:
     }
 
     std::optional<U16> PidForConn(const std::shared_ptr<connection_t>& client) {
-        std::lock_guard<std::mutex> lk(players_mtx_);
+        std::lock_guard<std::recursive_mutex> lk(players_mtx_);
         auto it = conn_to_pid_.find(client->GetID());
         if (it == conn_to_pid_.end()) return std::nullopt;
         return it->second;
@@ -514,7 +515,7 @@ private:
 
 private:
     // Player registry (first 2 tracked for hp/damage)
-    std::mutex players_mtx_;
+    std::recursive_mutex players_mtx_;
     std::unordered_map<uint32_t, U16> conn_to_pid_;
     std::vector<U16> players_;
     std::unordered_map<U16, int> hp_;
@@ -526,7 +527,7 @@ private:
     U16 last_p0_hp_sent_ = 0xffff, last_p1_hp_sent_ = 0xffff;
 
     // Song schedule
-    std::mutex song_mtx_;
+    std::recursive_mutex song_mtx_;
     std::vector<ScheduledNote> schedule_;
     U8 lanes_ = 6;
     double spb_;
