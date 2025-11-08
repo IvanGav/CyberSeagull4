@@ -86,7 +86,10 @@ GLuint createTexture(int texWidth, int texHeight, GLenum internalFormat, bool ge
 
     if (pixels) {
         glTextureSubImage2D(tex, 0, 0, 0, texWidth, texHeight, format, type, pixels);
-        glGenerateTextureMipmap(tex);
+        if (genMips) {
+            glGenerateTextureMipmap(tex);
+
+        }
 
         glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
@@ -134,17 +137,32 @@ GLuint createCubeTexture(const char** filenames) {
 
 // default texture
 GLuint default_tex;
+GLuint default_normal;
 
 // call at the beginning of main
 void initDefaultTexture() {
-    int hardcodedTextureData[16 * 16];
-    // The classic purple and black checker pattern
-    for (int y = 0; y < 16; y++) {
-        for (int x = 0; x < 16; x++) {
-            hardcodedTextureData[y * 16 + x] = x < 8 == y < 8 ? 0b11111111111111110000000011111111 : 0b11111111000000000000000000000000;
+    {
+        int hardcodedTextureData[16 * 16];
+        // The classic purple and black checker pattern
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                hardcodedTextureData[y * 16 + x] = x < 8 == y < 8 ? 0b11111111111111110000000011111111 : 0b11111111000000000000000000000000;
+            }
         }
+        default_tex = createTexture(16, 16, GL_RGBA8, false, false, hardcodedTextureData);
     }
-    default_tex = createTexture(16, 16, GL_RGBA8, false, false, hardcodedTextureData);
+
+    {
+        constexpr U32 size = 4;
+        RGBA8 hardcodedTextureData[size * size];
+        // The classic purple and black checker pattern
+        for (U32 y = 0; y < size; y++) {
+            for (U32 x = 0; x < size; x++) {
+                hardcodedTextureData[y * size + x] = RGBA8{ 127, 127, 255, 255 };
+            }
+        }
+        default_normal = createTexture(size, size, GL_RGBA8, false, false, hardcodedTextureData);
+    }
 }
 
 struct Mesh {
@@ -180,7 +198,7 @@ static int owned_cat_id = 0;
 static int not_owned_cat_id = 0;
 struct Entity {
     Mesh* mesh;
-    GLuint tex;
+    GLuint tex; // TEXTURE
     glm::mat4 model;
     glm::mat4 pretransmodel;
     int cat_id = -1;
@@ -188,22 +206,24 @@ struct Entity {
     F64 start_time;
     F32 shoot_angle;
     EmitterType type;
-
+    GLuint normal; // NORMAL MAP
 
     // You can use "default_tex" if you don't need a texture
-    static Entity create(Mesh* mesh, GLuint tex) {
+    static Entity create(Mesh* mesh, GLuint tex = default_tex, GLuint normal = default_normal) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
+        o.normal = normal;
         o.model = glm::mat4(1.0f);
         o.type = NONEMITTER;
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type, bool owned = false) {
+    static Entity create(Mesh* mesh, GLuint tex, GLuint normal, glm::mat4 initial_transform, EmitterType type, bool owned = false) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
+        o.normal = normal;
         o.model = initial_transform;
         o.type = type;
         if (type == CANNON) {
@@ -218,12 +238,8 @@ struct Entity {
         return o;
     }
 
-    Entity copy() {
-        return Entity{ mesh, tex, model };
-    }
-
-    Entity copyWithModel(glm::mat4 model) {
-        return Entity{ mesh, tex, model };
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type, bool owned = false) {
+        return Entity::create(mesh, tex, default_normal, initial_transform, type, owned);
     }
 
     bool (*update)(Entity& object, F64 dt);
