@@ -522,6 +522,9 @@ int main(int argc, char** argv) {
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	static char buf[64];
 	windowMouseRelease(window);
+
+	bool bothReady = false;
+
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -815,8 +818,8 @@ int main(int argc, char** argv) {
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
 		*/
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-		ImGui::ProgressBar(g_my_health / g_max_health);
-		ImGui::ProgressBar(g_enemy_health / g_max_health);
+		ImGui::ProgressBar((F32)g_my_health / (F32)g_max_health);
+		ImGui::ProgressBar((F32)g_enemy_health / (F32)g_max_health);
 		ImGui::PopStyleColor();
 		if (g_game_over) {
 			ImGui::Separator();
@@ -972,6 +975,11 @@ int main(int argc, char** argv) {
 				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
 			}
 
+			if (g_song_active && !bothReady) {
+				menu_open = false;
+			}
+
+			bothReady = g_song_active;
 			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
@@ -1087,7 +1095,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i] || true) { // TODO remove this later
+			if (cannon_can_fire[i]) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
