@@ -260,7 +260,7 @@ void make_seagull(U8 cannon, F64 timestamp) {
 
 		//return (cat.model[3][1] >= 0.0f);
 		return beats_from_fire > 1-beats_grace;
-		};
+	};
 }
 // Create a shader from vertex and fragment shader files
 
