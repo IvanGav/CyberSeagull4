@@ -198,7 +198,18 @@ void try_connect(const std::string& ip, U16 port) {
 		g_connecting = false;
 		}).detach();
 }
-
+static void reset_network_state() {
+	player_id = 0xffff;
+	g_p0_id = g_p1_id = 0xffff;
+	g_p0_ready = g_p1_ready = false;
+	g_sent_ready = false;
+	g_song_active = false;
+	g_game_over = false;
+	g_winner = 0xffff;
+	g_my_health = 5;
+	g_enemy_health = 5;
+	g_last_connect_error.clear();
+}
 // Reflections
 GLuint reflection_framebuffer;
 GLuint reflection_tex, reflection_depth_tex;
@@ -589,6 +600,7 @@ int main(int argc, char** argv) {
 			g_connecting = false;
 			g_last_connect_error = "Timed out connecting to " + server_ip;
 			client.Disconnect();
+			reset_network_state(); 
 		}
 
 
@@ -898,16 +910,25 @@ int main(int argc, char** argv) {
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
 						g_connect_started = glfwGetTime();
-						try_connect(server_ip, 1951);
+						g_last_connect_error.clear();
 						g_connecting = true;
-						std::cout << "Server IP:" <<  ipbuf;
+						std::thread([server_ip]() {
+							player_id = 0xffff; // ensure HELLO is sent after (re)connect
+							bool ok = client.Connect(server_ip, 1951);
+							if (!ok) g_last_connect_error = "Failed to start connection";
+							g_connecting = false;
+							}).detach();
 					}
+
 				}
 				else {
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					ImGui::Text("Connecting to %s...", server_ip.c_str());
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 *  spacing)));
-					if (ImGui::Button("Cancel")) { client.Disconnect(); } // leave g_connecting; thread will clear it :     )
+					if (ImGui::Button("Cancel")) {
+						client.Disconnect();
+						reset_network_state();
+					}
 				}
 			}
 			else {
@@ -917,6 +938,7 @@ int main(int argc, char** argv) {
 				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
 					client.Disconnect();
+					reset_network_state(); 
 				}
 			}
 
@@ -952,22 +974,31 @@ int main(int argc, char** argv) {
 				g_p1_ready ? "Ready" : "Not Ready");
 			*/
 			
+			// main.cpp – inside the menu_open == true block, around the "Start Game" drawing
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
 
-			ImGui::SetCursorPos(ImVec2(((2 * ready1x) + (2 * readyd) - readyd * 1.5) / 2, ready1y + readyd));
+			ImVec2 startSize = ImVec2(readyd * 1.5f, readyd * 1.5f);
+			ImVec2 startPos = ImVec2(
+				((2 * ready1x) + (2 * readyd) - readyd * 1.5f) / 2.0f, 
+				ready1y + readyd);
+
+			// Show button only if I'm actually a player and no match is running
 			if (!g_song_active && i_am_player && player_id != 0xffff)
 			{
 				if (!g_sent_ready)
 				{
-					ImGui::Image((ImTextureID)textures.menu.startGame, ImVec2(readyd*1.5, readyd * 1.5));
-					ImGui::SetCursorPos(ImVec2(ready1x, ready1y + readyd));
-					if (ImGui::InvisibleButton("Start Game", ImVec2(readyd * 1.5, readyd * 1.5)))
+					ImGui::SetCursorPos(startPos);
+					ImGui::Image((ImTextureID)textures.menu.startGame, startSize);
+
+					// Place the invisible button at the SAME position/size as the image:
+					ImGui::SetCursorPos(startPos);
+					if (ImGui::InvisibleButton("Start Game", startSize))
 					{
 						cgull::net::message<message_code> m;
 						m.header.id = message_code::PLAYER_READY;
-						U16 pid = player_id; // 16-bit id
+						U16 pid = player_id;
 						m << pid;
 						if (client.IsConnected() && player_id != 0xffff) {
 							client.Send(m);
@@ -978,13 +1009,16 @@ int main(int argc, char** argv) {
 				}
 				else
 				{
-					ImGui::Image((ImTextureID)textures.menu.waitForPlayer, ImVec2(readyd * 1.5, readyd * 1.5));
+					ImGui::SetCursorPos(startPos);
+					ImGui::Image((ImTextureID)textures.menu.waitForPlayer, startSize);
 				}
 			}
 			else
 			{
+				ImGui::SetCursorPos(startPos);
 				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
 			}
+
 			
 			
 			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
