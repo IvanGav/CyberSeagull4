@@ -130,7 +130,11 @@ static struct {
 		GLuint leave;
 		GLuint closeMenu;
   } menu;
+  GLuint feather;
 } textures;
+
+ParticleSource particleSource;
+ParticleSource featherSource;
 
 // Networking global stuff
 
@@ -384,6 +388,8 @@ int main(int argc, char** argv) {
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
 
+	textures.feather = createTextureFromImage("asset/feather.png");
+
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
 
@@ -424,9 +430,17 @@ int main(int argc, char** argv) {
 	}
 
 	// Create static particle sources (later change this to be dynamic or something)
+	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
+	particleSource.tex_index = 0;
+	particleSource.setSheetRes(8, 8);
 
-	ParticleSource particleSource{ glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 5 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
 
+	// Bind textures to particle array
+	particle_textures[0] = textures.particleExplosion;
+	particle_textures[1] = textures.feather;
+
+	// Create buffers
 	GLuint buffer;
 	glCreateBuffers(1, &buffer);
 	glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
@@ -616,6 +630,7 @@ int main(int argc, char** argv) {
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 			glProgramUniform1i(program, 19, true);
+			glBindTextureUnit(1, shadowmap);
 
 			for (int i = 0; i < objects.size(); i++) {
 				Entity& o = objects[i];
@@ -648,9 +663,12 @@ int main(int argc, char** argv) {
 
 			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
 			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-			glBindTextureUnit(0, textures.particleExplosion);
+			glBindTextureUnit(0, particle_textures[0]);
+			glBindTextureUnit(1, particle_textures[1]);
+			glBindTextureUnit(2, particle_textures[2]);
+			glBindTextureUnit(3, particle_textures[3]);
 
-			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE* lastUsedParticle); // where lastUsedParticle is the number of particles
+			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -685,6 +703,7 @@ int main(int argc, char** argv) {
 		glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 		glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 		glProgramUniform1i(program, 19, false);
+		glBindTextureUnit(1, shadowmap);
 
 		for (int i = 0; i < objects.size(); i++) {
 			Entity& o = objects[i];
@@ -728,7 +747,10 @@ int main(int argc, char** argv) {
 
 		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
 		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, textures.particleExplosion);
+		glBindTextureUnit(0, particle_textures[0]);
+		glBindTextureUnit(1, particle_textures[1]);
+		glBindTextureUnit(2, particle_textures[2]);
+		glBindTextureUnit(3, particle_textures[3]);
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 

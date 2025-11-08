@@ -29,6 +29,7 @@ struct Particle {
 	float size;
 	float age;
 	uint sheetRes;
+	uint texNum;
 };
 
 layout(binding = 1, std430) readonly buffer VertexBuffer {
@@ -42,6 +43,7 @@ layout(binding = 2, std430) readonly buffer ParticleBuffer {
 layout(location = 0) out vec2 outUV;
 layout(location = 1) flat out uint sheetRes;
 layout(location = 2) out float age;
+layout(location = 3) flat out uint texNum;
 
 layout(location = 0) uniform mat4 view;
 layout(location = 4) uniform mat4 projection;
@@ -55,6 +57,7 @@ void main() {
 	outUV = uvs[v.vertexid];
 	sheetRes = p.sheetRes;
 	age = p.age;
+	texNum = p.texNum;
 
 	gl_Position = projection * (view * worldSpacePos + vec4(vertex_offsets[v.vertexid], 0.0f) * p.size);
 }

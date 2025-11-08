@@ -37,7 +37,10 @@ struct ParticleData {
 	alignas(4) F32 size;
 	F32 age;
 	U32 sheetRes;
+	U32 tex; // 0 to 3
 };
+
+GLuint particle_textures[4]{};
 
 // For cpu
 
@@ -49,6 +52,7 @@ struct Particle {
 	F32 size;
 	F32 life;
 	F32 maxLife;
+	U8 tex; // 0 to 3
 	U8 sheetResX;
 	U8 sheetResY;
 
@@ -74,14 +78,22 @@ struct ParticleSource {
 	RGBA8 init_color;
 	F32 init_size;
 	F32 init_life;
+	U8 tex_index = 0xff; // "out of bounds"
+
+	U8 sheetResX = 1;
+	U8 sheetResY = 1;
 
 	void spawnParticle() {
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
-		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, 8, 8 };
+		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY };
 	}
 	void spawnParticles(int num) {
 		for (int i = 0; i < num; i++)
 			spawnParticle();
+	}
+	void setSheetRes(U8 x, U8 y) {
+		sheetResX = x;
+		sheetResY = y;
 	}
 };
 
@@ -135,5 +147,6 @@ void packParticles() {
 		pvertex_data[i].size = particles[i].size;
 		pvertex_data[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
 		pvertex_data[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;
+		pvertex_data[i].tex = particles[i].tex;
 	}
 }
