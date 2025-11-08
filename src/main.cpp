@@ -903,7 +903,7 @@ int main(int argc, char** argv) {
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 3) + buttonh));
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
@@ -916,6 +916,7 @@ int main(int argc, char** argv) {
 			{
 				if (!g_sent_ready)
 				{
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 4) + buttonh));
 					if (ImGui::Button("Start Game"))
 					{
 						cgull::net::message<message_code> m;
@@ -940,7 +941,7 @@ int main(int argc, char** argv) {
 			}
 			
 			
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
 			ImGui::PushItemWidth(inputw*4);
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
 			ImGui::PopItemWidth();
