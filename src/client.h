@@ -77,6 +77,7 @@ private:
         auto m = owned.msg;
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
+            if (m.body.size() < sizeof(U16)) break;
             U16 cid = 0; m >> cid; player_id = (U16)(cid & 0xffff);
             break;
         }
@@ -97,11 +98,10 @@ private:
             break;
         }
         case message_code::SONG_START: {
+            if (m.body.size() < sizeof(F64)) break;
             m >> song_spb;
             song_start_time = cur_time_sec;
-            g_song_active = true;
-            g_game_over = false;
-            g_sent_ready = false;
+            g_song_active = true; g_game_over = false; g_sent_ready = false;
             std::cout << "[CLIENT] SONG_START spb=" << song_spb << "\n";
             break;
         }

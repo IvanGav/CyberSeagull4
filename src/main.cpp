@@ -90,7 +90,6 @@ Entity* cannons_enemy[6];
 // F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
 
 // Static data
-static F32 WATER_HEIGHT = -2.0;
 static int width = 1920;
 static int height = 1080;
 static GLuint vao;
@@ -178,32 +177,29 @@ static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
 	if (client.IsConnected() || g_connecting.load()) return;
-
 	g_connect_started = glfwGetTime();
 	g_last_connect_error.clear();
 	g_connecting = true;
 
-	std::thread([ip, port]() {
-		try {
-			player_id = 0xffff;
-			client.Connect(ip, port);
-		}
-		catch (const std::exception& e) {
-			g_last_connect_error = e.what();
-		}
-		g_connecting = false;
-		}).detach();
+	player_id = 0xffff; 
+	bool ok = client.Connect(ip, port);
+	if (!ok) g_last_connect_error = "Failed to start connection";
+	g_connecting = false;
 }
+
 
 static void reset_network_state() {
 	player_id = 0xffff;
+	g_p0_id = g_p1_id = 0xffff;
+	g_p0_ready = g_p1_ready = false;
 	g_sent_ready = false;
 	g_song_active = false;
 	g_game_over = false;
 	g_winner = 0xffff;
-	g_connecting = false;
 	g_last_connect_error.clear();
+	g_connecting = false;
 }
+
 // Reflections
 GLuint reflection_framebuffer;
 GLuint reflection_tex, reflection_depth_tex;
@@ -452,7 +448,7 @@ int main(int argc, char** argv) {
 	std::string server_ip = "136.112.101.5";
 	// try_connect(server_ip, 1951);
 
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, WATER_HEIGHT, 0.0)), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	genTangents(vertices);
 
@@ -635,7 +631,7 @@ int main(int argc, char** argv) {
 
 		// Draw to water texture framebuffers
 		{
-			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = WATER_HEIGHT - modified_pos.y;
+			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = 0.0f - modified_pos.y;
 			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
 			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
 
@@ -671,7 +667,6 @@ int main(int argc, char** argv) {
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 			glProgramUniform1i(program, 19, true);
-			glProgramUniform1f(program, 20, WATER_HEIGHT);
 			glBindTextureUnit(1, shadowmap);
 
 			for (int i = 0; i < objects.size(); i++) {
