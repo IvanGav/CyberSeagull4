@@ -818,8 +818,8 @@ int main(int argc, char** argv) {
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
 		*/
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-		ImGui::ProgressBar(g_my_health / g_max_health);
-		ImGui::ProgressBar(g_enemy_health / g_max_health);
+		ImGui::ProgressBar((F32)g_my_health / (F32)g_max_health);
+		ImGui::ProgressBar((F32)g_enemy_health / (F32)g_max_health);
 		ImGui::PopStyleColor();
 		if (g_game_over) {
 			ImGui::Separator();
