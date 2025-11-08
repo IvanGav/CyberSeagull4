@@ -680,6 +680,7 @@ int main(int argc, char** argv) {
 			}
 
 			// Draw particles
+			glDepthMask(GL_FALSE);
 			glUseProgram(particleProgram);
 
 			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
@@ -690,6 +691,7 @@ int main(int argc, char** argv) {
 			glBindTextureUnit(3, particle_textures[3]);
 
 			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+			glDepthMask(GL_TRUE);
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -764,6 +766,7 @@ int main(int argc, char** argv) {
 		}
 
 		// Draw particles
+		glDepthMask(GL_FALSE);
 		glUseProgram(particleProgram);
 
 		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
@@ -774,6 +777,7 @@ int main(int argc, char** argv) {
 		glBindTextureUnit(3, particle_textures[3]);
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+		glDepthMask(GL_TRUE);
 
 		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
