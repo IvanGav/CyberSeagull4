@@ -102,6 +102,7 @@ private:
             g_song_active = true;
             g_game_over = false;
             g_sent_ready = false;
+            std::cout << "[CLIENT] SONG_START spb=" << song_spb << "\n";
             break;
         }
         case message_code::HEALTH_UPDATE: {
@@ -127,7 +128,7 @@ private:
             m >> p0; m >> r0; m >> p1; m >> r1;
             g_p0_id = p0;  g_p1_id = p1;
             g_p0_ready = (r0 != 0); g_p1_ready = (r1 != 0);
-            if (!g_p0_ready && !g_p1_ready) g_sent_ready = false;
+            if (!g_song_active && !g_p0_ready && !g_p1_ready) g_sent_ready = false;
             break;
         }
         default: break;

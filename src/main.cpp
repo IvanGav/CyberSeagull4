@@ -911,9 +911,8 @@ int main(int argc, char** argv) {
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
-			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
-			if (!g_song_active && (i_am_player || slot_available))
+			if (!g_song_active && i_am_player && player_id != 0xffff)
 			{
 				if (!g_sent_ready)
 				{
@@ -923,8 +922,10 @@ int main(int argc, char** argv) {
 						m.header.id = message_code::PLAYER_READY;
 						U16 pid = player_id; // 16-bit id
 						m << pid;
-						if (client.IsConnected()) client.Send(m);
-						g_sent_ready = true;
+						if (client.IsConnected() && player_id != 0xffff) {
+							client.Send(m);
+							g_sent_ready = true;
+						}
 					}
 					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 				}
