@@ -196,17 +196,16 @@ protected:
             std::sort(cats.begin(), cats.end());
             cats.erase(std::unique(cats.begin(), cats.end()), cats.end());
 
+            // Bind action to athe connections pid 
+            std::optional<U16> pid_from_conn;
             {
-                std::lock_guard<std::mutex> lk(song_mtx_);
-                if (cats.size() > lanes_) cats.resize(lanes_);
-                cats.erase(std::remove_if(cats.begin(), cats.end(),
-                    [this](U8 lane) { return lane >= lanes_; }),
-                    cats.end());
+                std::lock_guard<std::mutex> lk(players_mtx_);
+                auto it = conn_to_pid_.find(client->GetID());
+                if (it != conn_to_pid_.end()) pid_from_conn = it->second; 
             }
-
-            auto pid = PidForConn(client);
-            if (!pid) break;
-            OnPlayerFire(*pid, cats);
+            
+            if (!pid_from_conn_has_value() || cats.empty()) break;
+            OnPlayerFire(*pid_from_conn, cats);
             break;
         }
         case message_code::PLAYER_READY: {
@@ -341,7 +340,7 @@ private:
                         };
 
                     if (!b0 && !b1) {
-                        // Nobody blocked -> both punished bad bad boy
+                        // Nobody blocked,  both punished bad bad boy
                         apply_damage(0);
                         apply_damage(1);
                     }

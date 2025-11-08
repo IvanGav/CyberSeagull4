@@ -435,9 +435,8 @@ int main(int argc, char** argv) {
 	ma_engine_set_volume(&engine, volume/100.f);
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
-	bool menu_open = true;
 	static char buf[64];
-
+	bool menu_open = false;
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -702,178 +701,121 @@ int main(int argc, char** argv) {
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
-		// Draw UI
+		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
-
-		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
-		ImGui::Begin("State", NULL, flags);
-		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
-		ImGui::End();
-
-
-		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
-			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
-		}*/
-
-    /*
-    TODO merge here
-    if (menu_open) {
-			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
-
-			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
-			ImGui::SetNextWindowPos(ImVec2(100, 100));
-			ImGui::Begin("menu", NULL, flags);
-			ImGui::Text("This sis the omenu");
-			ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf));
-			if (!client.IsConnected()) {
-				if (ImGui::Button("Connect")) {
-					//server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
-					server_ip = buf;
-					client.Connect(server_ip, 1951);
-				}
-			}
-			else {
-				if (ImGui::Button("Disconnect")) {
-					client.Disconnect();
-				}
-			}
-			ImGui::SliderFloat("Volume", &volume, 0, 256);
-			if (ImGui::Button("Close Menu")) {
-				menu_open = false;
-    */
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(200, 200));
-		ImGui::Begin("note multiplier", NULL, flags);
-		ImGui::SliderInt("note 1", &note1, 0, 127);
-		ImGui::SliderInt("note 2", &note2, 0, 127);
-		ImGui::Text("The note multiplier value is %f", noteMultiplier((U8)note1, (U8)note2));
-		ImGui::Text("Frame time: %f", dt * 1000.0);
-		ImGui::End();
-
-
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(20, 20));
-		ImGui::Begin("ip", NULL, flags);
-		//ImGui::SliderInt("val 1", &val1, 0, 256);
-		//ImGui::SliderInt("val 2", &val2, 0, 256);
-		//ImGui::SliderInt("val 3", &val3, 0, 256);
-		//ImGui::SliderInt("val 4", &val4, 0, 256);
-		//ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
-		//if (!client.IsConnected()) {
-		//	if (ImGui::Button("Connect")) {
-		//		server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
-		//		client.Connect(server_ip, 1951);
-		//	}
-		//}
-		//else {
-		//	if (ImGui::Button("Disconnect")) {
-		//		client.Disconnect();
-		//	}
-		//}
-		// Editable server IP and connect disconnect buttons
-		static bool ipbuf_init = false;
-		static char ipbuf[64];
-		if (!ipbuf_init) {
-			std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str());
-			ipbuf_init = true;
-		}
-		if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
-			server_ip = ipbuf;
-		}
-
-		if (!client.IsConnected()) {
-			if (!g_connecting) {
-				if (!g_last_connect_error.empty()) {
-					ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
-				}
-				if (ImGui::Button("Connect")) {
-					g_connecting = true;
-					g_connect_started = glfwGetTime();
-					try_connect(server_ip, 1951);
-				}
-			}
-			else {
-				ImGui::Text("Connecting to %s...", server_ip.c_str());
-				if (ImGui::Button("Cancel")) { client.Disconnect(); } // leave g_connecting; thread will clear it :     )
-			}
-			ImGui::End();
-			ma_engine_set_volume(&engine, volume / 100.f);
-		}
-    /*
-    TODO merge here
-    
-		else {
-			ImGui::SetNextWindowSize(ImVec2(50, 50));
-			ImGui::SetNextWindowPos(ImVec2(50, 50));
-			ImGui::Begin("open menu", NULL, flags);
-			if (ImGui::Button("Menu")) {
-				menu_open = true;
-    */
-		ImGui::End();
-
-		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
-		ImGui::Text("My HP: %d", g_my_health);
-		ImGui::Text("Enemy HP: %d", g_enemy_health);
-		if (g_game_over) {
-			ImGui::Separator();
-			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
-			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
-			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+		ImGui::SetNextWindowSize(ImVec2(748.0f, 110.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2((width - 748.0f) * 0.5f, height * 0.01f), ImGuiCond_Always);
+		if (ImGui::Begin("State", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
+		{
+			ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
 		}
 		ImGui::End();
 
-		ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
-		ImGui::Text("Player 0: %s  [%s]", g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
-			g_p0_ready ? "Ready" : "Not Ready");
-		ImGui::Text("Player 1: %s  [%s]", g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
-			g_p1_ready ? "Ready" : "Not Ready");
+		ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
+		if (ImGui::Begin("Connection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			static bool ipbuf_init = false;
+			static char ipbuf[64]{};
+			if (!ipbuf_init) { std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str()); ipbuf_init = true; }
+			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) { server_ip = ipbuf; }
 
-		bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
-		bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
-		bool i_am_player = i_am_player0 || i_am_player1;
+			if (!client.IsConnected())
+			{
+				if (!g_connecting)
+				{
+					if (!g_last_connect_error.empty())
+						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 
-		// Allow showing the button if I'm in a slot OR a slot is empty (server ignores spectators anyway)
-		bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
-
-		if (!g_song_active && (i_am_player || slot_available)) {
-			if (!g_sent_ready) {
-				if (ImGui::Button("Start Game")) {
-					cgull::net::message<message_code> m;
-					m.header.id = message_code::PLAYER_READY;
-					U16 pid = player_id;   // U16!
-					m << pid;              // PUSH U16
-					if (client.IsConnected()) client.Send(m);
-					g_sent_ready = true;
+					if (ImGui::Button("Connect"))
+					{
+						g_connecting = true;
+						g_connect_started = glfwGetTime();
+						try_connect(server_ip, 1951);
+					}
 				}
-				ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
+				else
+				{
+					ImGui::Text("Connecting to %s...", server_ip.c_str());
+					if (ImGui::Button("Cancel")) { client.Disconnect(); } 
+				}
 			}
-			else {
-				ImGui::TextDisabled("Waiting for the other player�");
+			else
+			{
+				if (ImGui::Button("Disconnect")) { client.Disconnect(); }
 			}
-			ImGui::End();
 
+			ImGui::SliderFloat("Volume", &volume, 0.0f, 256.0f, "%.0f");
+			ma_engine_set_volume(&engine, volume / 100.0f); 
 		}
-		else {
-			ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
-		}
-
 		ImGui::End();
 
+		// Status
+		if (ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("My HP: %d", g_my_health);
+			ImGui::Text("Enemy HP: %d", g_enemy_health);
+			if (g_game_over)
+			{
+				ImGui::Separator();
+				if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
+				else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
+				else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+			}
+		}
+		ImGui::End();
 
+		// Lobby
+		if (ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Player 0: %s  [%s]",
+				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
+				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::Text("Player 1: %s  [%s]",
+				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
+				g_p1_ready ? "Ready" : "Not Ready");
 
+			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
+			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
+			const bool i_am_player = i_am_player0 || i_am_player1;
+			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
+			if (!g_song_active && (i_am_player || slot_available))
+			{
+				if (!g_sent_ready)
+				{
+					if (ImGui::Button("Start Game"))
+					{
+						cgull::net::message<message_code> m;
+						m.header.id = message_code::PLAYER_READY;
+						U16 pid = player_id; // 16-bit id
+						m << pid;
+						if (client.IsConnected()) client.Send(m);
+						g_sent_ready = true;
+					}
+					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
+				}
+				else
+				{
+					ImGui::TextDisabled("Waiting for the other player...");
+				}
+			}
+			else
+			{
+				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
+			}
+		}
+		ImGui::End();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		// tell the OS to display the frame
+		// present
 		glfwSwapBuffers(window);
+
 	}
 
 	//glDeleteFrameBuffers(1, &framebuffer);
