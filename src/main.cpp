@@ -83,7 +83,8 @@ static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 
 std::vector<ma_sound*> liveSounds;
 
-FreeCam cam = FreeCam{ Cam { glm::vec3(0.0f,1.0f,0.0f), 0.0, 0.0 } };
+
+FreeCam cam = FreeCam{ Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375 } };
 
 Entity* cannons_friend[6];
 Entity* cannons_enemy[6];
@@ -536,6 +537,7 @@ int main(int argc, char** argv) {
 		glfwPollEvents();
 
 		GLFWgamepadstate state{};
+		/*
 		if (!menu_open) {
 			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 				moveFreeCamGamepad(window, cam, dt, state);
@@ -548,6 +550,7 @@ int main(int argc, char** argv) {
 				moveFreeCamMidi(window, cam, dt);
 			}
 		}
+		*/
 
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].update) {
