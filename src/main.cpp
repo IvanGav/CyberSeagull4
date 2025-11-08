@@ -106,6 +106,8 @@ static struct {
 	Mesh cannon;
 	Mesh cannon_door;
 	Mesh seagBall;
+	Mesh ship;
+	Mesh shipNoMast;
 } meshes;
 static struct {
 	GLuint green;
@@ -122,6 +124,11 @@ static struct {
 		GLuint arm;
 	} cannon;
 	GLuint seagull;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} ship;
   struct {
     GLuint menu_logo;
 		GLuint context;
@@ -363,6 +370,8 @@ int main(int argc, char** argv) {
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
+	meshes.ship = Mesh::create(vertices, "asset/ship/ship.obj");
+	meshes.shipNoMast = Mesh::create(vertices, "asset/ship/ship_no_mast.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -387,6 +396,10 @@ int main(int argc, char** argv) {
 	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
+
+	textures.ship.color = createTextureFromImage("asset/ship/ship_BaseColor.png");
+	textures.ship.norm = createTextureFromImage("asset/ship/ship_Normal.png");
+	textures.ship.arm = createTextureFromImage("asset/ship/ship_ARM.png");
 
 	textures.feather = createTextureFromImage("asset/feather.png");
 
