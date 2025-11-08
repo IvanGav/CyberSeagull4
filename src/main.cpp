@@ -754,6 +754,10 @@ int main(int argc, char** argv) {
 	cleanup(window);
 }
 
+void draw_cannon(glm::vec3 pos) {
+	glDrawArrays(GL_TRIANGLES, meshes.cannon.offset, meshes.cannon.size);
+}
+
 void throw_cats() {
 	bool send = false;
 	std::vector<uint8_t> cats;
