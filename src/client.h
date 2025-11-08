@@ -16,11 +16,15 @@ extern int g_my_health;
 extern int g_enemy_health;
 extern bool g_game_over;
 extern U16 g_winner;
+extern bool g_song_active;
+extern bool g_sent_ready;
 
 // lobby state
 extern U16 g_p0_id, g_p1_id;
 extern bool g_p0_ready, g_p1_ready;
 extern bool g_sent_ready;  
+
+
 
 F64 song_start_time;
 F64 song_spb; 
@@ -93,8 +97,11 @@ private:
             break;
         }
         case message_code::SONG_START: {
-            song_spb = 1;                   // keep current visual pacing
+            song_spb = 1;            
             song_start_time = cur_time_sec;
+            g_song_active = true;   
+            g_game_over = false;   
+            g_sent_ready = false; 
             break;
         }
         case message_code::HEALTH_UPDATE: {
@@ -109,17 +116,17 @@ private:
         }
         case message_code::GAME_OVER: {
             U16 winner = 0xffff; m >> winner;
-            g_winner = winner; g_game_over = true;
-            g_sent_ready = false;           // allow pressing ready for next match
+            g_winner = winner;
+            g_game_over = true;
+            g_song_active = false; 
+            g_sent_ready = false; 
             break;
         }
         case message_code::LOBBY_STATE: {
-            // Server packs: p0_id, p0_ready, p1_id, p1_ready
             U16 p0 = 0xffff, p1 = 0xffff; U8 r0 = 0, r1 = 0;
             m >> p0; m >> r0; m >> p1; m >> r1;
-            g_p0_id = p0; g_p1_id = p1;
+            g_p0_id = p0;  g_p1_id = p1;
             g_p0_ready = (r0 != 0); g_p1_ready = (r1 != 0);
-            // If a new round is forming, ensure button can be pressed again
             if (!g_p0_ready && !g_p1_ready) g_sent_ready = false;
             break;
         }

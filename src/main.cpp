@@ -121,6 +121,7 @@ int  g_my_health = 5;
 int  g_enemy_health = 5;
 bool g_game_over = false;
 U16  g_winner = 0xffff;
+bool g_song_active = false;
 
 // lobby
 U16  g_p0_id = 0xffff, g_p1_id = 0xffff;
@@ -741,25 +742,29 @@ int main(int argc, char** argv) {
 		bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 		bool i_am_player = i_am_player0 || i_am_player1;
 
-		if (i_am_player) {
-			if (!g_sent_ready && !g_game_over) {
+		// Allow showing the button if I'm in a slot OR a slot is empty (server ignores spectators anyway)
+		bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
+
+		if (!g_song_active && (i_am_player || slot_available)) {
+			if (!g_sent_ready) {
 				if (ImGui::Button("Start Game")) {
 					cgull::net::message<message_code> m;
 					m.header.id = message_code::PLAYER_READY;
-					m << player_id;                     // payload
+					U16 pid = player_id;   // U16!
+					m << pid;              // PUSH U16
 					if (client.IsConnected()) client.Send(m);
 					g_sent_ready = true;
 				}
-				ImGui::SameLine();
-				ImGui::TextDisabled(" (press when ready)");
+				ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 			}
 			else {
-				ImGui::TextDisabled("Waiting for the other player...");
+				ImGui::TextDisabled("Waiting for the other player…");
 			}
 		}
 		else {
-			ImGui::TextDisabled("Spectating (button disabled)");
+			ImGui::TextDisabled(g_song_active ? "Match in progress…" : "Spectating (button disabled)");
 		}
+
 		ImGui::End();
 
 
