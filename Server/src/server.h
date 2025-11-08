@@ -78,6 +78,7 @@ public:
             s.rel_time = n.time;
             s.note = n.note;
             s.lane = static_cast<U8>(n.note % lanes_);
+            std::cout << "n: " << n.note << "   " << n.time << "\n";
             schedule_.push_back(s);
         }
         std::sort(schedule_.begin(), schedule_.end(),
