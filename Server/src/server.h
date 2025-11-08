@@ -29,6 +29,21 @@ public:
         if (stupidknowitall_thread_.joinable()) stupidknowitall_thread_.join();
     }
 
+    void BroadcastHealth()
+    {
+        U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
+        {
+            std::scoped_lock lk(players_mtx_);
+            if (players_.size() >= 1) { p0_id = players_[0]; p0_hp = (U16)hp_[players_[0]]; }
+            if (players_.size() >= 2) { p1_id = players_[1]; p1_hp = (U16)hp_[players_[1]]; }
+        }
+        cgull::net::message<message_code> m;
+        m.header.id = message_code::HEALTH_UPDATE;
+        m << p1_hp; m << p1_id; m << p0_hp; m << p0_id;  // same packing you already use
+        MessageAllClients(m);
+    }
+
+
     void SendHealthTo(const std::shared_ptr<connection_t>& c) {
         U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
         {
@@ -85,12 +100,15 @@ public:
 
             game_over_sent_ = false;
             for (size_t i = 0; i < players_.size() && i < 2; ++i) hp_[players_[i]] = HEALTH_MAX;
+            
+            BroadcastHealth();
 
             song_started_ = true;
             song_start_tp_ = std::chrono::steady_clock::now()
                 + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(LEAD_IN_SEC));
-        }
+        
+           }
 
         // Tell clients to anchor clocks (no payload)
         {

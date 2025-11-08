@@ -36,13 +36,8 @@ class seaclient : public cgull::net::client_interface<message_code> {
 public:
     // Call this regularly in the main loop
     void check_messages() {
-        // Not connected? Ensure next session handshakes, then bail.
-        if (!this->IsConnected()) {
-            hello_sent_ = false;
-            return;
-        }
+        if (!this->IsConnected()) { hello_sent_ = false; return; }
 
-        // Connected but no id yet -> request one (HELLO sent once)
         if (!hello_sent_ && player_id == 0xffff) {
             cgull::net::message<message_code> hello;
             hello.header.id = message_code::HELLO;
@@ -50,15 +45,12 @@ public:
             hello_sent_ = true;
         }
 
-        // Drain incoming messages. If we disconnect mid-loop, IsConnected() turns false;
-        // the loop condition guards the pop/send paths from racing a teardown.
         while (this->IsConnected() && !this->Incoming().empty()) {
-            try {
-                handle_message(this->Incoming().pop_front());
-            } catch (const std::exception& e) {
-                std::cerr << "[CLIENT] handle_message exception: " << e.what() << "\n";
-            }
+            try { handle_message(this->Incoming().pop_front()); }
+            catch (const std::exception& e) { std::cerr << "[CLIENT] handle_message exception: " << e.what() << "\n"; }
         }
+
+        apply_health_snapshot();
     }
 
     // Optional helper to send a "cat fire" event
@@ -83,14 +75,16 @@ private:
         U16 p0_hp = 0, p1_hp = 0;
         bool valid = false;
     } last_health_;
-
     void apply_health_snapshot() {
         if (!last_health_.valid) return;
 
-        if (player_id == last_health_.p0_id) { g_my_health = last_health_.p0_hp; g_enemy_health = last_health_.p1_hp; }
-        else if (player_id == last_health_.p1_id) { g_my_health = last_health_.p1_hp; g_enemy_health = last_health_.p0_hp; }
-        else /* spectator */ { g_my_health = last_health_.p0_hp; g_enemy_health = last_health_.p1_hp; }
+        U16 p1hp = last_health_.p1_id == 0xffff ? 5 : last_health_.p1_hp;
+
+        if (player_id == last_health_.p0_id) { g_my_health = last_health_.p0_hp; g_enemy_health = p1hp; }
+        else if (player_id == last_health_.p1_id) { g_my_health = p1hp; g_enemy_health = last_health_.p0_hp; }
+        else /* spectator */ { g_my_health = last_health_.p0_hp; g_enemy_health = p1hp; }
     }
+
 
     void handle_message(const cgull::net::owned_message<message_code>& owned) {
         auto m = owned.msg;

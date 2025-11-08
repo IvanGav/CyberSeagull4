@@ -162,7 +162,7 @@ seaclient client;
 // overlay state
 int  g_my_health = 5;
 int  g_enemy_health = 5;
-int g_max_health = std::max(g_my_health, g_enemy_health);
+constexpr int g_max_health = 5;
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 bool g_song_active = false;
