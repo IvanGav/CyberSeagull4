@@ -1,6 +1,5 @@
 #pragma once
 #include <cgullnet/cgull_net.h>
-#include "util.h"
 
 enum class message_code : U32 {
 	HELLO,

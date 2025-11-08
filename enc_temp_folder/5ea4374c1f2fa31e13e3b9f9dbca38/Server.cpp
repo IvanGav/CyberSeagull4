@@ -5,7 +5,6 @@
 #include <cstdint>
 #include "server.h"
 #include "message.h"
-#include "util.h"
 #include <libremidi/libremidi.hpp>
 
 
