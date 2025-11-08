@@ -136,6 +136,12 @@ static struct {
 		GLuint connect;
 		GLuint leave;
 		GLuint closeMenu;
+		GLuint P1Ready;
+		GLuint P1NotReady;
+		GLuint P2Ready;
+		GLuint P2NotReady;
+		GLuint startGame;
+		GLuint waitForPlayer;
   } menu;
   GLuint feather;
 } textures;
@@ -153,6 +159,7 @@ seaclient client;
 // overlay state
 int  g_my_health = 5;
 int  g_enemy_health = 5;
+int g_max_health = std::max(g_my_health, g_enemy_health);
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 bool g_song_active = false;
@@ -391,6 +398,12 @@ int main(int argc, char** argv) {
 	textures.menu.connect = createTextureFromImage("asset/ConnectButton.png");
 	textures.menu.leave = createTextureFromImage("asset/LeaveButton.png");
 	textures.menu.closeMenu = createTextureFromImage("asset/Close-Menu.png");
+	textures.menu.P1Ready = createTextureFromImage("asset/P1Ready.png");
+	textures.menu.P1NotReady = createTextureFromImage("asset/P1NotReady.png");
+	textures.menu.P2Ready = createTextureFromImage("asset/P2Ready.png");
+	textures.menu.P2NotReady = createTextureFromImage("asset/P2NotReady.png");
+	textures.menu.startGame = createTextureFromImage("asset/startGame.png");
+	textures.menu.waitForPlayer = createTextureFromImage("asset/waitForPlayer.png");
 
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
@@ -897,9 +910,30 @@ int main(int argc, char** argv) {
 					client.Disconnect();
 				}
 			}
-			
 
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			F32 readyd = buttonw*0.5, ready1x = inputx + buttonw + width / 40, ready1y = inputy + (spacing);
+			
+			if (g_p0_ready) {
+				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
+				ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
+			}
+			else {
+				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
+				ImGui::Image((ImTextureID)textures.menu.P1NotReady, ImVec2(readyd, readyd));
+			}
+
+			F32 ready2x = ready1x + readyd + width / 50, ready2y = ready1y;
+
+			if (g_p1_ready) {
+				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
+				ImGui::Image((ImTextureID)textures.menu.P2Ready, ImVec2(readyd, readyd));
+			}
+			else {
+				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
+				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
+			}
+
+			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
@@ -907,18 +941,21 @@ int main(int argc, char** argv) {
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
-
+			*/
+			
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
 			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
+			ImGui::SetCursorPos(ImVec2(((2 * ready1x) + (2 * readyd) - readyd * 1.5) / 2, ready1y + readyd));
 			if (!g_song_active && (i_am_player || slot_available))
 			{
 				if (!g_sent_ready)
 				{
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 4) + buttonh));
-					if (ImGui::Button("Start Game"))
+					ImGui::Image((ImTextureID)textures.menu.startGame, ImVec2(readyd*1.5, readyd * 1.5));
+					ImGui::SetCursorPos(ImVec2(ready1x, ready1y + readyd));
+					if (ImGui::InvisibleButton("Start Game", ImVec2(readyd * 1.5, readyd * 1.5)))
 					{
 						cgull::net::message<message_code> m;
 						m.header.id = message_code::PLAYER_READY;
@@ -927,11 +964,10 @@ int main(int argc, char** argv) {
 						if (client.IsConnected()) client.Send(m);
 						g_sent_ready = true;
 					}
-					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 				}
 				else
 				{
-					ImGui::TextDisabled("Waiting for the other player...");
+					ImGui::Image((ImTextureID)textures.menu.waitForPlayer, ImVec2(readyd * 1.5, readyd * 1.5));
 				}
 			}
 			else
@@ -967,49 +1003,20 @@ int main(int argc, char** argv) {
 
 		}
 
-		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::SetNextWindowSize(ImVec2(width-(width/15), 100));
+		ImGui::SetNextWindowPos(ImVec2(width/30, height * 0.01));
+		ImGui::Begin("Status", nullptr, flags);
+		/*
 		ImGui::Text("My HP: %d", g_my_health);
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
+		*/
+		ImGui::ProgressBar(g_my_health / g_max_health);
+		ImGui::ProgressBar(g_enemy_health / g_max_health);
 		if (g_game_over) {
 			ImGui::Separator();
 			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
 			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
 			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-		}
-		ImGui::End();
-
-		ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-		if (ImGui::Begin("Connection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			static bool ipbuf_init = false;
-			static char ipbuf[64]{};
-			if (!ipbuf_init) { std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str()); ipbuf_init = true; }
-			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) { server_ip = ipbuf; }
-
-			if (!client.IsConnected())
-			{
-				if (!g_connecting)
-				{
-					if (!g_last_connect_error.empty())
-						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
-
-					if (ImGui::Button("Join Game")) {
-						g_connect_started = glfwGetTime();
-						try_connect(server_ip, 1951);	
-						g_connecting = true;
-					}
-				}
-				else
-				{
-					ImGui::Text("Connecting to %s...", server_ip.c_str());
-					if (ImGui::Button("Cancel")) { client.Disconnect(); } 
-				}
-			}
-			else
-			{
-				if (ImGui::Button("Disconnect")) { client.Disconnect(); }
-			}
 		}
 		ImGui::End();
 
