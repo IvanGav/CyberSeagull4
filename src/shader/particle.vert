@@ -64,7 +64,7 @@ void main() {
 	age = p.age;
 	texNum = p.texNum;
 
-	if (all(p.dir == vec3(0.0))) {
+	if (length(p.dir) < 0.01) {
 		gl_Position = projection * (viewSpacePos + vec4(vertex_offsets[v.vertexid], 0.0f) * p.size);
 	} else {
 		vec3 viewSpaceDir = (view * vec4(p.dir, 0.0)).xyz;

@@ -406,22 +406,34 @@ private:
                 }
 
 
-                // Game over detection
-                if (!game_over_sent_ && !players_.empty()) {
-                    std::optional<U16> loser;
-                    for (size_t i = 0; i < players_.size() && i < 2; ++i) {
-                        if (hp_[players_[i]] <= 0) { loser = players_[i]; break; }
-                    }
-                    if (loser.has_value()) {
-                        out_winner = 0xffff;
-                        for (size_t i = 0; i < players_.size() && i < 2; ++i)
-                            if (players_[i] != *loser && hp_[players_[i]] > 0) { out_winner = players_[i]; break; }
-                        game_over_sent_ = true;
-                        song_started_ = false;
-                        ready_[0] = ready_[1] = false;
-                        send_game_over = true;
-                    }
+                bool all_resolved = true;
+                for (const auto& s : schedule_) {
+                    if (!s.resolved) { all_resolved = false; break; }
                 }
+
+                if (!game_over_sent_ && all_resolved) {
+                    // Decide winner by remaining HP; draw if equal/only one player
+                    U16 winner = 0xffff;
+                    if (players_.size() >= 1) {
+                        int hp0 = hp_[players_[0]];
+                        if (players_.size() >= 2) {
+                            int hp1 = hp_[players_[1]];
+                            if (hp0 > hp1) winner = players_[0];
+                            else if (hp1 > hp0) winner = players_[1];
+                            else                winner = 0xffff; // draw
+                        }
+                        else {
+                            winner = players_[0]; // single player “wins”
+                        }
+                    }
+
+                    out_winner = winner;
+                    game_over_sent_ = true;
+                    song_started_ = false;
+                    ready_[0] = ready_[1] = false;
+                    send_game_over = true;
+                }
+
             }
 
 
