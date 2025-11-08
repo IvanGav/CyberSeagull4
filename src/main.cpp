@@ -475,7 +475,12 @@ int main(int argc, char** argv) {
 	particleSource.setSheetRes(8, 8);
 	particleSource.scaleOverTime = 1.0F;
 
-	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.5f, 2.0f, 1 }; // live for 2 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.6f, 2.0f, 1 }; // live for 2 seconds
+	featherSource.randomRotation = 2.0F * PI;
+	featherSource.randomRotationOverTime = 10.0;
+	featherSource.gravity = 10.0F;
+	featherSource.drag = 0.95F;
+	featherSource.initVelScale = 8.0F;
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;

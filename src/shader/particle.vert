@@ -33,6 +33,7 @@ struct Particle {
 	float size;
 	float age;
 	uint sheetRes;
+	float rotation;
 	uint texNum;
 };
 
@@ -65,7 +66,9 @@ void main() {
 	texNum = p.texNum;
 
 	if (length(p.dir) < 0.01) {
-		gl_Position = projection * (viewSpacePos + vec4(vertex_offsets[v.vertexid], 0.0f) * p.size);
+		float sr = sin(p.rotation);
+		float cr = cos(p.rotation);
+		gl_Position = projection * (viewSpacePos + vec4(mat2(cr, sr, -sr, cr) * vertex_offsets[v.vertexid].xy, 0.0, 0.0f) * p.size);
 	} else {
 		vec3 viewSpaceDir = (view * vec4(p.dir, 0.0)).xyz;
 		vec3 offset = -normalize(cross(viewSpaceDir, viewSpacePos.xyz)) * 0.5;
