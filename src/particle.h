@@ -35,6 +35,8 @@ struct ParticleData {
 	alignas(16) glm::vec3 pos;
 	alignas(16) glm::vec4 color;
 	alignas(4) F32 size;
+	F32 age;
+	U32 sheetRes;
 };
 
 // For cpu
@@ -46,6 +48,9 @@ struct Particle {
 	RGBA8 color;
 	F32 size;
 	F32 life;
+	F32 maxLife;
+	U8 sheetResX;
+	U8 sheetResY;
 
 	F32 camdist;
 
@@ -72,7 +77,7 @@ struct ParticleSource {
 
 	void spawnParticle() {
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
-		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off, init_color, init_size, init_life};
+		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, 8, 8 };
 	}
 	void spawnParticles(int num) {
 		for (int i = 0; i < num; i++)
@@ -99,6 +104,7 @@ void advanceParticles(F32 dt) {
 			particles[i].life -= dt;
 			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(INFINITY); // so that when doing std::sort, it'll be the last particle
 			particles[i].pos += particles[i].speed * dt;
+			particles[i].size += dt;
 		}
 	}
 }
@@ -127,5 +133,7 @@ void packParticles() {
 		pvertex_data[i].pos = particles[i].pos;
 		pvertex_data[i].color = particles[i].color.to_v4f32();
 		pvertex_data[i].size = particles[i].size;
+		pvertex_data[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
+		pvertex_data[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;
 	}
 }
