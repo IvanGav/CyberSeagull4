@@ -365,12 +365,7 @@ private:
                         if (it != hp_.end() && it->second > 0) --(it->second); 
                     };
 
-                    if (!b0 && !b1) {
-                        // Nobody blocked,  both punished bad bad boy
-                        apply_damage(0);
-                        apply_damage(1);
-                    }
-                    else if (b0 ^ b1) {
+                    if (b0 ^ b1) {
                         // Exactly one blocked,  punish the other
                         apply_damage(b0 ? 1 : 0);
                     }
