@@ -91,17 +91,17 @@ struct midi_track {
 	}
 private:
 	void find_note_lane_mapping() {
-		U8 notes_found[12] = {}; // mod 12
+		U8 notes_found[6] = {}; // mod 12
 		// find used notes
 		for (U32 i = 0; i < notes.size(); i++)
-			notes_found[notes[i].note % 12]++;
+			notes_found[notes[i].note % 6]++;
 		U8 notes_found_count = 0;
 		// count how many were used
-		for (U32 i = 0; i < 12; i++) notes_found_count += notes_found[i] != 0;
+		for (U32 i = 0; i < 6; i++) notes_found_count += notes_found[i] != 0;
 		if (notes_found_count == lanes) {
 			// assign notes to lanes
 			U8 lane_num = 0;
-			for (U32 i = 0; i < 12; i++) {
+			for (U32 i = 0; i < 6; i++) {
 				note_lane_map[i] = lane_num;
 				lane_num += notes_found != 0;
 			}
