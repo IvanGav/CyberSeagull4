@@ -169,10 +169,13 @@ static std::string g_last_connect_error;
 static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
-	if (client.IsConnected() || g_connecting.load()) return;
+	if (client.IsConnected() || g_connecting.load()) {
+		return;
+	}
 	g_connect_started = glfwGetTime();  
 	g_connecting = true;
 	g_last_connect_error.clear();
+
 
 	std::thread([ip, port]() {
 		try {
@@ -182,7 +185,7 @@ void try_connect(const std::string& ip, U16 port) {
 		catch (const std::exception& e) {
 			g_last_connect_error = e.what();
 		}
-		catch (...) {                   // FIXED from catch (.)
+		catch (...) {   
 			g_last_connect_error = "Unknown error while connecting";
 		}
 		g_connecting = false;
@@ -865,6 +868,7 @@ int main(int argc, char** argv) {
 			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
 			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
 				server_ip = ipbuf;
+				std::cout << "Server IP:" <<  ipbuf;
 			}
 
 			if (!client.IsConnected()) {
@@ -876,9 +880,10 @@ int main(int argc, char** argv) {
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						g_connecting = true;
 						g_connect_started = glfwGetTime();
 						try_connect(server_ip, 1951);
+						g_connecting = true;
+						std::cout << "Server IP:" <<  ipbuf;
 					}
 				}
 				else {
@@ -899,9 +904,11 @@ int main(int argc, char** argv) {
 			}
 			
 
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 3) + buttonh));
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
@@ -909,20 +916,22 @@ int main(int argc, char** argv) {
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
-			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
-			if (!g_song_active && (i_am_player || slot_available))
+			if (!g_song_active && i_am_player && player_id != 0xffff)
 			{
 				if (!g_sent_ready)
 				{
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 4) + buttonh));
 					if (ImGui::Button("Start Game"))
 					{
 						cgull::net::message<message_code> m;
 						m.header.id = message_code::PLAYER_READY;
 						U16 pid = player_id; // 16-bit id
 						m << pid;
-						if (client.IsConnected()) client.Send(m);
-						g_sent_ready = true;
+						if (client.IsConnected() && player_id != 0xffff) {
+							client.Send(m);
+							g_sent_ready = true;
+						}
 					}
 					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 				}
@@ -937,7 +946,7 @@ int main(int argc, char** argv) {
 			}
 			
 			
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
 			ImGui::PushItemWidth(inputw*4);
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
 			ImGui::PopItemWidth();
@@ -992,9 +1001,9 @@ int main(int argc, char** argv) {
 						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 
 					if (ImGui::Button("Join Game")) {
-						g_connecting = true;
 						g_connect_started = glfwGetTime();
-						try_connect(server_ip, 1951);
+						try_connect(server_ip, 1951);	
+						g_connecting = true;
 					}
 				}
 				else
@@ -1041,7 +1050,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i]) {
+			if (cannon_can_fire[i] || true) {
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
@@ -1070,7 +1079,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
 
 	glm::vec4 pos = objects[i].model[3];
 	addParticle(Particle{
