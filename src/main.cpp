@@ -100,6 +100,7 @@ static struct {
 	Mesh quad;
 	Mesh cannon;
 	Mesh cannon_door;
+	Mesh seagull;
 } meshes;
 static struct {
 	GLuint green;
@@ -115,6 +116,7 @@ static struct {
 		GLuint norm;
 		GLuint arm;
 	} cannon;
+	GLuint seagull;
 } textures;
 
 // Networking global stuff
@@ -292,6 +294,7 @@ int main(int argc, char** argv) {
 	meshes.quad = Mesh::xzQuad(vertices);
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
+	meshes.seagull = Mesh::create(vertices, "asset/seagull/seagull.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -308,6 +311,8 @@ int main(int argc, char** argv) {
 	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
+
+	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
 
 
 	std::string song_name;
@@ -331,13 +336,9 @@ int main(int argc, char** argv) {
 	}
 
 	std::string server_ip = "136.112.101.5";
-	//try_connect(server_ip, 1951); // TODO
-	//client.Connect(server_ip, 1951);
+	try_connect(server_ip, 1951);
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
 	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
-
-	objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, glm::translate(glm::mat4(1.0), glm::vec3(0.0,10.0,0.0)), NONEMITTER));
 
 	genTangents(vertices);
 
@@ -800,7 +801,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagull, textures.seagull, objects[i].model, PROECTILE));
 	Entity& p = objects.back();
 
 	p.start_time = start_time;
