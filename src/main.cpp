@@ -430,11 +430,10 @@ int main(int argc, char** argv) {
 	}
 
 	// Create static particle sources (later change this to be dynamic or something)
-	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
-	particleSource.tex_index = 0;
+	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f, 0 }; // live for 1 seconds
 	particleSource.setSheetRes(8, 8);
 
-	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.02f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
@@ -1023,7 +1022,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i]) {
+			if (cannon_can_fire[i] || true) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
@@ -1038,8 +1037,9 @@ void throw_cats() {
 	}
 }
 
-void throw_cat(int cat_num, bool owned, double start_time) {
-	if (start_time < 0.0) start_time = cur_time_sec;
+void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time) {
+	F64 start_time = cur_time_sec;
+	F64 time_diff = cur_time_sec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
 
 	// Prefer a cannon whose owned flag matches, otherwise use any matching cat_id.
 	int best = -1, fallback = -1;
@@ -1062,7 +1062,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	p.pretransmodel = p.model;
 	p.shoot_angle = owned ? 0.0f : PI;
 
-	p.update = [](Entity& cat, F64 curtime) {
+	p.update = [cat_num](Entity& cat, F64 curtime) {
 		cat.model = toModel(
 			(curtime - cat.start_time) * 50, // distance along lane
 			0,                               // lane index
@@ -1070,9 +1070,30 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 			cat.shoot_angle
 		) * cat.pretransmodel;
 
+		glm::vec3 self_pos = glm::vec3(cat.model[3]);
+		for (int i = 0; i < objects.size(); i++) {
+			if (objects[i].type != PROECTILE || // only collide with seagulls
+				objects[i].model == cat.model // don't collidewith self
+			) continue;
+			glm::vec3 enemy_pos = glm::vec3(objects[i].model[3]);
+			F32 dist = glm::length(self_pos - enemy_pos);
+			if (dist < 10.0) {
+				featherSource.pos = self_pos;
+				featherSource.spawnParticles(100);
+				objects[i].markedForDeath = true;
+				return false;
+			}
+		}
+
+		// Die if marked for death
+		if (cat.markedForDeath) {
+			featherSource.pos = self_pos;
+			featherSource.spawnParticles(30);
+			return false;
+		}
 		// keep alive while above ground
 		return (cat.model[3][1] >= 0.0f);
-		};
+	};
 }
 
 void cleanupFinishedSounds() {
