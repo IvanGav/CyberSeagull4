@@ -521,6 +521,9 @@ int main(int argc, char** argv) {
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	static char buf[64];
 	windowMouseRelease(window);
+
+	bool bothReady = false;
+
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -950,7 +953,7 @@ int main(int argc, char** argv) {
 
 			F32 readyd = buttonw*0.5, ready1x = inputx + buttonw + width / 40, ready1y = inputy + (spacing);
 			
-			if (g_p0_ready) {
+			if (c) {
 				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
 				ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
 			}
@@ -970,6 +973,11 @@ int main(int argc, char** argv) {
 				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
 			}
 
+			if (!bothReady && (g_p1_ready && g_p1_ready)) {
+				menu_open = false;
+			}
+
+			bothReady = g_p1_ready && g_p1_ready;
 			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
