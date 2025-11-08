@@ -799,12 +799,24 @@ int main(int argc, char** argv) {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
-		ImGui::Begin("State", NULL, flags);
-		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
+		ImGui::SetNextWindowSize(ImVec2(width-(width/10), 100));
+		ImGui::SetNextWindowPos(ImVec2(width/20, height * 0.01));
+		ImGui::Begin("Status", nullptr, flags);
+		/*
+		ImGui::Text("My HP: %d", g_my_health);
+		ImGui::Text("Enemy HP: %d", g_enemy_health);
+		*/
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
+		ImGui::ProgressBar(g_my_health / g_max_health);
+		ImGui::ProgressBar(g_enemy_health / g_max_health);
+		ImGui::PopStyleColor();
+		if (g_game_over) {
+			ImGui::Separator();
+			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
+			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
+			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+		}
 		ImGui::End();
-
 
 		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
@@ -1014,22 +1026,6 @@ int main(int argc, char** argv) {
 
 		}
 
-		ImGui::SetNextWindowSize(ImVec2(width-(width/15), 100));
-		ImGui::SetNextWindowPos(ImVec2(width/30, height * 0.01));
-		ImGui::Begin("Status", nullptr, flags);
-		/*
-		ImGui::Text("My HP: %d", g_my_health);
-		ImGui::Text("Enemy HP: %d", g_enemy_health);
-		*/
-		ImGui::ProgressBar(g_my_health / g_max_health);
-		ImGui::ProgressBar(g_enemy_health / g_max_health);
-		if (g_game_over) {
-			ImGui::Separator();
-			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
-			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
-			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-		}
-		ImGui::End();
 
 		// Status
 
