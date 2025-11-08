@@ -100,6 +100,9 @@ static struct {
 	Mesh quad;
 	Mesh seagWalk2;
 	Mesh seagWalk3;
+	Mesh cannon;
+	Mesh cannon_door;
+	Mesh seagull;
 } meshes;
 static struct {
 	GLuint green;
@@ -110,6 +113,13 @@ static struct {
 	GLuint waterNormal;
 	GLuint waterOffset;
 	GLuint seagColor;
+	GLuint particleExplosion;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} cannon;
+	GLuint seagull;
 } textures;
 
 // Networking global stuff
@@ -167,9 +177,9 @@ const U32 catnumber = 6;
 
 glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 	if (friendly)
-		return glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z));
+		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z)), (F32) -PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	else
-		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (F32) PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void make_seagull(U8 cannon, F64 timestamp) {
@@ -308,10 +318,15 @@ int main(int argc, char** argv) {
 	meshes.quad = Mesh::xzQuad(vertices);
 	meshes.seagWalk2 = Mesh::create(vertices, "asset/seagull/seagull_walk2.obj");
 	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
+	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
+	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
+	meshes.seagull = Mesh::create(vertices, "asset/seagull/seagull.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
-	textures.seagColor = createTextureFromImage("asset/seagull/seag_tex.png");
+	//textures.seagColor = createTextureFromImage("asset/seagull/seag_tex.png"); // TODO here
+	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
+	textures.particleExplosion = createTextureFromImage("asset/particle_explosion.png");
 
 	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
@@ -320,6 +335,10 @@ int main(int argc, char** argv) {
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
+
+	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
+	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
+	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
@@ -333,18 +352,18 @@ int main(int argc, char** argv) {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	for (int i = 0; i < 6; i++) {
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		//objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, get_cannon_pos(i, true), CANNON, true));
 		cannons_friend[i] = &objects.back();
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+		//objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+		objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, get_cannon_pos(i, false), CANNON));
 		cannons_enemy[i] = &objects.back();
 	}
 
 	std::string server_ip = "136.112.101.5";
-	//try_connect(server_ip, 1951);
-	//client.Connect(server_ip, 1951);
+	try_connect(server_ip, 1951);
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER);
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	genTangents(vertices);
 
@@ -362,7 +381,7 @@ int main(int argc, char** argv) {
 
 	// Create static particle sources (later change this to be dynamic or something)
 
-	ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
+	ParticleSource particleSource{ glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 5 seconds
 
 	GLuint buffer;
 	glCreateBuffers(1, &buffer);
@@ -560,12 +579,14 @@ int main(int argc, char** argv) {
 				Entity& o = objects[i];
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, objects[i].tex);
+				glBindTextureUnit(2, objects[i].normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
+
 
 			// Draw the player as a cat
 			{
@@ -573,12 +594,22 @@ int main(int argc, char** argv) {
 				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, o.tex);
+				glBindTextureUnit(2, o.normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
+
+			// Draw particles
+			glUseProgram(particleProgram);
+
+			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
+			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+			glBindTextureUnit(0, textures.particleExplosion);
+
+			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE* lastUsedParticle); // where lastUsedParticle is the number of particles
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -618,6 +649,7 @@ int main(int argc, char** argv) {
 			Entity& o = objects[i];
 			glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 			glBindTextureUnit(0, objects[i].tex);
+			glBindTextureUnit(2, objects[i].normal);
 
 			glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 			glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
@@ -625,19 +657,10 @@ int main(int argc, char** argv) {
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
 
-		// Draw particles
-		glUseProgram(particleProgram);
-
-		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
-		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, textures.green);
-
-		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-
 		// Draw water
 		glUseProgram(waterProgram);
 
-		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
+		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection* view));
 		glProgramUniformMatrix4fv(waterProgram, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
 		glProgramUniform3fv(waterProgram, 15, 1, glm::value_ptr(cam.cam.pos));
 		glProgramUniform3fv(waterProgram, 16, 1, glm::value_ptr(lightDir));
@@ -658,6 +681,15 @@ int main(int argc, char** argv) {
 
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
+
+		// Draw particles
+		glUseProgram(particleProgram);
+
+		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+		glBindTextureUnit(0, textures.particleExplosion);
+
+		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
 		// Draw UI
 		ImGui_ImplOpenGL3_NewFrame();
@@ -755,6 +787,10 @@ int main(int argc, char** argv) {
 	cleanup(window);
 }
 
+void draw_cannon(glm::vec3 pos) {
+	glDrawArrays(GL_TRIANGLES, meshes.cannon.offset, meshes.cannon.size);
+}
+
 void throw_cats() {
 	bool send = false;
 	std::vector<uint8_t> cats;
@@ -790,7 +826,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagull, textures.seagull, objects[i].model, PROECTILE));
 	Entity& p = objects.back();
 
 	p.start_time = start_time;

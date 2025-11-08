@@ -11,7 +11,7 @@ layout(location = 0) out vec4 fCol;
 
 layout(binding = 0) uniform sampler2D baseColorTex;
 layout(binding = 1) uniform sampler2DShadow shadowMap;
-//layout(binding = 2) uniform sampler2D normalMap;
+layout(binding = 2) uniform sampler2D normalMap;
 
 layout(location = 15) uniform vec3 cameraPos;
 layout(location = 16) uniform vec3 lightAngle;
@@ -69,13 +69,12 @@ vec4 directionalLight(vec4 baseColor, vec3 toLightDir, vec3 lightColor, vec3 cam
 void main() {
 	vec3 normal = normalize(inNormal);
 
-	/*
 	// use normal map
 	vec3 tangent = normalize(inTangent);
 	vec3 bitangent = normalize(inBitangent);
 	mat3 TBN = mat3(tangent, bitangent, normal);
 	normal = normalize(TBN * (texture(normalMap, inUV).rgb * 2.0f - 1.0f));
-	*/
+	//fCol = vec4(texture(normalMap, inUV).rgb * 2.0f - 1.0f, 1.0);
 
 	fCol = vec4(vec3(directionalLight(texture(baseColorTex, inUV), normalize(-lightAngle), lightColor, cameraPos, normal)), 1.0);
 }
