@@ -223,6 +223,7 @@ const F64 distbetweencats = -5.0; // offset to catstartingpos's x axis
 constexpr U32 catnumber = 6;
 const F64 beats_grace = .5;
 B8 cannon_can_fire[catnumber];
+B8 cannon_note[catnumber];
 
 
 glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
@@ -232,12 +233,12 @@ glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (F32) PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-void make_seagull(U8 cannon, F64 timestamp) {
+void make_seagull(U8 note, U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
 	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagull, glm::translate(glm::rotate(get_cannon_pos(cannon, true), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
-	objects.back().update = [cannon](Entity& cat, F64 curtime) {
+	objects.back().update = [cannon, note](Entity& cat, F64 curtime) {
 		F64 beats_from_fire = (((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
 		U8 beats_left = (U8)glm::floor(beats_from_fire);
 
@@ -275,6 +276,7 @@ void make_seagull(U8 cannon, F64 timestamp) {
 			return false;
 		}
 		cannon_can_fire[cannon] = ccf;
+		cannon_note[cannon] = note;
 
 		//return (cat.model[3][1] >= 0.0f);
 		return beats_from_fire > 1-beats_grace;
@@ -1087,7 +1089,8 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
+	playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)72,cannon_note[cat_num]));
+	playSoundVolume(&engine, "asset/cannon.wav", false, 0.3);
 
 	glm::vec4 pos = objects[i].model[3];
 	addParticle(Particle{
