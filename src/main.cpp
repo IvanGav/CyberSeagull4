@@ -98,6 +98,8 @@ static struct {
 	Mesh test_scene;
 	Mesh cat;
 	Mesh quad;
+	Mesh seagWalk2;
+	Mesh seagWalk3;
 	Mesh cannon;
 	Mesh cannon_door;
 	Mesh seagull;
@@ -110,6 +112,7 @@ static struct {
 	GLuint weezer;
 	GLuint waterNormal;
 	GLuint waterOffset;
+	GLuint seagColor;
 	GLuint particleExplosion;
 	struct {
 		GLuint color;
@@ -181,19 +184,40 @@ glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 
 void make_seagull(U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagColor, glm::translate(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
 	objects.back().update = [](Entity& cat, F64 curtime) {
 		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
 
-		if (beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
-		else {
-			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0));
+		glm::mat4 transform(1.0);
+		if (beats_left > SHOW_NUM_BEATS) {
+			transform = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		} else if (beats_left <= 1) {
+			F64 dist = SEAGULL_MOVE_PER_BEAT;
+			// TODO do the jumping animation here
+			transform = glm::translate(toModel(
+				glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, // distance along lane
+				0, // unused
+				dist,
+				0,
+				1.0
+			), glm::vec3(0.0, 0.0, -dist));
+			/*cat.model = glm::translate(
+				glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0)), 
+				-glm::vec3(0.0, glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, 0.0)
+			);*/
+
+			//std::cout << "-----dist: " << (1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb) << "\n";
 		}
+		else {
+			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * (beats_left - 1)));
+			cat.mesh = (beats_left % 2) ? &meshes.seagWalk2 : &meshes.seagWalk3;
+		}
+		cat.model = transform * cat.pretransmodel;
 
 		//return (cat.model[3][1] >= 0.0f);
-		return beats_left < 0xf0;
+		return beats_left > 0;
 		};
 }
 // Create a shader from vertex and fragment shader files
@@ -292,12 +316,16 @@ int main(int argc, char** argv) {
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
 	meshes.quad = Mesh::xzQuad(vertices);
+	meshes.seagWalk2 = Mesh::create(vertices, "asset/seagull/seagull_walk2.obj");
+	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 	meshes.seagull = Mesh::create(vertices, "asset/seagull/seagull.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
+	//textures.seagColor = createTextureFromImage("asset/seagull/seag_tex.png"); // TODO here
+	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
 	textures.particleExplosion = createTextureFromImage("asset/particle_explosion.png");
 
 	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
@@ -311,9 +339,6 @@ int main(int argc, char** argv) {
 	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
-
-	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
-
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
