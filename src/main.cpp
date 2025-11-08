@@ -84,6 +84,7 @@ static int height = 1080;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
+bool menu_open = true;
 std::vector<Entity> objects;
 static struct {
 	Mesh test_scene;
@@ -98,6 +99,12 @@ static struct {
 		GLuint weezer;
 		GLuint waterNormal;
 		GLuint waterOffset;
+		GLuint menu_logo;
+		GLuint context;
+		GLuint page;
+		GLuint connect;
+		GLuint leave;
+		GLuint closeMenu;
 } textures;
 servergull server(1951);
 bool is_server = false;
@@ -236,8 +243,14 @@ int main(int argc, char** argv) {
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
 
 	stbi_set_flip_vertically_on_load(false);
+	textures.menu_logo = createTextureFromImage("asset/menu_logo.png");
+	textures.page = createTextureFromImage("asset/page.png");
+	textures.context = createTextureFromImage("asset/context.png");
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
+	textures.connect = createTextureFromImage("asset/ConnectButton.png");
+	textures.leave = createTextureFromImage("asset/LeaveButton.png");
+	textures.closeMenu = createTextureFromImage("asset/Close-Menu.png");
 	stbi_set_flip_vertically_on_load(true);
 
 	std::string song_name;
@@ -319,7 +332,6 @@ int main(int argc, char** argv) {
 	ma_engine_set_volume(&engine, volume/100.f);
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
-	bool menu_open = true;
 	static char buf[64];
 
 	// event loop (each iteration of this loop is one frame of the application)
@@ -583,12 +595,24 @@ int main(int argc, char** argv) {
 
 
 		if (menu_open) {
-			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+			//flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+
+			ImGui::SetNextWindowSize(ImVec2(width - 200, height - 200));
+			ImGui::SetNextWindowPos(ImVec2(100, 100));
+			ImGui::Begin("menu", NULL, flags);
+			ImGui::Image((ImTextureID)textures.page, ImVec2(width - 200, height - 200));
+			ImGui::End();
 
 			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
 			ImGui::SetNextWindowPos(ImVec2(100, 100));
 			ImGui::Begin("menu", NULL, flags);
-			ImGui::Text("This sis the omenu");
+			int padding = 100;
+			F32 menuw = (width) / 3, menuh = ((width) / 3) * 0.562, menux = (width - (2 * padding) - menuw) / 2, menuy = height / 70;
+			ImGui::SetCursorPos(ImVec2(menux, menuy));
+			ImGui::Image((ImTextureID)textures.menu_logo, ImVec2(menuw, menuh));
+			F32 contextw = width / 3, contexth = width / 3, contextx = (width - (2 * padding) - (contextw)) / 2 + (menuw / 2), contexty = menuy + menuh - (menuh/2);
+			ImGui::SetCursorPos(ImVec2(contextx, contexty));
+			ImGui::Image((ImTextureID)textures.context, ImVec2(contextw, contexth));
 			/*
 				ImGui::SliderInt("val 1", &val1, 0, 256);
 				ImGui::SliderInt("val 2", &val2, 0, 256);
@@ -596,21 +620,41 @@ int main(int argc, char** argv) {
 				ImGui::SliderInt("val 4", &val4, 0, 256);
 				ImGui::Text(((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str()));
 			*/
-			ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf));
+			ImGuiInputTextFlags inflags = ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue;
+			F32 inputw = width/20, inputx = width/10, inputy = menuy + menuh, spacing = height/20;
+			ImGui::SetCursorPos(ImVec2(inputx, inputy));
+			ImGui::PushItemWidth(inputw);
+			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
+			if (ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf), inflags) && !client.IsConnected()) goto inputChange;
+			ImGui::PopItemWidth();
 			if (!client.IsConnected()) {
-				if (ImGui::Button("Connect")) {
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				ImGui::Image((ImTextureID)textures.connect, ImVec2(buttonw, buttonh));
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				if (ImGui::InvisibleButton("Connect", ImVec2(buttonw, buttonh))) {
+					inputChange:
 					//server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
 					server_ip = buf;
 					client.Connect(server_ip, 1951);
 				}
 			}
 			else {
-				if (ImGui::Button("Disconnect")) {
+				F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				ImGui::Image((ImTextureID)textures.leave, ImVec2(buttondisw, buttondish));
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
 					client.Disconnect();
 				}
 			}
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			ImGui::PushItemWidth(inputw*4);
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
-			if (ImGui::Button("Close Menu")) {
+			ImGui::PopItemWidth();
+			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
+			ImGui::Image((ImTextureID)textures.closeMenu, ImVec2(100, 100));
+			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
+			if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
 				menu_open = false;
 			}
 			ImGui::End();

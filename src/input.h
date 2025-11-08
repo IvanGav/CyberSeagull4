@@ -16,24 +16,30 @@ extern ma_engine engine;
 extern U16 player_id;
 extern seaclient client;
 extern double cur_time_sec;
+extern bool menu_open;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		cats_thrown[0] = true;
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        menu_open = !menu_open;
     }
-    if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		cats_thrown[1] = true;
-    }
-    if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		cats_thrown[2] = true;
-    }
-    if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
-		cats_thrown[3] = true;
-    }
-    if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
-		cats_thrown[4] = true;
-    }
-    if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
-		cats_thrown[5] = true;
+    if (!menu_open) {
+        if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+            cats_thrown[0] = true;
+        }
+        if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+            cats_thrown[1] = true;
+        }
+        if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+            cats_thrown[2] = true;
+        }
+        if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
+            cats_thrown[3] = true;
+        }
+        if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
+            cats_thrown[4] = true;
+        }
+        if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
+            cats_thrown[5] = true;
+        }
     }
 }

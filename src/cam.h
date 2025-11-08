@@ -14,6 +14,7 @@ static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
 extern ma_engine engine;
+extern bool menu_open;
 
 F32 mouse_sensitivity = 0.005;
 F64 lastx; F64 lasty;
@@ -119,14 +120,13 @@ void initMouse(GLFWwindow* window) {
 
 // When ESCAPE pressed, give mouse control. When mouse clicked, disable mouse again.
 void windowFocusControl(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    if (menu_open) {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // ENABLE MOUSE MOVEMENT
         glfwGetCursorPos(window, &lastx, &lasty);
-    }
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
+    } else {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
         glfwGetCursorPos(window, &lastx, &lasty);
     }
 }
