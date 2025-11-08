@@ -174,7 +174,7 @@ glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 
 void make_seagull(U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagColor, glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
 	objects.back().update = [](Entity& cat, F64 curtime) {
@@ -202,8 +202,7 @@ void make_seagull(U8 cannon, F64 timestamp) {
 		}
 		else {
 			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * (beats_left - 1)));
-			cat.mesh = (beats_left % 2) ? &meshes.cat : &meshes.cat;
-			cat.tex = (beats_left % 2) ? textures.green : textures.green;
+			cat.mesh = (beats_left % 2) ? &meshes.seagWalk2 : &meshes.seagWalk3;
 		}
 		cat.model = transform * cat.pretransmodel;
 
