@@ -855,6 +855,43 @@ int main(int argc, char** argv) {
 				}
 			}
 			
+
+			ImGui::Text("Player 0: %s  [%s]",
+				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
+				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::Text("Player 1: %s  [%s]",
+				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
+				g_p1_ready ? "Ready" : "Not Ready");
+
+			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
+			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
+			const bool i_am_player = i_am_player0 || i_am_player1;
+			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
+
+			if (!g_song_active && (i_am_player || slot_available))
+			{
+				if (!g_sent_ready)
+				{
+					if (ImGui::Button("Start Game"))
+					{
+						cgull::net::message<message_code> m;
+						m.header.id = message_code::PLAYER_READY;
+						U16 pid = player_id; // 16-bit id
+						m << pid;
+						if (client.IsConnected()) client.Send(m);
+						g_sent_ready = true;
+					}
+					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
+				}
+				else
+				{
+					ImGui::TextDisabled("Waiting for the other player...");
+				}
+			}
+			else
+			{
+				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
+			}
 			
 			
 			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
@@ -948,48 +985,6 @@ int main(int argc, char** argv) {
 				if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
 				else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
 				else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-			}
-		}
-		ImGui::End();
-
-		// Lobby
-		if (ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			ImGui::Text("Player 0: %s  [%s]",
-				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
-				g_p0_ready ? "Ready" : "Not Ready");
-			ImGui::Text("Player 1: %s  [%s]",
-				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
-				g_p1_ready ? "Ready" : "Not Ready");
-
-			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
-			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
-			const bool i_am_player = i_am_player0 || i_am_player1;
-			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
-
-			if (!g_song_active && (i_am_player || slot_available))
-			{
-				if (!g_sent_ready)
-				{
-					if (ImGui::Button("Start Game"))
-					{
-						cgull::net::message<message_code> m;
-						m.header.id = message_code::PLAYER_READY;
-						U16 pid = player_id; // 16-bit id
-						m << pid;
-						if (client.IsConnected()) client.Send(m);
-						g_sent_ready = true;
-					}
-					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
-				}
-				else
-				{
-					ImGui::TextDisabled("Waiting for the other player...");
-				}
-			}
-			else
-			{
-				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
 			}
 		}
 		ImGui::End();
