@@ -17,7 +17,7 @@ extern int  g_enemy_health;
 extern bool g_game_over;
 extern U16  g_winner;
 extern bool g_song_active;
-extern bool g_sent_ready;   // (was duplicated in the header — keep only one)
+extern bool g_sent_ready;  
 
 extern U16 g_p0_id, g_p1_id;
 extern bool g_p0_ready, g_p1_ready;
@@ -128,8 +128,6 @@ private:
         }
 
         case message_code::HEALTH_UPDATE: {
-            // Server packs: p0_id, p0_hp, p1_id, p1_hp  (FIFO)
-            if (m.body.size() < sizeof(U16)*4) break;
             U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
             m >> p0_id; m >> p0_hp; m >> p1_id; m >> p1_hp;
 
@@ -140,7 +138,6 @@ private:
         }
 
         case message_code::GAME_OVER: {
-            if (m.body.size() < sizeof(U16)) break;
             U16 winner = 0xffff; m >> winner;
             g_winner     = winner;
             g_game_over  = true;

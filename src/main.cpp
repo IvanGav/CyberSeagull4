@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
-	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b1,b:b2,x:b3,y:b0,back:b4,start:b5,dpdown:+a1,dpup:-a1");
+	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b0,b:b1,x:b2,y:b3,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
@@ -520,11 +520,6 @@ int main(int argc, char** argv) {
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	static char buf[64];
 	windowMouseRelease(window);
-
-	bool bothReady = false;
-
-	GLFWgamepadstate lastState{};
-
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -541,8 +536,6 @@ int main(int argc, char** argv) {
 		if (!menu_open) {
 			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 				moveFreeCamGamepad(window, cam, dt, state);
-				gamepadInput(state, lastState);
-				lastState = state;
 			}
 			else {
 				moveFreeCam(window, cam, dt);
@@ -676,7 +669,6 @@ int main(int argc, char** argv) {
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 			glProgramUniform1i(program, 19, true);
-			glProgramUniform1f(program, 20, WATER_HEIGHT);
 			glBindTextureUnit(1, shadowmap);
 
 			for (int i = 0; i < objects.size(); i++) {
@@ -820,8 +812,8 @@ int main(int argc, char** argv) {
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
 		*/
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-		ImGui::ProgressBar((F32)g_my_health / (F32)g_max_health);
-		ImGui::ProgressBar((F32)g_enemy_health / (F32)g_max_health);
+		ImGui::ProgressBar(static_cast<F32>(g_my_health) / static_cast<F32>(g_max_health));
+		ImGui::ProgressBar(static_cast<F32>(g_enemy_health) / static_cast<F32>(g_max_health));
 		ImGui::PopStyleColor();
 		if (g_game_over) {
 			ImGui::Separator();
@@ -977,11 +969,6 @@ int main(int argc, char** argv) {
 				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
 			}
 
-			if (g_song_active && !bothReady) {
-				menu_open = false;
-			}
-
-			bothReady = g_song_active;
 			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
