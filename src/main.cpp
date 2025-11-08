@@ -98,6 +98,8 @@ static struct {
 	Mesh test_scene;
 	Mesh cat;
 	Mesh quad;
+	Mesh seagWalk2;
+	Mesh seagWalk3;
 } meshes;
 static struct {
 	GLuint green;
@@ -107,6 +109,7 @@ static struct {
 	GLuint weezer;
 	GLuint waterNormal;
 	GLuint waterOffset;
+	GLuint seagColor;
 } textures;
 
 // Networking global stuff
@@ -304,9 +307,12 @@ int main(int argc, char** argv) {
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
 	meshes.quad = Mesh::xzQuad(vertices);
+	meshes.seagWalk2 = Mesh::create(vertices, "asset/seagull/seagull_walk2.obj");
+	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
+	textures.seagColor = createTextureFromImage("asset/seagull/seag_tex.png");
 
 	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
