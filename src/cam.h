@@ -238,13 +238,13 @@ void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
         cam.buttonPress(KeyboardAction::MOVE_DOWN, dt);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+    //if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
         /*ma_sound sound;
         ma_result result;
         result = ma_sound_init_from_file(&engine, "asset/seagull-in-the-morning-60127.wav", 0, NULL, NULL, &sound);
         ma_sound_start(&sound);*/
-        ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL);
-    }
+        //ma_engine_play_sound(&engine, "asset/seagull-flock-sound-effect-206610.wav", NULL); <- TERRIBLE
+    //}
 
     // mouse input
     F64 xpos, ypos;
