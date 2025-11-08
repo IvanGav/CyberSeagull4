@@ -106,6 +106,8 @@ static struct {
 	Mesh cannon;
 	Mesh cannon_door;
 	Mesh seagBall;
+	Mesh ship;
+	Mesh shipNoMast;
 } meshes;
 static struct {
 	GLuint green;
@@ -122,6 +124,11 @@ static struct {
 		GLuint arm;
 	} cannon;
 	GLuint seagull;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} ship;
   struct {
     GLuint menu_logo;
 		GLuint context;
@@ -130,7 +137,11 @@ static struct {
 		GLuint leave;
 		GLuint closeMenu;
   } menu;
+  GLuint feather;
 } textures;
+
+ParticleSource particleSource;
+ParticleSource featherSource;
 
 // Networking global stuff
 
@@ -362,6 +373,8 @@ int main(int argc, char** argv) {
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
+	meshes.ship = Mesh::create(vertices, "asset/ship/ship.obj");
+	meshes.shipNoMast = Mesh::create(vertices, "asset/ship/ship_no_mast.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -386,6 +399,12 @@ int main(int argc, char** argv) {
 	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
+
+	textures.ship.color = createTextureFromImage("asset/ship/ship_BaseColor.png");
+	textures.ship.norm = createTextureFromImage("asset/ship/ship_Normal.png");
+	textures.ship.arm = createTextureFromImage("asset/ship/ship_ARM.png");
+
+	textures.feather = createTextureFromImage("asset/feather.png");
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
@@ -427,9 +446,17 @@ int main(int argc, char** argv) {
 	}
 
 	// Create static particle sources (later change this to be dynamic or something)
+	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
+	particleSource.tex_index = 0;
+	particleSource.setSheetRes(8, 8);
 
-	ParticleSource particleSource{ glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 5 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
 
+	// Bind textures to particle array
+	particle_textures[0] = textures.particleExplosion;
+	particle_textures[1] = textures.feather;
+
+	// Create buffers
 	GLuint buffer;
 	glCreateBuffers(1, &buffer);
 	glNamedBufferStorage(buffer, vertices.size() * sizeof(Vertex), vertices.data(), 0);
@@ -619,6 +646,7 @@ int main(int argc, char** argv) {
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 			glProgramUniform1i(program, 19, true);
+			glBindTextureUnit(1, shadowmap);
 
 			for (int i = 0; i < objects.size(); i++) {
 				Entity& o = objects[i];
@@ -651,9 +679,12 @@ int main(int argc, char** argv) {
 
 			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
 			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-			glBindTextureUnit(0, textures.particleExplosion);
+			glBindTextureUnit(0, particle_textures[0]);
+			glBindTextureUnit(1, particle_textures[1]);
+			glBindTextureUnit(2, particle_textures[2]);
+			glBindTextureUnit(3, particle_textures[3]);
 
-			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE* lastUsedParticle); // where lastUsedParticle is the number of particles
+			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -688,6 +719,7 @@ int main(int argc, char** argv) {
 		glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 		glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 		glProgramUniform1i(program, 19, false);
+		glBindTextureUnit(1, shadowmap);
 
 		for (int i = 0; i < objects.size(); i++) {
 			Entity& o = objects[i];
@@ -731,7 +763,10 @@ int main(int argc, char** argv) {
 
 		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
 		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, textures.particleExplosion);
+		glBindTextureUnit(0, particle_textures[0]);
+		glBindTextureUnit(1, particle_textures[1]);
+		glBindTextureUnit(2, particle_textures[2]);
+		glBindTextureUnit(3, particle_textures[3]);
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
@@ -864,9 +899,11 @@ int main(int argc, char** argv) {
 			}
 			
 
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
@@ -1006,7 +1043,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i]) {
+			if (cannon_can_fire[i] || true) {
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
@@ -1035,7 +1072,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
 	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));

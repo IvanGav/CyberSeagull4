@@ -19,6 +19,8 @@ extern U16 player_id;
 extern seaclient client;
 extern double cur_time_sec;
 extern bool menu_open;
+extern ParticleSource featherSource;
+extern FreeCam cam;
 
 void make_seagull(U8 cannon, F64 timestamp);
 
@@ -51,6 +53,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (key == GLFW_KEY_I && action == GLFW_PRESS) {
             song_start_time = cur_time_sec;
             make_seagull(0, 3);
+        }
+
+        if (key == GLFW_KEY_O && action == GLFW_PRESS) {
+            featherSource.pos = cam.cam.pos;
+            featherSource.spawnParticles(100);
         }
     }
 }
