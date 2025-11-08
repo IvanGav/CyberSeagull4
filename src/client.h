@@ -78,6 +78,20 @@ public:
     }
 
 private:
+    struct HealthSnapshot {
+        U16 p0_id = 0xffff, p1_id = 0xffff;
+        U16 p0_hp = 0, p1_hp = 0;
+        bool valid = false;
+    } last_health_;
+
+    void apply_health_snapshot() {
+        if (!last_health_.valid) return;
+
+        if (player_id == last_health_.p0_id) { g_my_health = last_health_.p0_hp; g_enemy_health = last_health_.p1_hp; }
+        else if (player_id == last_health_.p1_id) { g_my_health = last_health_.p1_hp; g_enemy_health = last_health_.p0_hp; }
+        else /* spectator */ { g_my_health = last_health_.p0_hp; g_enemy_health = last_health_.p1_hp; }
+    }
+
     void handle_message(const cgull::net::owned_message<message_code>& owned) {
         auto m = owned.msg;
 
@@ -85,6 +99,7 @@ private:
         case message_code::GIVE_PLAYER_ID: {
             if (m.body.size() < sizeof(U16)) break;
             U16 cid = 0; m >> cid; player_id = (U16)(cid & 0xffff);
+            apply_health_snapshot();             
             break;
         }
 
@@ -128,12 +143,15 @@ private:
         }
 
         case message_code::HEALTH_UPDATE: {
+            // Server sends in LIFO-friendly order; your reads are already correct.
             U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
             m >> p0_id; m >> p0_hp; m >> p1_id; m >> p1_hp;
 
-            if      (player_id == p0_id) { g_my_health = p0_hp; g_enemy_health = p1_hp; }
-            else if (player_id == p1_id) { g_my_health = p1_hp; g_enemy_health = p0_hp; }
-            else                         { g_my_health = p0_hp; g_enemy_health = p1_hp; } // spectator
+            last_health_.p0_id = p0_id; last_health_.p1_id = p1_id;
+            last_health_.p0_hp = p0_hp; last_health_.p1_hp = p1_hp;
+            last_health_.valid = true;
+
+            apply_health_snapshot();                // <— update bars immediately on every snapshot
             break;
         }
 

@@ -29,6 +29,21 @@ public:
         if (stupidknowitall_thread_.joinable()) stupidknowitall_thread_.join();
     }
 
+    void SendHealthTo(const std::shared_ptr<connection_t>& c) {
+        U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
+        {
+            std::scoped_lock lk(players_mtx_);
+            if (players_.size() >= 1) { p0_id = players_[0]; p0_hp = (U16)hp_[players_[0]]; }
+            if (players_.size() >= 2) { p1_id = players_[1]; p1_hp = (U16)hp_[players_[1]]; }
+        }
+        cgull::net::message<message_code> m;
+        m.header.id = message_code::HEALTH_UPDATE;
+        
+        m << p1_hp; m << p1_id; m << p0_hp; m << p0_id;
+        MessageClient(c, m);
+    }
+
+
     // Song control
     bool LoadSong(const std::string& midi_path, U8 lanes = 6) {
         std::string song_name;
@@ -176,6 +191,7 @@ protected:
 
             MessageClient(client, reply);
             SendLobbyState(); 
+            SendHealthTo(client); 
             break;
         }
 
