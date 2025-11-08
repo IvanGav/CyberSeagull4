@@ -289,7 +289,7 @@ void make_seagull(U8 cannon, F64 timestamp) {
 
 		//return (cat.model[3][1] >= 0.0f);
 		return beats_from_fire > 1-beats_grace;
-		};
+	};
 }
 // Create a shader from vertex and fragment shader files
 
@@ -473,12 +473,11 @@ int main(int argc, char** argv) {
 	}
 
 	// Create static particle sources (later change this to be dynamic or something)
-	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
-	particleSource.tex_index = 0;
+	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f, 0 }; // live for 1 seconds
 	particleSource.setSheetRes(8, 8);
 	particleSource.scaleOverTime = 1.0F;
 
-	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.02f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
@@ -811,12 +810,24 @@ int main(int argc, char** argv) {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
-		ImGui::SetNextWindowPos(ImVec2((width - 728.0f) / 2, height * 0.01));
-		ImGui::Begin("State", NULL, flags);
-		ImGui::Image((ImTextureID)textures.banner, ImVec2(728.0f, 90.0f));
+		ImGui::SetNextWindowSize(ImVec2(width-(width/10), 100));
+		ImGui::SetNextWindowPos(ImVec2(width/20, height * 0.01));
+		ImGui::Begin("Status", nullptr, flags);
+		/*
+		ImGui::Text("My HP: %d", g_my_health);
+		ImGui::Text("Enemy HP: %d", g_enemy_health);
+		*/
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
+		ImGui::ProgressBar(g_my_health / g_max_health);
+		ImGui::ProgressBar(g_enemy_health / g_max_health);
+		ImGui::PopStyleColor();
+		if (g_game_over) {
+			ImGui::Separator();
+			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
+			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
+			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+		}
 		ImGui::End();
-
 
 		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
@@ -1048,22 +1059,6 @@ int main(int argc, char** argv) {
 
 		}
 
-		ImGui::SetNextWindowSize(ImVec2(width-(width/15), 100));
-		ImGui::SetNextWindowPos(ImVec2(width/30, height * 0.01));
-		ImGui::Begin("Status", nullptr, flags);
-		/*
-		ImGui::Text("My HP: %d", g_my_health);
-		ImGui::Text("Enemy HP: %d", g_enemy_health);
-		*/
-		ImGui::ProgressBar(g_my_health / g_max_health);
-		ImGui::ProgressBar(g_enemy_health / g_max_health);
-		if (g_game_over) {
-			ImGui::Separator();
-			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
-			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
-			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-		}
-		ImGui::End();
 
 		// Status
 
@@ -1096,7 +1091,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i] || true) {
+			if (cannon_can_fire[i] || true) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
@@ -1111,8 +1106,9 @@ void throw_cats() {
 	}
 }
 
-void throw_cat(int cat_num, bool owned, double start_time) {
-	if (start_time < 0.0) start_time = cur_time_sec;
+void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time) {
+	F64 start_time = cur_time_sec;
+	F64 time_diff = cur_time_sec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
 
 	// Prefer a cannon whose owned flag matches, otherwise use any matching cat_id.
 	int best = -1, fallback = -1;
@@ -1148,7 +1144,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	p.pretransmodel = p.model;
 	p.shoot_angle = owned ? 0.0f : PI;
 
-	p.update = [](Entity& cat, F64 curtime) {
+	p.update = [cat_num](Entity& cat, F64 curtime) {
 		cat.model = toModel(
 			(curtime - cat.start_time) * 50, // distance along lane
 			0,                               // lane index
@@ -1156,9 +1152,30 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 			cat.shoot_angle
 		) * cat.pretransmodel;
 
+		glm::vec3 self_pos = glm::vec3(cat.model[3]);
+		for (int i = 0; i < objects.size(); i++) {
+			if (objects[i].type != PROECTILE || // only collide with seagulls
+				objects[i].owned == cat.owned // don't collide with own faction
+			) continue;
+			glm::vec3 enemy_pos = glm::vec3(objects[i].model[3]);
+			F32 dist = glm::length(self_pos - enemy_pos);
+			if (dist < 5.0) {
+				featherSource.pos = self_pos;
+				featherSource.spawnParticles(100);
+				objects[i].markedForDeath = true;
+				return false;
+			}
+		}
+
+		// Die if marked for death
+		if (cat.markedForDeath) {
+			featherSource.pos = self_pos;
+			featherSource.spawnParticles(30);
+			return false;
+		}
 		// keep alive while above ground
 		return (cat.model[3][1] >= 0.0f);
-		};
+	};
 }
 
 void cleanupFinishedSounds() {
