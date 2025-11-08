@@ -94,7 +94,7 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-const B8 INFINITE_FIRE = false;
+const B8 INFINITE_FIRE = true;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
@@ -475,7 +475,7 @@ int main(int argc, char** argv) {
 	particleSource.setSheetRes(8, 8);
 	particleSource.scaleOverTime = 1.0F;
 
-	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.02f, 2.0f, 1 }; // live for 2 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.5f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
@@ -1163,13 +1163,14 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 		glm::vec3 self_pos = glm::vec3(cat.model[3]);
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].type != PROECTILE || // only collide with seagulls
-				objects[i].owned == cat.owned // don't collide with own faction
+				//objects[i].owned == cat.owned // don't collide with own faction
+				objects[i].shoot_angle == cat.shoot_angle
 			) continue;
 			glm::vec3 enemy_pos = glm::vec3(objects[i].model[3]);
 			F32 dist = glm::length(self_pos - enemy_pos);
 			if (dist < 5.0) {
 				featherSource.pos = self_pos;
-				featherSource.spawnParticles(100);
+				featherSource.spawnParticles(75);
 				objects[i].markedForDeath = true;
 				return false;
 			}
@@ -1178,7 +1179,7 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 		// Die if marked for death
 		if (cat.markedForDeath) {
 			featherSource.pos = self_pos;
-			featherSource.spawnParticles(30);
+			featherSource.spawnParticles(75);
 			return false;
 		}
 		// keep alive while above ground

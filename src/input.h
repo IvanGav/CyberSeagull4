@@ -59,6 +59,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             featherSource.pos = cam.cam.pos;
             featherSource.spawnParticles(100);
         }
+
+        if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+            //song_start_time = cur_time_sec;
+            //make_seagull(65, 0, 3);
+            throw_cat(0, false);
+        }
     }
 }
 
