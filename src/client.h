@@ -97,11 +97,11 @@ private:
             break;
         }
         case message_code::SONG_START: {
-            song_spb = 1;            
+            m >> song_spb;
             song_start_time = cur_time_sec;
-            g_song_active = true;   
-            g_game_over = false;   
-            g_sent_ready = false; 
+            g_song_active = true;
+            g_game_over = false;
+            g_sent_ready = false;
             break;
         }
         case message_code::HEALTH_UPDATE: {
