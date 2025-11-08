@@ -16,7 +16,6 @@
 #include "midi.h"
 
 static constexpr F64 LEAD_IN_SEC = 4.0;
-static constexpr F64 HIT_WINDOW_SEC = 0.25;
 static constexpr F64 MERGE_SLICE_SEC = 0.06;
 
 class servergull : public cgull::net::server_interface<message_code> {
@@ -322,8 +321,8 @@ private:
         std::bitset<2> blocked; // player 0/1 blocked flag
     };
 
-    static constexpr int  HEALTH_MAX = 5;
-    static constexpr F64  HIT_WINDOW_SEC = 0.25; // +/- around rel_time
+    static constexpr int  HEALTH_MAX = 15;
+    F64 HIT_WINDOW_SEC = 0.5 * spb_; // +/- around rel_time
 
     U16 NextPlayerId() {
         return ++last_player_id_;
@@ -359,7 +358,10 @@ private:
             for (auto& s : schedule_) {
                 if (s.resolved || s.lane != lane) continue;
                 const F64 dt = std::abs(s.rel_time - now_rel);
-                if (dt <= HIT_WINDOW_SEC) s.blocked.set(pidx, true);
+                if (dt <= HIT_WINDOW_SEC) {
+                    s.blocked.set(pidx, true);
+                    break;
+                }
             }
         }
     }
@@ -436,7 +438,6 @@ private:
                     send_health = true;
                     last_p0_id_sent_ = out_p0_id; last_p0_hp_sent_ = out_p0_hp;
                     last_p1_id_sent_ = out_p1_id; last_p1_hp_sent_ = out_p1_hp;
-            
                 }
 
 
