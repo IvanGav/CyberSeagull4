@@ -23,6 +23,11 @@ class servergull : public cgull::net::server_interface<message_code> {
 public:
     using connection_t = cgull::net::connection<message_code>;
     explicit servergull(uint16_t port) : cgull::net::server_interface<message_code>(port) {}
+    
+    ~servergull() {
+        stupidknowitall_thread_running_ = false;
+        if (stupidknowitall_thread_.joinable()) stupidknowitall_thread_.join();
+    }
 
     // Song control
     bool LoadSong(const std::string& midi_path, U8 lanes = 6) {
@@ -57,24 +62,19 @@ public:
 
     void StartSong() {
         {
-            std::lock_guard<std::mutex> lk(song_mtx_);
+            std::scoped_lock lk(song_mtx_, players_mtx_);
             if (song_started_) return;
             if (schedule_.empty()) { std::cerr << "[SERVER] StartSong with empty schedule\n"; return; }
 
-            // reset note state
             for (auto& s : schedule_) { s.resolved = false; s.blocked.reset(); }
 
-            // reset match state
-            {
-                std::lock_guard<std::mutex> lk2(players_mtx_);
-                game_over_sent_ = false;
-                for (size_t i = 0; i < players_.size() && i < 2; ++i) hp_[players_[i]] = HEALTH_MAX;
-            }
+            game_over_sent_ = false;
+            for (size_t i = 0; i < players_.size() && i < 2; ++i) hp_[players_[i]] = HEALTH_MAX;
 
             song_started_ = true;
-
             song_start_tp_ = std::chrono::steady_clock::now()
-                + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(LEAD_IN_SEC));
+                + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>(LEAD_IN_SEC));
         }
 
         // Tell clients to anchor clocks (no payload)
@@ -129,15 +129,13 @@ protected:
                 conn_to_pid_.erase(it);
             }
             if (pid.has_value()) {
-                // if they were one of the two players, remove them from the slots
                 auto itp = std::find(players_.begin(), players_.end(), *pid);
                 if (itp != players_.end()) {
-                    size_t idx = std::distance(players_.begin(), itp);
                     players_.erase(itp);
-                    ready_[0] = ready_[1] = false;  
-                    hp_.erase(*pid);
-                    song_started_ = false;           // stop any in-progress match gating
+                    ready_[0] = ready_[1] = false;
+                    song_started_ = false;
                 }
+                hp_.erase(*pid);
             }
             /// Remove connection from deq
             auto idx = std::find(m_deqConnections.begin(), m_deqConnections.end(), client);
@@ -182,29 +180,39 @@ protected:
         }
 
         case message_code::PLAYER_CAT_FIRE: {
-            // Relay to all clients
             MessageAllClients(msg);
 
-            // server side collision
-            U16 who = 0; F64 timestamp = 0.0; U16 count = 0;
-            try {
-                msg >> who; msg >> timestamp; msg >> count;
-                std::vector<U8> cats(count);
-                for (U16 i = 0; i < count; ++i) msg >> cats[i];
+            U16 who_wire = 0; F64 timestamp = 0.0; U16 count = 0;
+            if (msg.body.size() < sizeof(U16) + sizeof(F64) + sizeof(U16)) break;
+            msg >> who_wire; msg >> timestamp; msg >> count;
 
-                OnPlayerFire(who, cats);
+            size_t need = static_cast<size_t>(count) * sizeof(U8);
+            if (msg.body.size() < need) break; // truncated / malformed
+
+            std::vector<U8> cats(count);
+            for (U16 i = 0; i < count; ++i) msg >> cats[i];
+
+            // Sanitize
+            std::sort(cats.begin(), cats.end());
+            cats.erase(std::unique(cats.begin(), cats.end()), cats.end());
+
+            {
+                std::lock_guard<std::mutex> lk(song_mtx_);
+                if (cats.size() > lanes_) cats.resize(lanes_);
+                cats.erase(std::remove_if(cats.begin(), cats.end(),
+                    [this](U8 lane) { return lane >= lanes_; }),
+                    cats.end());
             }
-            catch (...) {
-                // ignore  id g af
-            }
+
+            auto pid = PidForConn(client);
+            if (!pid) break;
+            OnPlayerFire(*pid, cats);
             break;
         }
         case message_code::PLAYER_READY: {
-            U16 who = 0;
-            if (msg.body.size() >= sizeof(U16)) {
-                msg >> who;
-                OnPlayerReady(who);
-            }
+            auto pid = PidForConn(client);
+            if (!pid) break;
+            OnPlayerReady(*pid);
             break;
         }
 
@@ -285,23 +293,24 @@ private:
         if (!song_started_) return;
         const auto now_rel = SecondsSince(song_start_tp_);
 
-        auto idxOpt = playerIndex(who);
-        if (!idxOpt.has_value()) return; // spectators don't block
-        const int pidx = *idxOpt;
+        int pidx = -1;
+        {
+            std::lock_guard<std::mutex> lk(players_mtx_);
+            auto idxOpt = playerIndex(who);
+            if (!idxOpt.has_value()) return; // spectators don't block
+            pidx = *idxOpt;
+        }
 
         std::lock_guard<std::mutex> lk(song_mtx_);
         for (U8 lane : cats) {
             for (auto& s : schedule_) {
-                if (s.resolved) continue;
-                if (s.lane != lane) continue;
+                if (s.resolved || s.lane != lane) continue;
                 const F64 dt = std::abs(s.rel_time - now_rel);
-                if (dt <= HIT_WINDOW_SEC) {
-                    s.blocked.set(pidx, true);
-                    // don't break,  multiple cats during window are ok
-                }
+                if (dt <= HIT_WINDOW_SEC) s.blocked.set(pidx, true);
             }
         }
     }
+
 
     void StupidKnowItAllLoop() {
         while (stupidknowitall_thread_running_) {
@@ -321,19 +330,30 @@ private:
                     // Because of lead in, now_rel will be negative until the count in 
                     if (now_rel < (s.rel_time + HIT_WINDOW_SEC)) break; // future notes 
 
-                    // Decide damage
-                    bool blocked_by_any = s.blocked.any();
+                    bool b0 = s.blocked.test(0);
+                    bool b1 = s.blocked.test(1);
 
-                    if (!blocked_by_any) {
-                        for (int p = 0; p < 2; ++p) {
-                            auto pid = getPlayerId(p);
-                            if (!pid.has_value()) continue;
+                    auto apply_damage = [&](int idx) {
+                        if (auto pid = getPlayerId(idx); pid.has_value()) {
                             auto& hp = hp_[*pid];
                             if (hp > 0) hp -= 1;
                         }
+                        };
+
+                    if (!b0 && !b1) {
+                        // Nobody blocked -> both punished bad bad boy
+                        apply_damage(0);
+                        apply_damage(1);
                     }
+                    else if (b0 ^ b1) {
+                        // Exactly one blocked,  punish the other
+                        apply_damage(b0 ? 1 : 0);
+                    }
+                    // else both blocked,  no damage
+
                     s.resolved = true;
 
+                    // Keep your existing merge slice collapsing:
                     for (size_t j = i + 1; j < schedule_.size(); ++j) {
                         auto& s2 = schedule_[j];
                         if (s2.resolved) continue;
@@ -341,17 +361,16 @@ private:
                         if ((s2.rel_time - s.rel_time) <= MERGE_SLICE_SEC) {
                             s2.resolved = true;
                         }
-                        else {
-                            break;
-                        }
+                        else break;
                     }
+
                 }
 
                 if (players_.size() >= 1) hp0 = { players_[0], hp_[players_[0]] };
                 if (players_.size() >= 2) hp1 = { players_[1], hp_[players_[1]] };
             }
 
-            // HEALTH_UPDATE (client pops p0_id, p0_hp, p1_id, p1_hp → push reverse)
+            // HEALTH_UPDATE (client pops p0_id, p0_hp, p1_id, p1_hp -> push reverse)
             if (hp0.has_value() || hp1.has_value()) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::HEALTH_UPDATE;
@@ -402,6 +421,14 @@ private:
         using namespace std::chrono;
         return duration_cast<duration<double>>(steady_clock::now() - tp0).count();
     }
+
+    std::optional<U16> PidForConn(const std::shared_ptr<connection_t>& client) {
+        std::lock_guard<std::mutex> lk(players_mtx_);
+        auto it = conn_to_pid_.find(client->GetID());
+        if (it == conn_to_pid_.end()) return std::nullopt;
+        return it->second;
+    }
+
 
 private:
     // Player registry (first 2 tracked for hp/damage)
