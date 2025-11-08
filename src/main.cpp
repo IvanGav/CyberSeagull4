@@ -158,17 +158,19 @@ static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
 	if (client.IsConnected() || g_connecting.load()) return;
+	g_connect_started = glfwGetTime();  
 	g_connecting = true;
 	g_last_connect_error.clear();
 
 	std::thread([ip, port]() {
 		try {
+			player_id = 0xffff;           // ensure HELLO is sent after reconnect
 			client.Connect(ip, port);
 		}
 		catch (const std::exception& e) {
 			g_last_connect_error = e.what();
 		}
-		catch (...) {
+		catch (...) {                   // FIXED from catch (.)
 			g_last_connect_error = "Unknown error while connecting";
 		}
 		g_connecting = false;
@@ -532,14 +534,15 @@ int main(int argc, char** argv) {
 			client.check_messages();
 		}
 
-		// gate: connected or timed out (lets the button work again)
 		if (client.IsConnected()) {
 			g_connecting = false;
 		}
 		else if (g_connecting && (glfwGetTime() - g_connect_started) > 5.0) {
-			// assume the attempt failed
 			g_connecting = false;
+			g_last_connect_error = "Timed out connecting to " + server_ip;
+			client.Disconnect();
 		}
+
 
 		// Update particles
 		advanceParticles(dt);

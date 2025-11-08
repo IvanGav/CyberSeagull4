@@ -33,9 +33,11 @@ int main(int argc, char** argv) {
     }
 
     if (!server.LoadSong(midi_path)) {
-        std::cerr << "[SERVER] Failed to load MIDI '" << midi_path << "'\n";
+        std::cerr << "[SERVER] Failed to load MIDI '" << midi_path;
         return 2;
     }
+    std::cout << "[SERVER] Listening on port " << port << "\n";
+
 
 
     std::cout << "[SERVER] Listening on port " << port << "\n";
