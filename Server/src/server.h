@@ -309,9 +309,15 @@ private:
         int pidx = -1;
         {
             std::lock_guard<std::mutex> lk(players_mtx_);
-            auto idxOpt = playerIndex(who);
-            if (!idxOpt.has_value()) return; // spectators don't block
-            pidx = *idxOpt;
+            for (size_t i = 0; i < players_.size(); ++i)
+            {
+                if (players_[i] == who)
+                {
+                    pidx = static_cast<int>(i);
+                    break;
+                }
+            }
+            if (pidx == -1) return; // spectators no blockkk
         }
 
         std::lock_guard<std::mutex> lk(song_mtx_);
@@ -330,12 +336,18 @@ private:
             if (!song_started_) { std::this_thread::sleep_for(std::chrono::milliseconds(5)); continue; }
 
             const F64 now_rel = SecondsSince(song_start_tp_);
-            std::optional<std::pair<U16, int>> hp0, hp1;
+
+            // Locals to send
+            bool send_health = false;
+            bool send_game_over = false;
+            U16 out_p0_id = 0xffff, out_p1_id = 0xffff;
+            U16 out_p0_hp = 0, out_p1_hp = 0;
+            U16 out_winner = 0xffff;
+
 
             {
-                std::lock_guard<std::mutex> lk(song_mtx_);
+                std::scoped_lock  lk(song_mtx_, players_mtx_);
 
-                // For each note whose window ended, resolve once
                 for (size_t i = 0; i < schedule_.size(); ++i) {
                     auto& s = schedule_[i];
                     if (s.resolved) continue;
@@ -347,11 +359,11 @@ private:
                     bool b1 = s.blocked.test(1);
 
                     auto apply_damage = [&](int idx) {
-                        if (auto pid = getPlayerId(idx); pid.has_value()) {
-                            auto& hp = hp_[*pid];
-                            if (hp > 0) hp -= 1;
-                        }
-                        };
+                        if (idx < 0 || idx >= (int)players_.size()) return;
+                        U16 pid = players_[idx];
+                        auto it = hp_.find(pid);
+                        if (it != hp_.end() && it->second > 0) --(it->second); 
+                    };
 
                     if (!b0 && !b1) {
                         // Nobody blocked,  both punished bad bad boy
@@ -366,7 +378,6 @@ private:
 
                     s.resolved = true;
 
-                    // Keep your existing merge slice collapsing:
                     for (size_t j = i + 1; j < schedule_.size(); ++j) {
                         auto& s2 = schedule_[j];
                         if (s2.resolved) continue;
@@ -379,44 +390,59 @@ private:
 
                 }
 
-                if (players_.size() >= 1) hp0 = { players_[0], hp_[players_[0]] };
-                if (players_.size() >= 2) hp1 = { players_[1], hp_[players_[1]] };
+                // Snapshot HP/IDs 
+                if (players_.size() >= 1) {
+                    out_p0_id = players_[0];
+                    out_p0_hp = (U16)hp_[players_[0]];
+                }
+
+                if (players_.size() >= 2) {
+                    out_p1_id = players_[1];
+                    out_p1_hp = (U16)hp_[players_[1]];
+                }
+
+                // Send only when health/ids changed
+                if (out_p0_id != last_p0_id_sent_ || out_p0_hp != last_p0_hp_sent_ ||
+                    out_p1_id != last_p1_id_sent_ || out_p1_hp != last_p1_hp_sent_) {
+                    send_health = true;
+                    last_p0_id_sent_ = out_p0_id; last_p0_hp_sent_ = out_p0_hp;
+                    last_p1_id_sent_ = out_p1_id; last_p1_hp_sent_ = out_p1_hp;
+            
+                }
+
+
+                // Game over detection
+                if (!game_over_sent_ && !players_.empty()) {
+                    std::optional<U16> loser;
+                    for (size_t i = 0; i < players_.size() && i < 2; ++i) {
+                        if (hp_[players_[i]] <= 0) { loser = players_[i]; break; }
+                    }
+                    if (loser.has_value()) {
+                        out_winner = 0xffff;
+                        for (size_t i = 0; i < players_.size() && i < 2; ++i)
+                            if (players_[i] != *loser && hp_[players_[i]] > 0) { out_winner = players_[i]; break; }
+                        game_over_sent_ = true;
+                        song_started_ = false;
+                        ready_[0] = ready_[1] = false;
+                        send_game_over = true;
+                    }
+                }
             }
 
-            // HEALTH_UPDATE (client pops p0_id, p0_hp, p1_id, p1_hp -> push reverse)
-            if (hp0.has_value() || hp1.has_value()) {
+
+            // HEALTH_UPDATE
+            if (send_health) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::HEALTH_UPDATE;
-                U16 p0_id = hp0 ? hp0->first : (U16)0xffff;
-                U16 p0_hp = hp0 ? (U16)hp0->second : (U16)0;
-                U16 p1_id = hp1 ? hp1->first : (U16)0xffff;
-                U16 p1_hp = hp1 ? (U16)hp1->second : (U16)0;
-                m << p1_hp; m << p1_id; m << p0_hp; m << p0_id;
+                m << out_p1_hp; m << out_p1_id; m << out_p0_hp; m << out_p0_id;
                 MessageAllClients(m);
             }
 
-            {
-                std::lock_guard<std::mutex> lk(players_mtx_);
-                if (!game_over_sent_ && players_.size() > 0) {
-                    std::optional<U16> loser;
-                    for (size_t i = 0; i < players_.size() && i < 2; ++i) {
-                        if (hp_[players_[i]] <= 0) loser = players_[i];
-                    }
-                    if (loser.has_value()) {
-                        U16 winner = 0xffff;
-                        for (size_t i = 0; i < players_.size() && i < 2; ++i)
-                            if (players_[i] != *loser && hp_[players_[i]] > 0) { winner = players_[i]; break; }
-
-                        cgull::net::message<message_code> gm;
-                        gm.header.id = message_code::GAME_OVER;
-                        gm << winner;
-                        MessageAllClients(gm);
-
-                        game_over_sent_ = true;
-                        song_started_ = false;      // stop round
-                        ready_[0] = ready_[1] = false; // require re-ready for next match
-                    }
-                }
+            if (send_game_over) {
+                cgull::net::message<message_code> gm;
+                gm.header.id = message_code::GAME_OVER;
+                gm << out_winner;
+                MessageAllClients(gm);
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(4));
@@ -451,6 +477,10 @@ private:
     std::unordered_map<U16, int> hp_;
     bool game_over_sent_ = false;
     bool ready_[2] = { false,false };
+    
+    // last sent health snapshot
+    U16 last_p0_id_sent_ = 0xffff, last_p1_id_sent_ = 0xffff;
+    U16 last_p0_hp_sent_ = 0xffff, last_p1_hp_sent_ = 0xffff;
 
     // Song schedule
     std::mutex song_mtx_;
