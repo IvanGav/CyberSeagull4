@@ -16,16 +16,17 @@ void main() {
 	uint resX = sheetRes & 0xFFu;
 	uint resY = sheetRes >> 8u;
 	uint idx = clamp(uint(age * float(resX * resY)), 0u, resX * resY);
-	vec2 uv = inUV / vec2(float(resX), float(resY));
+	vec2 uv = (inUV - vec2(0.0, 1.0)) / vec2(float(resX), float(resY));
 	uv += vec2(float(idx % resX) / float(resX), -float(idx / resX) / float(resY));
+	vec4 color = vec4(1.0, 1.0, 1.0, 1.0 - pow(age, 20.0));
 	if(texNum == 0)
-		fCol = texture(particleTex0, uv);
+		fCol = texture(particleTex0, uv) * color;
 	else if(texNum == 1)
-		fCol = texture(particleTex1, uv);
+		fCol = texture(particleTex1, uv) * color;
 	else if(texNum == 2)
-		fCol = texture(particleTex2, uv);
+		fCol = texture(particleTex2, uv) * color;
 	else if(texNum == 3)
-		fCol = texture(particleTex3, uv);
+		fCol = texture(particleTex3, uv) * color;
 	else
-		fCol = vec4(1.0,0.0,1.0,1.0);
+		fCol = color;
 }

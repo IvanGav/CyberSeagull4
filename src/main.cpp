@@ -138,6 +138,7 @@ static struct {
 		GLuint closeMenu;
   } menu;
   GLuint feather;
+  GLuint cannonExplosion;
 } textures;
 
 ParticleSource particleSource;
@@ -403,6 +404,8 @@ int main(int argc, char** argv) {
 
 	textures.feather = createTextureFromImage("asset/feather.png");
 
+	textures.cannonExplosion = createTextureFromImage("asset/cannon_explosion.png");
+
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
 
@@ -446,12 +449,14 @@ int main(int argc, char** argv) {
 	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
 	particleSource.tex_index = 0;
 	particleSource.setSheetRes(8, 8);
+	particleSource.scaleOverTime = 1.0F;
 
 	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
 	particle_textures[1] = textures.feather;
+	particle_textures[2] = textures.cannonExplosion;
 
 	// Create buffers
 	GLuint buffer;
@@ -1066,6 +1071,19 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	if (i == -1) return; // no suitable cannon found
 
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+
+	glm::vec4 pos = objects[i].model[3];
+	addParticle(Particle{
+			.pos = glm::vec3(pos.x, pos.y + 2.16504F, pos.z + 0.052887F),
+			.color = { 255, 255, 255, 255 },
+			.size = 10.0,
+			.life = 2.0F,
+			.maxLife = 2.0F,
+			.tex = 2,
+			.sheetResX = 8,
+			.sheetResY = 4,
+			.axis = glm::vec3(0.0F, 2.75997F - 2.66555F, 1.06046F + 0.251254F) * 2.0F
+	});
 
 	// Spawn projectile using the chosen cannon's transform
 	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
