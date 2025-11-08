@@ -13,11 +13,11 @@
 #include "cgullnet/cgull_net.h"
 #include "message.h"
 #include "util.h"
-#include "midi.h"  
+#include "midi.h"
 
-static constexpr F64 LEAD_IN_SEC = 2.0;
+static constexpr F64 LEAD_IN_SEC = 4.0;
 static constexpr F64 HIT_WINDOW_SEC = 0.25;
-static constexpr F64 MERGE_SLICE_SEC = 0.06; 
+static constexpr F64 MERGE_SLICE_SEC = 0.06;
 
 class servergull : public cgull::net::server_interface<message_code> {
 public:
@@ -27,27 +27,28 @@ public:
     // Song control
     bool LoadSong(const std::string& midi_path, U8 lanes = 6) {
         std::string song_name;
-        auto notes = midi_parse_file(midi_path, song_name);   // time in seconds, note, velocity
-        if (notes.empty()) {
+        auto midi = midi_parse_file(midi_path, lanes);
+        if (midi.notes.empty()) {
             std::cerr << "[SERVER] MIDI had no NOTE_ON events or failed to load.\n";
             return false;
         }
 
         std::lock_guard<std::mutex> lk(song_mtx_);
         lanes_ = lanes;
+        bps_ = midi.beats_per_sec;
         schedule_.clear();
-        schedule_.reserve(notes.size());
-        for (const auto& n : notes) {
-            if (n.velocity == 0) continue; 
+        schedule_.reserve(midi.notes.size());
+        for (const auto& n : midi.notes) {
+            if (n.velocity == 0) continue;
             ScheduledNote s;
-            s.rel_time = n.time;          
+            s.rel_time = n.time;
             s.note = n.note;
             s.lane = static_cast<U8>(n.note % lanes_);
             schedule_.push_back(s);
         }
         std::sort(schedule_.begin(), schedule_.end(),
             [](const ScheduledNote& a, const ScheduledNote& b)
-            { 
+            {
                 return a.rel_time < b.rel_time;
             });
         std::cout << "[SERVER] Loaded " << schedule_.size() << " notes from '" << midi_path << "'\n";
@@ -80,6 +81,7 @@ public:
         {
             cgull::net::message<message_code> m;
             m.header.id = message_code::SONG_START;
+            m << (F64)bps_;
             MessageAllClients(m);
         }
 
@@ -409,6 +411,7 @@ private:
     std::mutex song_mtx_;
     std::vector<ScheduledNote> schedule_;
     U8 lanes_ = 6;
+    double bps_;
     bool song_started_ = false;
     std::chrono::steady_clock::time_point song_start_tp_;
 

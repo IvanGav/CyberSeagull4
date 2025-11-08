@@ -11,11 +11,13 @@
 #include <atomic>
 #include <thread>
 
+#ifdef __MSC_VER
 extern "C"
 {
 	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
+#endif
 
 #ifdef _MSC_VER
 #pragma comment( lib, "Winmm.lib" )
