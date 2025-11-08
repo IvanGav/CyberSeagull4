@@ -73,7 +73,7 @@ public:
             song_started_ = true;
 
             song_start_tp_ = std::chrono::steady_clock::now()
-                + std::chrono::duration<double>(LEAD_IN_SEC);
+                + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(LEAD_IN_SEC));
         }
 
         // Tell clients to anchor clocks (no payload)
