@@ -479,8 +479,6 @@ int main(int argc, char** argv) {
 		// per-frame input
 		glfwPollEvents();
 
-		throw_cats();
-
 		GLFWgamepadstate state{};
 		if (!menu_open) {
 			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
