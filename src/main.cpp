@@ -924,12 +924,6 @@ int main(int argc, char** argv) {
 
 		}
 
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(20, 20));
-		ImGui::Begin("ip", NULL, flags);
-		
-		ImGui::End();
-
 		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 		ImGui::Text("My HP: %d", g_my_health);
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
@@ -977,19 +971,6 @@ int main(int argc, char** argv) {
 		ImGui::End();
 
 		// Status
-		if (ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			ImGui::Text("My HP: %d", g_my_health);
-			ImGui::Text("Enemy HP: %d", g_enemy_health);
-			if (g_game_over)
-			{
-				ImGui::Separator();
-				if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
-				else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
-				else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-			}
-		}
-		ImGui::End();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
