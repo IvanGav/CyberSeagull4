@@ -139,6 +139,11 @@ protected:
                     song_started_ = false;           // stop any in-progress match gating
                 }
             }
+            /// Remove connection from deq
+            auto idx = std::find(m_deqConnections.begin(), m_deqConnections.end(), client);
+            if (idx != m_deqConnections.end()) {
+                m_deqConnections.erase(idx);
+            }
         }
         SendLobbyState(); 
     }
