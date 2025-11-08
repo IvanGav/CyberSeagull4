@@ -93,6 +93,7 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -2.0f;
+const B8 INFINITE_FIRE = false;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
@@ -1083,7 +1084,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i] || true) { // TODO remove this later
+			if (cannon_can_fire[i] || INFINITE_FIRE) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
