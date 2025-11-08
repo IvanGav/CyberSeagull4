@@ -157,10 +157,13 @@ static std::string g_last_connect_error;
 static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
-	if (client.IsConnected() || g_connecting.load()) return;
+	if (client.IsConnected() || g_connecting.load()) {
+		return;
+	}
 	g_connect_started = glfwGetTime();  
 	g_connecting = true;
 	g_last_connect_error.clear();
+
 
 	std::thread([ip, port]() {
 		try {
@@ -170,7 +173,7 @@ void try_connect(const std::string& ip, U16 port) {
 		catch (const std::exception& e) {
 			g_last_connect_error = e.what();
 		}
-		catch (...) {                   // FIXED from catch (.)
+		catch (...) {   
 			g_last_connect_error = "Unknown error while connecting";
 		}
 		g_connecting = false;
@@ -825,6 +828,7 @@ int main(int argc, char** argv) {
 			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
 			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
 				server_ip = ipbuf;
+				std::cout << "Server IP:" <<  ipbuf;
 			}
 
 			if (!client.IsConnected()) {
@@ -836,9 +840,10 @@ int main(int argc, char** argv) {
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						g_connecting = true;
 						g_connect_started = glfwGetTime();
 						try_connect(server_ip, 1951);
+						g_connecting = true;
+						std::cout << "Server IP:" <<  ipbuf;
 					}
 				}
 				else {
@@ -952,9 +957,9 @@ int main(int argc, char** argv) {
 						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 
 					if (ImGui::Button("Join Game")) {
-						g_connecting = true;
 						g_connect_started = glfwGetTime();
-						try_connect(server_ip, 1951);
+						try_connect(server_ip, 1951);	
+						g_connecting = true;
 					}
 				}
 				else
