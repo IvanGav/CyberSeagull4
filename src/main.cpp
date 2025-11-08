@@ -195,16 +195,17 @@ void make_seagull(U8 cannon, F64 timestamp) {
 				-glm::vec3(0.0, glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, 0.0)
 			);*/
 
-			std::cout << "-----dist: " << (1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb) << "\n";
-		} else {
-			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * beats_left));
+			//std::cout << "-----dist: " << (1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb) << "\n";
+		}
+		else {
+			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * (beats_left - 1)));
 			cat.mesh = (beats_left % 2) ? &meshes.cat : &meshes.cat;
-			cat.tex = (beats_left % 2) ? textures.green : textures.cat;
+			cat.tex = (beats_left % 2) ? textures.green : textures.green;
 		}
 		cat.model = transform * cat.pretransmodel;
 
 		//return (cat.model[3][1] >= 0.0f);
-		return beats_left < 0xf0;
+		return beats_left > 0;
 		};
 }
 // Create a shader from vertex and fragment shader files
