@@ -23,6 +23,8 @@ extern int g_max_health;
 
 extern U16 g_p0_id, g_p1_id;
 extern bool g_p0_ready, g_p1_ready;
+extern ma_engine engine;
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
 
 // If you’re building with C++17 or later, using inline variables here avoids ODR issues.
 // Otherwise: declare these here as `extern` and define them once in a .cpp.
@@ -136,6 +138,7 @@ private:
             g_game_over   = false;
             g_sent_ready  = false;
             std::cout << "[CLIENT] SONG_START spb=" << song_spb << "\n";
+            playSound(&engine, "asset/wellerman.wav", MA_FALSE, 1.0f);
             break;
         }
 
