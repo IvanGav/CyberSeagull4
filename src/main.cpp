@@ -349,7 +349,7 @@ int main(int argc, char** argv) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
-	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b0,b:b1,x:b2,y:b3,dpdown:+a1,dpup:-a1");
+	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b1,b:b2,x:b3,y:b0,back:b4,start:b5,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
@@ -522,6 +522,11 @@ int main(int argc, char** argv) {
 	ma_engine_set_volume(&engine, volume/100.f);
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
+
+	bool bothReady = false;
+
+	GLFWgamepadstate lastState{};
+
 	static char buf[64];
 	windowMouseRelease(window);
 	// event loop (each iteration of this loop is one frame of the application)
@@ -537,9 +542,12 @@ int main(int argc, char** argv) {
 		glfwPollEvents();
 
 		GLFWgamepadstate state{};
+		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+			gamepadInput(state, lastState);
+			lastState = state;
+		}
 		/*
 		if (!menu_open) {
-			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 				moveFreeCamGamepad(window, cam, dt, state);
 			}
 			else {
