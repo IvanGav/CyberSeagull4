@@ -98,6 +98,8 @@ static struct {
 	Mesh test_scene;
 	Mesh cat;
 	Mesh quad;
+	Mesh cannon;
+	Mesh cannonDoor;
 } meshes;
 static struct {
 	GLuint green;
@@ -108,6 +110,11 @@ static struct {
 	GLuint waterNormal;
 	GLuint waterOffset;
 	GLuint particleExplosion;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} cannon;
 } textures;
 
 // Networking global stuff
@@ -283,6 +290,8 @@ int main(int argc, char** argv) {
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
 	meshes.quad = Mesh::xzQuad(vertices);
+	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
+	meshes.cannonDoor = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -295,6 +304,11 @@ int main(int argc, char** argv) {
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
+
+	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
+	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
+	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
+
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
