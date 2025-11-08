@@ -354,14 +354,15 @@ int main(int argc, char** argv) {
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
 
 	stbi_set_flip_vertically_on_load(false);
-	textures.menu_logo = createTextureFromImage("asset/menu_logo.png");
-	textures.page = createTextureFromImage("asset/page.png");
-	textures.context = createTextureFromImage("asset/context.png");
+	textures.menu.menu_logo = createTextureFromImage("asset/menu_logo.png");
+	textures.menu.page = createTextureFromImage("asset/page.png");
+	textures.menu.context = createTextureFromImage("asset/context.png");
+	textures.menu.connect = createTextureFromImage("asset/ConnectButton.png");
+	textures.menu.leave = createTextureFromImage("asset/LeaveButton.png");
+	textures.menu.closeMenu = createTextureFromImage("asset/Close-Menu.png");
+
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
-	textures.connect = createTextureFromImage("asset/ConnectButton.png");
-	textures.leave = createTextureFromImage("asset/LeaveButton.png");
-	textures.closeMenu = createTextureFromImage("asset/Close-Menu.png");
 	stbi_set_flip_vertically_on_load(true);
 
 	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
@@ -742,11 +743,8 @@ int main(int argc, char** argv) {
 			ImGui::SetNextWindowSize(ImVec2(width - 200, height - 200));
 			ImGui::SetNextWindowPos(ImVec2(100, 100));
 			ImGui::Begin("menu", NULL, flags);
-			ImGui::Image((ImTextureID)textures.page, ImVec2(width - 200, height - 200));
+			ImGui::Image((ImTextureID)textures.menu.page, ImVec2(width - 200, height - 200));
 			ImGui::End();
-    /*
-    TODO merge here
-    if (menu_open) {
 			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
 
 			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
@@ -755,10 +753,10 @@ int main(int argc, char** argv) {
 			int padding = 100;
 			F32 menuw = (width) / 3, menuh = ((width) / 3) * 0.562, menux = (width - (2 * padding) - menuw) / 2, menuy = height / 70;
 			ImGui::SetCursorPos(ImVec2(menux, menuy));
-			ImGui::Image((ImTextureID)textures.menu_logo, ImVec2(menuw, menuh));
+			ImGui::Image((ImTextureID)textures.menu.menu_logo, ImVec2(menuw, menuh));
 			F32 contextw = width / 3, contexth = width / 3, contextx = (width - (2 * padding) - (contextw)) / 2 + (menuw / 2), contexty = menuy + menuh - (menuh/2);
 			ImGui::SetCursorPos(ImVec2(contextx, contexty));
-			ImGui::Image((ImTextureID)textures.context, ImVec2(contextw, contexth));
+			ImGui::Image((ImTextureID)textures.menu.context, ImVec2(contextw, contexth));
 			/*
 				ImGui::SliderInt("val 1", &val1, 0, 256);
 				ImGui::SliderInt("val 2", &val2, 0, 256);
@@ -775,7 +773,7 @@ int main(int argc, char** argv) {
 			ImGui::PopItemWidth();
 			if (!client.IsConnected()) {
 				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				ImGui::Image((ImTextureID)textures.connect, ImVec2(buttonw, buttonh));
+				ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 				if (ImGui::InvisibleButton("Connect", ImVec2(buttonw, buttonh))) {
 					inputChange:
@@ -787,7 +785,7 @@ int main(int argc, char** argv) {
 			else {
 				F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
 				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				ImGui::Image((ImTextureID)textures.leave, ImVec2(buttondisw, buttondish));
+				ImGui::Image((ImTextureID)textures.menu.leave, ImVec2(buttondisw, buttondish));
 				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
 					client.Disconnect();
@@ -798,13 +796,27 @@ int main(int argc, char** argv) {
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
 			ImGui::PopItemWidth();
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
-			ImGui::Image((ImTextureID)textures.closeMenu, ImVec2(100, 100));
+			ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
 			if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
 				menu_open = false;
 				windowMouseFocus(window);
-      }
-    
+			}
+			ImGui::End();
+			ma_engine_set_volume(&engine, volume / 100.f);
+		}
+		else {
+			ImGui::SetNextWindowSize(ImVec2(50, 50));
+			ImGui::SetNextWindowPos(ImVec2(50, 50));
+			ImGui::Begin("open menu", NULL, flags);
+			if (ImGui::Button("Menu")) {
+				menu_open = true;
+				windowMouseRelease(window);
+			}
+			ImGui::End();
+
+		}
+
 		ImGui::SetNextWindowSize(ImVec2(500, 500));
 		ImGui::SetNextWindowPos(ImVec2(200, 200));
 		ImGui::Begin("note multiplier", NULL, flags);
