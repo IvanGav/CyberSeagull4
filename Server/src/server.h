@@ -182,38 +182,52 @@ protected:
         case message_code::PLAYER_CAT_FIRE: {
             MessageAllClients(msg);
 
-            U16 who_wire = 0; F64 timestamp = 0.0; U16 count = 0;
             if (msg.body.size() < sizeof(U16) + sizeof(F64) + sizeof(U16)) break;
-            msg >> who_wire; msg >> timestamp; msg >> count;
 
-            size_t need = static_cast<size_t>(count) * sizeof(U8);
-            if (msg.body.size() < need) break; // truncated / malformed
+            U16 who_wire = 0; F64 timestamp = 0.0; U16 count = 0;
+            msg >> who_wire;
+            msg >> timestamp;
+            msg >> count;
+
+            const size_t need = static_cast<size_t>(count) * sizeof(U8);
+            if (msg.body.size() < need) break;
 
             std::vector<U8> cats(count);
             for (U16 i = 0; i < count; ++i) msg >> cats[i];
 
-            // Sanitize
+            {
+                std::lock_guard<std::mutex> lk(song_mtx_);
+                cats.erase(std::remove_if(cats.begin(), cats.end(),
+                    [this](U8 lane) { return lane >= lanes_; }),
+                    cats.end());
+            }
             std::sort(cats.begin(), cats.end());
             cats.erase(std::unique(cats.begin(), cats.end()), cats.end());
+            if (cats.empty()) break;
 
-            // Bind action to athe connections pid 
             std::optional<U16> pid_from_conn;
             {
                 std::lock_guard<std::mutex> lk(players_mtx_);
                 auto it = conn_to_pid_.find(client->GetID());
-                if (it != conn_to_pid_.end()) pid_from_conn = it->second; 
+                if (it != conn_to_pid_.end()) pid_from_conn = it->second;
             }
-            
-            if (!pid_from_conn_has_value() || cats.empty()) break;
+            if (!pid_from_conn) break;
+
             OnPlayerFire(*pid_from_conn, cats);
             break;
         }
+
         case message_code::PLAYER_READY: {
-            auto pid = PidForConn(client);
-            if (!pid) break;
-            OnPlayerReady(*pid);
+            std::optional<U16> pid_from_conn;
+            {
+                std::lock_guard<std::mutex> lk(players_mtx_);
+                auto it = conn_to_pid_.find(client->GetID());
+                if (it != conn_to_pid_.end()) pid_from_conn = it->second;
+            }
+            if (pid_from_conn) OnPlayerReady(*pid_from_conn);
             break;
         }
+
 
         default:
             std::cout << "[SERVER] Unknown/Unhandled message id\n";
