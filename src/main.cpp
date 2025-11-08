@@ -180,12 +180,24 @@ void make_seagull(U8 cannon, F64 timestamp) {
 		if (beats_left > SHOW_NUM_BEATS) {
 			cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
 		} else if (beats_left == 1) {
+			F64 dist = SEAGULL_MOVE_PER_BEAT;
 			// TODO do the jumping animation here
-		} else {
-			cat.model = glm::scale(
-				glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0)),
-				glm::vec3(1.0, (beats_left % 2 == 0 ? -1.0 : 1.0), 1.0) // flip every other tick
+			//cat.model = toModel(
+			//	(2.0*song_spb) - ((song_start_time + cat.start_time - song_spb) - curtime) * 10, // distance along lane
+			//	0, // unused
+			//	dist,
+			//	0,
+			//	1.0
+			//) * glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0));
+			cat.model = glm::translate(
+				glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0)), 
+				-glm::vec3(0.0, ((2.0 * song_spb) - ((song_start_time + cat.start_time - song_spb) - curtime)) * 10, 0.0)
 			);
+			std::cout << "-----dist: " << ((2.0 * song_spb) - ((song_start_time + cat.start_time - song_spb) - curtime)) * 10 << "\n and height: " << cat.model[3][1] << "\n";
+		} else {
+			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT /* * beats_left*/, 0.0));
+			cat.mesh = (beats_left % 2) ? &meshes.cat/*test_scene*/ : &meshes.cat;
+			cat.tex = (beats_left % 2) ? textures.green : textures.cat;
 		}
 
 		//return (cat.model[3][1] >= 0.0f);

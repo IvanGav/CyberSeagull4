@@ -18,6 +18,7 @@ extern ma_engine engine;
 extern U16 player_id;
 extern seaclient client;
 extern double cur_time_sec;
+void make_seagull(U8 cannon, F64 timestamp);
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
@@ -37,5 +38,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
         cats_thrown[5] = true;
+    }
+    if (key == GLFW_KEY_I && action == GLFW_PRESS) {
+        song_start_time = cur_time_sec;
+        make_seagull(0, 3);
     }
 }

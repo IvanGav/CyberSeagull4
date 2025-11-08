@@ -12,8 +12,8 @@ extern std::vector<Entity> objects;
 void make_seagull(U8 cannon, F64 timestamp);
 
 F64 song_start_time;
-F64 song_spb = .20; // seconds/beat
-static constexpr U8 SHOW_NUM_BEATS = 4;
+F64 song_spb = .5; // seconds/beat
+static constexpr U8 SHOW_NUM_BEATS = 10;
 static constexpr F64 SEAGULL_MOVE_PER_BEAT = 30;
 
 void throw_cat(int, bool, F64);
