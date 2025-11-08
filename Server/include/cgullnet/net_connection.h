@@ -29,6 +29,7 @@ namespace cgull {
                     if (m_socket.is_open())
                     {
                         id = uid;
+                        m_connected = true;
                         ReadHeader();
                     }
                 }
@@ -45,6 +46,10 @@ namespace cgull {
                             {
                                 ReadHeader();
                             }
+                            else
+                            {
+                                m_conncted = false;
+                            }
                         });
                 }
             }
@@ -52,13 +57,14 @@ namespace cgull {
             void Disconnect()
             {
                 if (IsConnected())
-                    asio::post(m_asioContext, [this]() { m_socket.close(); });
+                    asio::post(m_asioContext, [this]() { m_connected = false;  m_socket.close(); });
             }
 
             bool IsConnected() const
             {
-                return m_socket.is_open();
+                return m_connected.load() && m_socket.is_open();
             }
+
 
             void StartListening()
             {
@@ -103,7 +109,7 @@ namespace cgull {
                         {
                             // connection dead
                             std::cout << "[CONN] ReadHeader error: " << ec.message() << "\n";
-                            m_socket.close();
+                            m_connected = false; m_socket.close();
                         }
                     });
             }
@@ -121,7 +127,7 @@ namespace cgull {
                         else
                         {
                             std::cout << "[CONN] ReadBody error: " << ec.message() << "\n";
-                            m_socket.close();
+                            m_connected = false; m_socket.close();
                         }
                     });
             }
@@ -161,7 +167,7 @@ namespace cgull {
                         else
                         {
                             std::cout << "[CONN] WriteHeader error: " << ec.message() << "\n";
-                            m_socket.close();
+                            m_connected = false; m_socket.close();
                         }
                     });
             }
@@ -183,7 +189,7 @@ namespace cgull {
                         else
                         {
                             std::cout << "[CONN] WriteBody error: " << ec.message() << "\n";
-                            m_socket.close();
+                            m_connected = false; m_socket.close();
                         }
                     });
             }
@@ -194,7 +200,7 @@ namespace cgull {
             tsqueue<message<T>> m_qMessagesOut;
             tsqueue<owned_message<T>>& m_qMessagesIn;
             message<T> m_msgTemporaryIn;
-
+            std::atomic<bool> m_connected{ false };
             owner m_nOwnerType = owner::server;
             uint32_t id = 0;
         };

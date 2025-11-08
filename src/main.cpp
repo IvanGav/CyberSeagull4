@@ -176,38 +176,31 @@ static std::string g_last_connect_error;
 static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
-	if (client.IsConnected() || g_connecting.load()) {
-		return;
-	}
-	g_connect_started = glfwGetTime();  
-	g_connecting = true;
-	g_last_connect_error.clear();
+	if (client.IsConnected() || g_connecting.load()) return;
 
+	g_connect_started = glfwGetTime();
+	g_last_connect_error.clear();
+	g_connecting = true;
 
 	std::thread([ip, port]() {
 		try {
-			player_id = 0xffff;           // ensure HELLO is sent after reconnect
+			player_id = 0xffff;
 			client.Connect(ip, port);
 		}
 		catch (const std::exception& e) {
 			g_last_connect_error = e.what();
 		}
-		catch (...) {   
-			g_last_connect_error = "Unknown error while connecting";
-		}
 		g_connecting = false;
 		}).detach();
 }
+
 static void reset_network_state() {
 	player_id = 0xffff;
-	g_p0_id = g_p1_id = 0xffff;
-	g_p0_ready = g_p1_ready = false;
 	g_sent_ready = false;
 	g_song_active = false;
 	g_game_over = false;
 	g_winner = 0xffff;
-	g_my_health = 5;
-	g_enemy_health = 5;
+	g_connecting = false;
 	g_last_connect_error.clear();
 }
 // Reflections
@@ -991,8 +984,7 @@ int main(int argc, char** argv) {
 			const bool i_am_player = i_am_player0 || i_am_player1;
 
 			ImVec2 startSize = ImVec2(readyd * 1.5f, readyd * 1.5f);
-			ImVec2 startPos = ImVec2(
-				((2 * ready1x) + (2 * readyd) - readyd * 1.5f) / 2.0f, 
+			ImVec2 startPos = ImVec2(((2 * ready1x) + (2 * readyd) - startSize.x) / 2.0f,
 				ready1y + readyd);
 
 			// Show button only if I'm actually a player and no match is running

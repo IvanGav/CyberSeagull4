@@ -27,8 +27,8 @@ namespace cgull {
             {
                 static_assert(std::is_trivially_copyable<DataType>::value, "Data is too complex to be pushed into message.");
 
-                size_t old_size = msg.body.size();
-                msg.body.resize(msg.body.size() + sizeof(DataType));
+                const size_t old_size = msg.body.size();
+                msg.body.resize(old_size + sizeof(DataType));
                 std::memcpy(msg.body.data() + old_size, &data, sizeof(DataType));
                 msg.header.size = static_cast<uint32_t>(msg.body.size());
                 return msg;
@@ -79,4 +79,4 @@ namespace cgull {
         };
 
     }
-} // namespace cgull::net
+} 
