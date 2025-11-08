@@ -73,7 +73,7 @@ private:
         auto m = owned.msg;
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
-            U32 cid = 0; m >> cid; player_id = (U16)(cid & 0xffff);
+            U16 cid = 0; m >> cid; player_id = (U16)(cid & 0xffff);
             break;
         }
         case message_code::PLAYER_CAT_FIRE: {
