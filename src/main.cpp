@@ -1095,7 +1095,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i] || true) { // TODO remove this later
+			if (cannon_can_fire[i]) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
