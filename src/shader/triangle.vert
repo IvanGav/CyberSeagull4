@@ -23,6 +23,7 @@ layout(location = 4) uniform mat4 camMatrix;
 layout(location = 8) uniform mat3 normalTransform;
 layout(location = 11) uniform mat4 lightTransform;
 layout(location = 19) uniform bool doClip;
+layout(location = 20) uniform float clipY;
 
 void main() {
 	Vertex v = vertices[gl_VertexID];
@@ -38,5 +39,5 @@ void main() {
 	
 	gl_Position = camMatrix * worldSpacePos;
 	if(doClip)
-		gl_ClipDistance[0] = worldSpacePos.y;
+		gl_ClipDistance[0] = worldSpacePos.y - clipY;
 }
