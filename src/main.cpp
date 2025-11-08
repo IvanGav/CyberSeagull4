@@ -179,6 +179,7 @@ void genTangents(std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
+void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume = 1);
 void throw_cats();
 //void throw_cat(int cat_num, bool owned, F64);
 void initWaterFramebuffer();
@@ -428,12 +429,14 @@ int main(int argc, char** argv) {
 		midi_init(midi);
 	}
 
-	ma_engine_init(NULL, &engine);
-	ma_engine_set_volume(&engine, 0.1f);
-	playSound(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE);
-	int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
+	F32 volume = 100.0;
 
-	int note1 = 0, note2 = 0;
+	ma_engine_init(NULL, &engine);
+	ma_engine_set_volume(&engine, volume/100.f);
+	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
+	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
+	bool menu_open = true;
+	static char buf[64];
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -451,19 +454,16 @@ int main(int argc, char** argv) {
 		throw_cats();
 
 		GLFWgamepadstate state{};
-		if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
-			moveFreeCamGamepad(window, cam, dt, state);
-		}
-		else {
-			moveFreeCam(window, cam, dt);
-		}
-		if (midi_exists) {
-			extern std::vector<char> midi_keys_velocity;
-			moveFreeCamMidi(window, cam, dt);
-			for (int i = 0; i < midi_keys_velocity.size(); i++) {
-				if (midi_keys_velocity[i]) {
-					playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)i));
-				}
+		if (!menu_open) {
+			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+				moveFreeCamGamepad(window, cam, dt, state);
+			}
+			else {
+				moveFreeCam(window, cam, dt);
+			}
+			if (midi_exists) {
+				extern std::vector<char> midi_keys_velocity;
+				moveFreeCamMidi(window, cam, dt);
 			}
 		}
 
@@ -599,7 +599,6 @@ int main(int argc, char** argv) {
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
 
-
 			// Draw the player as a cat
 			{
 				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
@@ -722,6 +721,32 @@ int main(int argc, char** argv) {
 			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
 		}*/
 
+    /*
+    TODO merge here
+    if (menu_open) {
+			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+
+			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
+			ImGui::SetNextWindowPos(ImVec2(100, 100));
+			ImGui::Begin("menu", NULL, flags);
+			ImGui::Text("This sis the omenu");
+			ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf));
+			if (!client.IsConnected()) {
+				if (ImGui::Button("Connect")) {
+					//server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
+					server_ip = buf;
+					client.Connect(server_ip, 1951);
+				}
+			}
+			else {
+				if (ImGui::Button("Disconnect")) {
+					client.Disconnect();
+				}
+			}
+			ImGui::SliderFloat("Volume", &volume, 0, 256);
+			if (ImGui::Button("Close Menu")) {
+				menu_open = false;
+    */
 		ImGui::SetNextWindowSize(ImVec2(500, 500));
 		ImGui::SetNextWindowPos(ImVec2(200, 200));
 		ImGui::Begin("note multiplier", NULL, flags);
@@ -777,7 +802,19 @@ int main(int argc, char** argv) {
 				ImGui::Text("Connecting to %s...", server_ip.c_str());
 				if (ImGui::Button("Cancel")) { client.Disconnect(); } // leave g_connecting; thread will clear it :     )
 			}
+			ImGui::End();
+			ma_engine_set_volume(&engine, volume / 100.f);
 		}
+    /*
+    TODO merge here
+    
+		else {
+			ImGui::SetNextWindowSize(ImVec2(50, 50));
+			ImGui::SetNextWindowPos(ImVec2(50, 50));
+			ImGui::Begin("open menu", NULL, flags);
+			if (ImGui::Button("Menu")) {
+				menu_open = true;
+    */
 		ImGui::End();
 
 		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
@@ -819,9 +856,11 @@ int main(int argc, char** argv) {
 			else {
 				ImGui::TextDisabled("Waiting for the other player�");
 			}
+			ImGui::End();
+
 		}
 		else {
-			ImGui::TextDisabled(g_song_active ? "Match in progress�" : "Spectating (button disabled)");
+			ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
 		}
 
 		ImGui::End();
@@ -941,7 +980,24 @@ void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitc
 	if (ma_sound_init_from_file(engine, filePath,
 		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
 		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
 		ma_sound_set_pitch(s, pitch);
+		ma_sound_start(s);
+		liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
+}
+
+void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume) {
+	ma_sound* s = new ma_sound{};
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
+		ma_sound_set_volume(s, volume);
 		ma_sound_start(s);
 		liveSounds.push_back(s);
 	}
