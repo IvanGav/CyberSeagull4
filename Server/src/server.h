@@ -53,48 +53,53 @@ public:
     void StartSong() {
         {
             std::lock_guard<std::mutex> lk(song_mtx_);
-            if (schedule_.empty()) { std::cerr << "[SERVER] StartSong with empty schedule\n"; return; }
+            if (song_started_) return; 
+            if (schedule_.empty()) {
+                std::cerr << "[SERVER] StartSong with empty schedule\n";
+                return;
+            }
 
-            // reset per note state (replay)
             for (auto& s : schedule_) { s.resolved = false; s.blocked.reset(); }
 
             // reset match state
             {
                 std::lock_guard<std::mutex> lk2(players_mtx_);
                 game_over_sent_ = false;
-                for (size_t i = 0; i < players_.size() && i < 2; ++i) hp_[players_[i]] = HEALTH_MAX;
+                for (size_t i = 0; i < players_.size() && i < 2; ++i)
+                    hp_[players_[i]] = HEALTH_MAX;
             }
 
             song_started_ = true;
             song_start_tp_ = std::chrono::steady_clock::now();
         }
 
-        // Tell clients to anchor clocks
+        // anchor clocks
         {
             cgull::net::message<message_code> m;
             m.header.id = message_code::SONG_START;
             MessageAllClients(m);
         }
 
-
-        // broadcats note,lane,timestamp
         {
             std::lock_guard<std::mutex> lk(song_mtx_);
             for (const auto& s : schedule_) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::NEW_NOTE;
-                m << (F64)s.rel_time;  // last popped by client
+                m << (F64)s.rel_time;
                 m << (U8)s.lane;
                 m << (U8)s.note;
                 MessageAllClients(m);
             }
         }
 
-        // Launch stupidknowitall thread (damage calculation)
+        // start damage thread
         if (!stupidknowitall_thread_running_.exchange(true)) {
             stupidknowitall_thread_ = std::thread([this]() { this->StupidKnowItAllLoop(); });
         }
+
+        std::cout << "[SERVER] SONG_START sent, notes scheduled: " << schedule_.size() << "\n";
     }
+
 
 protected:
     // server_interface overrides
@@ -210,17 +215,19 @@ private:
     }
 
     void MaybeStartMatch() {
-        std::lock_guard<std::mutex> lk(players_mtx_);
-        if (song_started_) return;
-        if (players_.size() < 2) return;
-        if (!ready_[0] || !ready_[1]) return;
-
-        // Both ready THENNNNN START THE PARTTYYTYTYTYTYYTYTYHTYTYH!
-        std::cout << "[SERVER] Both players ready — starting match\n";
-        // Reset readiness so a replay will require pressing again
-        ready_[0] = ready_[1] = false;
+        bool should_start = false;
+        {
+            std::lock_guard<std::mutex> lk(players_mtx_);
+            if (!song_started_ && players_.size() >= 2 && ready_[0] && ready_[1]) {
+                ready_[0] = ready_[1] = false;
+                should_start = true;
+            }
+        }
         SendLobbyState();
-        StartSong();
+
+        if (should_start) {
+            StartSong();
+        }
     }
 
     void SendLobbyState() {
