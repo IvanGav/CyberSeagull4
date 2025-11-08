@@ -106,6 +106,8 @@ static struct {
 	Mesh cannon;
 	Mesh cannon_door;
 	Mesh seagBall;
+	Mesh ship;
+	Mesh shipNoMast;
 } meshes;
 static struct {
 	GLuint green;
@@ -122,6 +124,11 @@ static struct {
 		GLuint arm;
 	} cannon;
 	GLuint seagull;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} ship;
   struct {
     GLuint menu_logo;
 		GLuint context;
@@ -129,8 +136,15 @@ static struct {
 		GLuint connect;
 		GLuint leave;
 		GLuint closeMenu;
+		GLuint P1Ready;
+		GLuint P1NotReady;
+		GLuint P2Ready;
+		GLuint P2NotReady;
+		GLuint startGame;
+		GLuint waitForPlayer;
   } menu;
   GLuint feather;
+  GLuint cannonExplosion;
 } textures;
 
 ParticleSource particleSource;
@@ -146,6 +160,7 @@ seaclient client;
 // overlay state
 int  g_my_health = 5;
 int  g_enemy_health = 5;
+int g_max_health = std::max(g_my_health, g_enemy_health);
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 bool g_song_active = false;
@@ -161,10 +176,13 @@ static std::string g_last_connect_error;
 static double g_connect_started = 0.0;
 
 void try_connect(const std::string& ip, U16 port) {
-	if (client.IsConnected() || g_connecting.load()) return;
+	if (client.IsConnected() || g_connecting.load()) {
+		return;
+	}
 	g_connect_started = glfwGetTime();  
 	g_connecting = true;
 	g_last_connect_error.clear();
+
 
 	std::thread([ip, port]() {
 		try {
@@ -174,7 +192,7 @@ void try_connect(const std::string& ip, U16 port) {
 		catch (const std::exception& e) {
 			g_last_connect_error = e.what();
 		}
-		catch (...) {                   // FIXED from catch (.)
+		catch (...) {   
 			g_last_connect_error = "Unknown error while connecting";
 		}
 		g_connecting = false;
@@ -363,6 +381,8 @@ int main(int argc, char** argv) {
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
+	meshes.ship = Mesh::create(vertices, "asset/ship/ship.obj");
+	meshes.shipNoMast = Mesh::create(vertices, "asset/ship/ship_no_mast.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -379,6 +399,12 @@ int main(int argc, char** argv) {
 	textures.menu.connect = createTextureFromImage("asset/ConnectButton.png");
 	textures.menu.leave = createTextureFromImage("asset/LeaveButton.png");
 	textures.menu.closeMenu = createTextureFromImage("asset/Close-Menu.png");
+	textures.menu.P1Ready = createTextureFromImage("asset/P1Ready.png");
+	textures.menu.P1NotReady = createTextureFromImage("asset/P1NotReady.png");
+	textures.menu.P2Ready = createTextureFromImage("asset/P2Ready.png");
+	textures.menu.P2NotReady = createTextureFromImage("asset/P2NotReady.png");
+	textures.menu.startGame = createTextureFromImage("asset/startGame.png");
+	textures.menu.waitForPlayer = createTextureFromImage("asset/waitForPlayer.png");
 
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
@@ -388,7 +414,13 @@ int main(int argc, char** argv) {
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
 
+	textures.ship.color = createTextureFromImage("asset/ship/ship_BaseColor.png");
+	textures.ship.norm = createTextureFromImage("asset/ship/ship_Normal.png");
+	textures.ship.arm = createTextureFromImage("asset/ship/ship_ARM.png");
+
 	textures.feather = createTextureFromImage("asset/feather.png");
+
+	textures.cannonExplosion = createTextureFromImage("asset/cannon_explosion.png");
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
@@ -397,8 +429,8 @@ int main(int argc, char** argv) {
 		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";
 	}
 
-
-	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
+	objects.push_back(Entity::create(&meshes.shipNoMast, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(5.0F, -4.1F, 0.0F)), NONEMITTER));
+	objects.push_back(Entity::create(&meshes.ship, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(-25.0F - distancebetweenthetwoshipswhichshallherebyshootateachother, -4.1F, 0.0F)), NONEMITTER));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	for (int i = 0; i < 6; i++) {
@@ -432,12 +464,14 @@ int main(int argc, char** argv) {
 	// Create static particle sources (later change this to be dynamic or something)
 	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f, 0 }; // live for 1 seconds
 	particleSource.setSheetRes(8, 8);
+	particleSource.scaleOverTime = 1.0F;
 
 	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.02f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
 	particle_textures[1] = textures.feather;
+	particle_textures[2] = textures.cannonExplosion;
 
 	// Create buffers
 	GLuint buffer;
@@ -658,6 +692,7 @@ int main(int argc, char** argv) {
 			}
 
 			// Draw particles
+			glDepthMask(GL_FALSE);
 			glUseProgram(particleProgram);
 
 			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
@@ -668,6 +703,7 @@ int main(int argc, char** argv) {
 			glBindTextureUnit(3, particle_textures[3]);
 
 			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+			glDepthMask(GL_TRUE);
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -742,6 +778,7 @@ int main(int argc, char** argv) {
 		}
 
 		// Draw particles
+		glDepthMask(GL_FALSE);
 		glUseProgram(particleProgram);
 
 		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
@@ -752,6 +789,7 @@ int main(int argc, char** argv) {
 		glBindTextureUnit(3, particle_textures[3]);
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+		glDepthMask(GL_TRUE);
 
 		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
@@ -846,6 +884,7 @@ int main(int argc, char** argv) {
 			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
 			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
 				server_ip = ipbuf;
+				std::cout << "Server IP:" <<  ipbuf;
 			}
 
 			if (!client.IsConnected()) {
@@ -857,9 +896,10 @@ int main(int argc, char** argv) {
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						g_connecting = true;
 						g_connect_started = glfwGetTime();
 						try_connect(server_ip, 1951);
+						g_connecting = true;
+						std::cout << "Server IP:" <<  ipbuf;
 					}
 				}
 				else {
@@ -878,38 +918,66 @@ int main(int argc, char** argv) {
 					client.Disconnect();
 				}
 			}
-			
 
+			F32 readyd = buttonw*0.5, ready1x = inputx + buttonw + width / 40, ready1y = inputy + (spacing);
+			
+			if (g_p0_ready) {
+				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
+				ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
+			}
+			else {
+				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
+				ImGui::Image((ImTextureID)textures.menu.P1NotReady, ImVec2(readyd, readyd));
+			}
+
+			F32 ready2x = ready1x + readyd + width / 50, ready2y = ready1y;
+
+			if (g_p1_ready) {
+				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
+				ImGui::Image((ImTextureID)textures.menu.P2Ready, ImVec2(readyd, readyd));
+			}
+			else {
+				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
+				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
+			}
+
+			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 3) + buttonh));
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
-
+			*/
+			
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
-			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
-			if (!g_song_active && (i_am_player || slot_available))
+			ImGui::SetCursorPos(ImVec2(((2 * ready1x) + (2 * readyd) - readyd * 1.5) / 2, ready1y + readyd));
+			if (!g_song_active && i_am_player && player_id != 0xffff)
 			{
 				if (!g_sent_ready)
 				{
-					if (ImGui::Button("Start Game"))
+					ImGui::Image((ImTextureID)textures.menu.startGame, ImVec2(readyd*1.5, readyd * 1.5));
+					ImGui::SetCursorPos(ImVec2(ready1x, ready1y + readyd));
+					if (ImGui::InvisibleButton("Start Game", ImVec2(readyd * 1.5, readyd * 1.5)))
 					{
 						cgull::net::message<message_code> m;
 						m.header.id = message_code::PLAYER_READY;
 						U16 pid = player_id; // 16-bit id
 						m << pid;
-						if (client.IsConnected()) client.Send(m);
-						g_sent_ready = true;
+						if (client.IsConnected() && player_id != 0xffff) {
+							client.Send(m);
+							g_sent_ready = true;
+						}
 					}
 					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 				}
 				else
 				{
-					ImGui::TextDisabled("Waiting for the other player...");
+					ImGui::Image((ImTextureID)textures.menu.waitForPlayer, ImVec2(readyd * 1.5, readyd * 1.5));
 				}
 			}
 			else
@@ -918,7 +986,7 @@ int main(int argc, char** argv) {
 			}
 			
 			
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
 			ImGui::PushItemWidth(inputw*4);
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
 			ImGui::PopItemWidth();
@@ -945,49 +1013,20 @@ int main(int argc, char** argv) {
 
 		}
 
-		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::SetNextWindowSize(ImVec2(width-(width/15), 100));
+		ImGui::SetNextWindowPos(ImVec2(width/30, height * 0.01));
+		ImGui::Begin("Status", nullptr, flags);
+		/*
 		ImGui::Text("My HP: %d", g_my_health);
 		ImGui::Text("Enemy HP: %d", g_enemy_health);
+		*/
+		ImGui::ProgressBar(g_my_health / g_max_health);
+		ImGui::ProgressBar(g_enemy_health / g_max_health);
 		if (g_game_over) {
 			ImGui::Separator();
 			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
 			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
 			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-		}
-		ImGui::End();
-
-		ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-		if (ImGui::Begin("Connection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			static bool ipbuf_init = false;
-			static char ipbuf[64]{};
-			if (!ipbuf_init) { std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str()); ipbuf_init = true; }
-			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) { server_ip = ipbuf; }
-
-			if (!client.IsConnected())
-			{
-				if (!g_connecting)
-				{
-					if (!g_last_connect_error.empty())
-						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
-
-					if (ImGui::Button("Join Game")) {
-						g_connecting = true;
-						g_connect_started = glfwGetTime();
-						try_connect(server_ip, 1951);
-					}
-				}
-				else
-				{
-					ImGui::Text("Connecting to %s...", server_ip.c_str());
-					if (ImGui::Button("Cancel")) { client.Disconnect(); } 
-				}
-			}
-			else
-			{
-				if (ImGui::Button("Disconnect")) { client.Disconnect(); }
-			}
 		}
 		ImGui::End();
 
@@ -1052,7 +1091,20 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
+
+	glm::vec4 pos = objects[i].model[3];
+	addParticle(Particle{
+			.pos = glm::vec3(pos.x, pos.y + 2.16504F, pos.z + 0.052887F),
+			.color = { 255, 255, 255, 255 },
+			.size = 10.0,
+			.life = 2.0F,
+			.maxLife = 2.0F,
+			.tex = 2,
+			.sheetResX = 8,
+			.sheetResY = 4,
+			.axis = glm::vec3(0.0F, 2.75997F - 2.66555F, 1.06046F + 0.251254F) * 2.0F
+	});
 
 	// Spawn projectile using the chosen cannon's transform
 	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
