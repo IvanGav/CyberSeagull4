@@ -99,7 +99,7 @@ static struct {
 	Mesh cat;
 	Mesh quad;
 	Mesh cannon;
-	Mesh cannonDoor;
+	Mesh cannon_door;
 } meshes;
 static struct {
 	GLuint green;
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
 	meshes.quad = Mesh::xzQuad(vertices);
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
-	meshes.cannonDoor = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
+	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
@@ -333,7 +333,9 @@ int main(int argc, char** argv) {
 	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER);
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
+
+	objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, glm::translate(glm::mat4(1.0), glm::vec3(0.0,10.0,0.0)), NONEMITTER));
 
 	genTangents(vertices);
 
@@ -549,6 +551,7 @@ int main(int argc, char** argv) {
 				Entity& o = objects[i];
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, objects[i].tex);
+				glBindTextureUnit(2, objects[i].normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
@@ -563,6 +566,7 @@ int main(int argc, char** argv) {
 				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, o.tex);
+				glBindTextureUnit(2, o.normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
@@ -617,6 +621,7 @@ int main(int argc, char** argv) {
 			Entity& o = objects[i];
 			glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 			glBindTextureUnit(0, objects[i].tex);
+			glBindTextureUnit(2, objects[i].normal);
 
 			glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 			glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
