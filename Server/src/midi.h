@@ -130,11 +130,11 @@ midi_track midi_parse_file(std::string filename, U8 lanes) {
 
 	double beat_duration;
 	if(result != libremidi::reader::invalid) {
-		long beat_duration = (60 * 1000000. / (double)r.startingTempo);
+		beat_duration = (60 * 1000000. / (double)r.startingTempo);
 
 		for(auto& track : r.tracks) {
 			for(auto& event : track) {
-				current_time_s += (event.tick / r.ticksPerBeat) * (beat_duration / 1000.f);
+				current_time_s += (event.tick / r.ticksPerBeat) * (beat_duration);
 				if (event.m.is_meta_event())
 					{
 						switch (event.m.get_meta_event_type())
@@ -158,7 +158,7 @@ midi_track midi_parse_file(std::string filename, U8 lanes) {
 							case libremidi::meta_event_type::COPYRIGHT:
 								break;
 							case libremidi::meta_event_type::TEMPO_CHANGE:
-								beat_duration = (((((uint32_t)event.m.bytes[3]) << 16) + (event.m.bytes[4] << 8) + event.m.bytes[5]) / (double)1000); // sec
+								beat_duration = (((((uint32_t)event.m.bytes[3]) << 16) + (event.m.bytes[4] << 8) + event.m.bytes[5]) / (double)1000000); // sec
 								// tickDuration = beatDuration / r.ticksPerBeat;
 								// duration = (long)r.get_end_time() * tickDuration / 1'000'000;
 								break;
