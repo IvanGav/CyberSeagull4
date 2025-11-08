@@ -61,6 +61,11 @@ namespace cgull {
                 if (IsConnected()) m_connection->Send(msg);
             }
 
+            tsqueue<owned_message<T>>& Incoming()
+            {
+                return m_qMessagesIn;
+            }
+
         private:
             asio::io_context m_context;
             std::thread      thrContext;

@@ -92,6 +92,7 @@ Entity* cannons_enemy[6];
 // Static data
 static int width = 1920;
 static int height = 1080;
+const F32 WATER_HEIGHT = -2.0f;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
