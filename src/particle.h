@@ -34,6 +34,7 @@ struct ParticleVertex {
 struct ParticleData {
 	alignas(16) glm::vec3 pos;
 	alignas(16) glm::vec4 color;
+	alignas(16) glm::vec3 dir;
 	alignas(4) F32 size;
 	F32 age;
 	U32 sheetRes;
@@ -55,6 +56,8 @@ struct Particle {
 	U8 tex; // 0 to 3
 	U8 sheetResX;
 	U8 sheetResY;
+	F32 scaleOverTime;
+	glm::vec3 axis;
 
 	F32 camdist;
 
@@ -83,9 +86,11 @@ struct ParticleSource {
 	U8 sheetResX = 1;
 	U8 sheetResY = 1;
 
+	F32 scaleOverTime;
+
 	void spawnParticle() {
 		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
-		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY };
+		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY, scaleOverTime };
 	}
 	void spawnParticles(int num) {
 		for (int i = 0; i < num; i++)
@@ -96,6 +101,10 @@ struct ParticleSource {
 		sheetResY = y;
 	}
 };
+
+void addParticle(const Particle& p) {
+	particles[getUnusedParticlePos()] = p;
+}
 
 // Assume that requested index will now be used
 U32 getUnusedParticlePos() {
@@ -116,7 +125,7 @@ void advanceParticles(F32 dt) {
 			particles[i].life -= dt;
 			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(INFINITY); // so that when doing std::sort, it'll be the last particle
 			particles[i].pos += particles[i].speed * dt;
-			particles[i].size += dt;
+			particles[i].size += dt * particles[i].scaleOverTime;
 		}
 	}
 }
@@ -144,6 +153,7 @@ void packParticles() {
 		}
 		pvertex_data[i].pos = particles[i].pos;
 		pvertex_data[i].color = particles[i].color.to_v4f32();
+		pvertex_data[i].dir = particles[i].axis;
 		pvertex_data[i].size = particles[i].size;
 		pvertex_data[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
 		pvertex_data[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;

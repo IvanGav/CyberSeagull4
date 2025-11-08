@@ -9,6 +9,9 @@ vec3 vertex_offsets[6] = {
 	{1.0f, 1.0f, 0.0f}
 };
 
+float cylindricalScaleX[6] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0 };
+float cylindricalScaleY[6] = { 0.0, 1.0, 1.0, 0.0, 0.0, 1.0 };
+
 vec2 uvs[6] = {
 	{0.0f, 0.0f},
 	{1.0f, 1.0f},
@@ -26,6 +29,7 @@ struct ParticleVertex {
 struct Particle {
     vec3 pos;
     vec4 color;
+	vec3 dir;
 	float size;
 	float age;
 	uint sheetRes;
@@ -53,11 +57,18 @@ void main() {
 	Particle p = particles[v.particleid];
 
 	vec4 worldSpacePos = vec4(p.pos, 1.0f);
+	vec4 viewSpacePos = view * worldSpacePos;
 
 	outUV = uvs[v.vertexid];
 	sheetRes = p.sheetRes;
 	age = p.age;
 	texNum = p.texNum;
 
-	gl_Position = projection * (view * worldSpacePos + vec4(vertex_offsets[v.vertexid], 0.0f) * p.size);
+	if (all(p.dir == vec3(0.0))) {
+		gl_Position = projection * (viewSpacePos + vec4(vertex_offsets[v.vertexid], 0.0f) * p.size);
+	} else {
+		vec3 viewSpaceDir = (view * vec4(p.dir, 0.0)).xyz;
+		vec3 offset = -normalize(cross(viewSpaceDir, viewSpacePos.xyz)) * 0.5;
+		gl_Position = projection * (viewSpacePos + vec4(offset * cylindricalScaleX[v.vertexid] + viewSpaceDir * cylindricalScaleY[v.vertexid], 0.0f) * p.size);
+	}
 }

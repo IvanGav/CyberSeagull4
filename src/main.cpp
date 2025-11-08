@@ -144,6 +144,7 @@ static struct {
 		GLuint waitForPlayer;
   } menu;
   GLuint feather;
+  GLuint cannonExplosion;
 } textures;
 
 ParticleSource particleSource;
@@ -419,6 +420,8 @@ int main(int argc, char** argv) {
 
 	textures.feather = createTextureFromImage("asset/feather.png");
 
+	textures.cannonExplosion = createTextureFromImage("asset/cannon_explosion.png");
+
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
 
@@ -426,8 +429,8 @@ int main(int argc, char** argv) {
 		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";
 	}
 
-
-	objects.push_back(Entity::create(&meshes.test_scene, textures.green));
+	objects.push_back(Entity::create(&meshes.shipNoMast, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(5.0F, -4.1F, 0.0F)), NONEMITTER));
+	objects.push_back(Entity::create(&meshes.ship, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(-25.0F - distancebetweenthetwoshipswhichshallherebyshootateachother, -4.1F, 0.0F)), NONEMITTER));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	for (int i = 0; i < 6; i++) {
@@ -462,12 +465,14 @@ int main(int argc, char** argv) {
 	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 1 seconds
 	particleSource.tex_index = 0;
 	particleSource.setSheetRes(8, 8);
+	particleSource.scaleOverTime = 1.0F;
 
 	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.1f, 2.0f, 1 }; // live for 2 seconds
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
 	particle_textures[1] = textures.feather;
+	particle_textures[2] = textures.cannonExplosion;
 
 	// Create buffers
 	GLuint buffer;
@@ -688,6 +693,7 @@ int main(int argc, char** argv) {
 			}
 
 			// Draw particles
+			glDepthMask(GL_FALSE);
 			glUseProgram(particleProgram);
 
 			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
@@ -698,6 +704,7 @@ int main(int argc, char** argv) {
 			glBindTextureUnit(3, particle_textures[3]);
 
 			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+			glDepthMask(GL_TRUE);
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -772,6 +779,7 @@ int main(int argc, char** argv) {
 		}
 
 		// Draw particles
+		glDepthMask(GL_FALSE);
 		glUseProgram(particleProgram);
 
 		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
@@ -782,6 +790,7 @@ int main(int argc, char** argv) {
 		glBindTextureUnit(3, particle_textures[3]);
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+		glDepthMask(GL_TRUE);
 
 		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
@@ -946,10 +955,9 @@ int main(int argc, char** argv) {
 			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 			const bool i_am_player = i_am_player0 || i_am_player1;
-			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
 			ImGui::SetCursorPos(ImVec2(((2 * ready1x) + (2 * readyd) - readyd * 1.5) / 2, ready1y + readyd));
-			if (!g_song_active && (i_am_player || slot_available))
+			if (!g_song_active && i_am_player && player_id != 0xffff)
 			{
 				if (!g_sent_ready)
 				{
@@ -961,9 +969,12 @@ int main(int argc, char** argv) {
 						m.header.id = message_code::PLAYER_READY;
 						U16 pid = player_id; // 16-bit id
 						m << pid;
-						if (client.IsConnected()) client.Send(m);
-						g_sent_ready = true;
+						if (client.IsConnected() && player_id != 0xffff) {
+							client.Send(m);
+							g_sent_ready = true;
+						}
 					}
+					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 				}
 				else
 				{
@@ -1081,6 +1092,19 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	if (i == -1) return; // no suitable cannon found
 
 	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
+
+	glm::vec4 pos = objects[i].model[3];
+	addParticle(Particle{
+			.pos = glm::vec3(pos.x, pos.y + 2.16504F, pos.z + 0.052887F),
+			.color = { 255, 255, 255, 255 },
+			.size = 10.0,
+			.life = 2.0F,
+			.maxLife = 2.0F,
+			.tex = 2,
+			.sheetResX = 8,
+			.sheetResY = 4,
+			.axis = glm::vec3(0.0F, 2.75997F - 2.66555F, 1.06046F + 0.251254F) * 2.0F
+	});
 
 	// Spawn projectile using the chosen cannon's transform
 	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
