@@ -975,11 +975,11 @@ int main(int argc, char** argv) {
 				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
 			}
 
-			if (!bothReady && (g_p1_ready && g_p1_ready)) {
+			if (g_song_active && !bothReady) {
 				menu_open = false;
 			}
 
-			bothReady = g_p1_ready && g_p1_ready;
+			bothReady = g_song_active;
 			/*
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
