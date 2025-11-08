@@ -107,6 +107,7 @@ static struct {
 	GLuint weezer;
 	GLuint waterNormal;
 	GLuint waterOffset;
+	GLuint particleExplosion;
 } textures;
 
 // Networking global stuff
@@ -285,6 +286,7 @@ int main(int argc, char** argv) {
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
+	textures.particleExplosion = createTextureFromImage("asset/particle_explosion.png");
 
 	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
@@ -335,7 +337,7 @@ int main(int argc, char** argv) {
 
 	// Create static particle sources (later change this to be dynamic or something)
 
-	ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
+	ParticleSource particleSource{ glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 5 seconds
 
 	GLuint buffer;
 	glCreateBuffers(1, &buffer);
@@ -540,6 +542,7 @@ int main(int argc, char** argv) {
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
 
+
 			// Draw the player as a cat
 			{
 				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
@@ -552,6 +555,15 @@ int main(int argc, char** argv) {
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
+
+			// Draw particles
+			glUseProgram(particleProgram);
+
+			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
+			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+			glBindTextureUnit(0, textures.particleExplosion);
+
+			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE* lastUsedParticle); // where lastUsedParticle is the number of particles
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -598,19 +610,10 @@ int main(int argc, char** argv) {
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
 
-		// Draw particles
-		glUseProgram(particleProgram);
-
-		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
-		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, textures.green);
-
-		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-
 		// Draw water
 		glUseProgram(waterProgram);
 
-		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
+		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection* view));
 		glProgramUniformMatrix4fv(waterProgram, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
 		glProgramUniform3fv(waterProgram, 15, 1, glm::value_ptr(cam.cam.pos));
 		glProgramUniform3fv(waterProgram, 16, 1, glm::value_ptr(lightDir));
@@ -631,6 +634,15 @@ int main(int argc, char** argv) {
 
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
+
+		// Draw particles
+		glUseProgram(particleProgram);
+
+		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+		glBindTextureUnit(0, textures.particleExplosion);
+
+		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
 		// Draw UI
 		ImGui_ImplOpenGL3_NewFrame();
