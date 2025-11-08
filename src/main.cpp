@@ -955,7 +955,7 @@ int main(int argc, char** argv) {
 
 			F32 readyd = buttonw*0.5, ready1x = inputx + buttonw + width / 40, ready1y = inputy + (spacing);
 			
-			if (c) {
+			if (g_p0_ready) {
 				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
 				ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
 			}
