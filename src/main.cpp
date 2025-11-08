@@ -601,7 +601,7 @@ int main(int argc, char** argv) {
 
 		// Update particles
 		advanceParticles(dt);
-		particleSource.spawnParticle();
+		//particleSource.spawnParticle();
 		sortParticles(cam.cam, cam.cam.lookDir());
 		packParticles();
 
@@ -688,7 +688,7 @@ int main(int argc, char** argv) {
 
 			// Draw the player as a cat
 			{
-				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), cam.cam.pos), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
+				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.cam.pos.x, cam.cam.pos.y - WATER_HEIGHT, cam.cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
 				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, o.tex);
@@ -1171,7 +1171,13 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 			return false;
 		}
 		// keep alive while above ground
-		return (cat.model[3][1] >= 0.0f);
+		if (cat.model[3][1] < 2.0f && (curtime-cat.start_time) > 1.0) {
+			particleSource.pos = self_pos;
+			particleSource.spawnParticles(75);
+			return false;
+		}
+
+		return true;
 	};
 }
 
