@@ -35,7 +35,7 @@ public:
 
         std::lock_guard<std::mutex> lk(song_mtx_);
         lanes_ = lanes;
-        bps_ = midi.beats_per_sec;
+        spb_ = midi.seconds_per_beat;
         schedule_.clear();
         schedule_.reserve(midi.notes.size());
         for (const auto& n : midi.notes) {
@@ -81,7 +81,7 @@ public:
         {
             cgull::net::message<message_code> m;
             m.header.id = message_code::SONG_START;
-            m << (F64)bps_;
+            m << (F64)spb_;
             MessageAllClients(m);
         }
 
@@ -416,7 +416,7 @@ private:
     std::mutex song_mtx_;
     std::vector<ScheduledNote> schedule_;
     U8 lanes_ = 6;
-    double bps_;
+    double spb_;
     bool song_started_ = false;
     std::chrono::steady_clock::time_point song_start_tp_;
 

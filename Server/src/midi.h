@@ -53,14 +53,14 @@ struct midi_track {
 	std::vector<midi_note> notes;
 	std::string song_name;
 	U32 lanes; // how many lanes we have
-	F64 beats_per_sec;
+	F64 seconds_per_beat;
 
 	F64 time; // current time from start of this track
 	U32 index; // index into `notes`, where we're at
 	U8 note_lane_map[12]; // note_lane_map[n] = lane on which to send a given note
 
-	static midi_track create(std::vector<midi_note> notes, std::string song_name, U32 lanes, F64 beats_per_sec) {
-		midi_track self = { notes, song_name, lanes, beats_per_sec };
+	static midi_track create(std::vector<midi_note> notes, std::string song_name, U32 lanes, F64 spb) {
+		midi_track self = { notes, song_name, lanes, spb };
 		self.time = 0.0;
 		self.find_note_lane_mapping();
 		return self;
@@ -199,6 +199,7 @@ midi_track midi_parse_file(std::string filename, U8 lanes) {
 	}
 	file.close();
 
+	std::cout << "bd: " << beat_duration << "\n";
 	return midi_track::create(notes, song_name, lanes, beat_duration);
 }
 
