@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
 
 	GLuint framebuffer;
 	glCreateFramebuffers(1, &framebuffer);
-	GLuint shadowmap; int shadowmap_width = 2048; int shadowmap_height = 2048;
+	GLuint shadowmap; int shadowmap_width = 4096; int shadowmap_height = 4096; //int shadowmap_width = 2048; int shadowmap_height = 2048;
 	{
 		shadowmap = createTexture(shadowmap_width, shadowmap_height, GL_DEPTH_COMPONENT32F, false, true, nullptr);
 		glTextureParameteri(shadowmap, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -500,7 +500,7 @@ int main(int argc, char** argv) {
 
 
 	DirectionalLight sun = DirectionalLight{};
-	sun.illuminateArea(50.0);
+	sun.illuminateArea(150.0);
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	double last_time_sec = 0.0;
