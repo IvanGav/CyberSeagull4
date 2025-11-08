@@ -94,7 +94,7 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-const B8 INFINITE_FIRE = true;
+const B8 INFINITE_FIRE = false;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
