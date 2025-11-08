@@ -881,9 +881,11 @@ int main(int argc, char** argv) {
 			}
 			
 
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::Text("Player 0: %s  [%s]",
 				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
 				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::Text("Player 1: %s  [%s]",
 				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
 				g_p1_ready ? "Ready" : "Not Ready");
@@ -1023,7 +1025,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i]) {
+			if (cannon_can_fire[i] || true) {
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
@@ -1052,7 +1054,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
+	playSound(&engine, "asset/cannon.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
 	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
