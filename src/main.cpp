@@ -94,7 +94,7 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-const B8 INFINITE_FIRE = false;
+const B8 INFINITE_FIRE = true;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
@@ -163,7 +163,7 @@ seaclient client;
 // overlay state
 int  g_my_health = 5;
 int  g_enemy_health = 5;
-constexpr int g_max_health = 5;
+int g_max_health = 5;
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 bool g_song_active = false;
@@ -184,11 +184,14 @@ void try_connect(const std::string& ip, U16 port) {
 	g_last_connect_error.clear();
 	g_connecting = true;
 
-	player_id = 0xffff; 
+	player_id = 0xffff;
 	bool ok = client.Connect(ip, port);
-	if (!ok) g_last_connect_error = "Failed to start connection";
-	g_connecting = false;
+	if (!ok) {
+		g_last_connect_error = "Failed to start connection";
+		g_connecting = false; // only clear on immediate failure
+	}
 }
+
 
 
 static void reset_network_state() {
@@ -475,7 +478,12 @@ int main(int argc, char** argv) {
 	particleSource.setSheetRes(8, 8);
 	particleSource.scaleOverTime = 1.0F;
 
-	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.02f, 2.0f, 1 }; // live for 2 seconds
+	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.6f, 2.0f, 1 }; // live for 2 seconds
+	featherSource.randomRotation = 2.0F * PI;
+	featherSource.randomRotationOverTime = 10.0;
+	featherSource.gravity = 10.0F;
+	featherSource.drag = 0.95F;
+	featherSource.initVelScale = 8.0F;
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
@@ -599,7 +607,7 @@ int main(int argc, char** argv) {
 		if (client.IsConnected()) {
 			client.check_messages();
 		}
-
+		
 		if (client.IsConnected()) {
 			g_connecting = false;
 		}
@@ -607,8 +615,9 @@ int main(int argc, char** argv) {
 			g_connecting = false;
 			g_last_connect_error = "Timed out connecting to " + server_ip;
 			client.Disconnect();
-			reset_network_state(); 
+			reset_network_state();
 		}
+
 
 
 		// Update particles
@@ -928,22 +937,13 @@ int main(int argc, char** argv) {
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						g_connect_started = glfwGetTime();
-						g_last_connect_error.clear();
-						g_connecting = true;
-						std::thread([server_ip]() {
-							player_id = 0xffff; // ensure HELLO is sent after (re)connect
-							bool ok = client.Connect(server_ip, 1951);
-							if (!ok) g_last_connect_error = "Failed to start connection";
-							g_connecting = false;
-							}).detach();
+						try_connect(server_ip, 1951);
 					}
-
 				}
 				else {
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					ImGui::Text("Connecting to %s...", server_ip.c_str());
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 *  spacing)));
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 * spacing)));
 					if (ImGui::Button("Cancel")) {
 						client.Disconnect();
 						reset_network_state();
@@ -1163,13 +1163,14 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 		glm::vec3 self_pos = glm::vec3(cat.model[3]);
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].type != PROECTILE || // only collide with seagulls
-				objects[i].owned == cat.owned // don't collide with own faction
+				//objects[i].owned == cat.owned // don't collide with own faction
+				objects[i].shoot_angle == cat.shoot_angle
 			) continue;
 			glm::vec3 enemy_pos = glm::vec3(objects[i].model[3]);
 			F32 dist = glm::length(self_pos - enemy_pos);
 			if (dist < 5.0) {
 				featherSource.pos = self_pos;
-				featherSource.spawnParticles(100);
+				featherSource.spawnParticles(75);
 				objects[i].markedForDeath = true;
 				return false;
 			}
@@ -1178,7 +1179,7 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 		// Die if marked for death
 		if (cat.markedForDeath) {
 			featherSource.pos = self_pos;
-			featherSource.spawnParticles(30);
+			featherSource.spawnParticles(75);
 			return false;
 		}
 		// keep alive while above ground

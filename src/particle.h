@@ -38,6 +38,7 @@ struct ParticleData {
 	alignas(4) F32 size;
 	F32 age;
 	U32 sheetRes;
+	F32 rotation;
 	U32 tex; // 0 to 3
 };
 
@@ -58,6 +59,10 @@ struct Particle {
 	U8 sheetResY;
 	F32 scaleOverTime;
 	glm::vec3 axis;
+	F32 rotation;
+	F32 rotationOverTime;
+	F32 gravity;
+	F32 drag;
 
 	F32 camdist;
 
@@ -87,10 +92,20 @@ struct ParticleSource {
 	U8 sheetResY = 1;
 
 	F32 scaleOverTime;
+	F32 randomRotation;
+	F32 randomRotationOverTime;
+	F32 gravity;
+	F32 drag;
+	F32 initVelScale;
 
 	void spawnParticle() {
-		glm::vec3 off = glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f);
-		particles[getUnusedParticlePos()] = Particle{ pos, init_speed + off * 4.0F, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY, scaleOverTime };
+		glm::vec3 off = glm::normalize(glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f)) * randf01();
+		Particle p{ pos, init_speed + off * 4.0F * initVelScale, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY, scaleOverTime };
+		p.rotation = randf01() * randomRotation;
+		p.rotationOverTime = (randf01() * 2.0F - 1.0F) * randomRotationOverTime;
+		p.gravity = gravity;
+		p.drag = drag;
+		particles[getUnusedParticlePos()] = p;
 	}
 	void spawnParticles(int num) {
 		for (int i = 0; i < num; i++)
@@ -125,7 +140,11 @@ void advanceParticles(F32 dt) {
 			particles[i].life -= dt;
 			if (particles[i].life <= 0.0f) particles[i].pos = glm::vec3(INFINITY); // so that when doing std::sort, it'll be the last particle
 			particles[i].pos += particles[i].speed * dt;
+			particles[i].speed.y -= particles[i].gravity * dt;
+			particles[i].speed *= powf(1.0F - particles[i].drag, dt);
+			particles[i].rotationOverTime *= powf(1.0F - particles[i].drag * 0.25F, dt);
 			particles[i].size += dt * particles[i].scaleOverTime;
+			particles[i].rotation += dt * particles[i].rotationOverTime;
 		}
 	}
 }
@@ -157,6 +176,7 @@ void packParticles() {
 		pvertex_data[i].size = particles[i].size;
 		pvertex_data[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
 		pvertex_data[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;
+		pvertex_data[i].rotation = particles[i].rotation;
 		pvertex_data[i].tex = particles[i].tex;
 	}
 }
