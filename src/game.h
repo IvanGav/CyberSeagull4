@@ -47,5 +47,5 @@ struct Game {
 
 // Given a lane and dist, return the model matrix.
 glm::mat4 toModel(F64 dist, U32 lane, F64 distancebetweenthetwoshipswhichshallherebyshootateachother, F32 angle, F32 height = 0.45) {
-	return glm::translate(glm::mat4(1.0f), glm::vec3(sin(angle) * dist, (-height / distancebetweenthetwoshipswhichshallherebyshootateachother * (dist) * (dist - distancebetweenthetwoshipswhichshallherebyshootateachother)), cos(angle) * dist));
+	return glm::translate(glm::vec3(sin(angle) * dist, (-height / distancebetweenthetwoshipswhichshallherebyshootateachother * (dist) * (dist - distancebetweenthetwoshipswhichshallherebyshootateachother)), cos(angle) * dist));
 }

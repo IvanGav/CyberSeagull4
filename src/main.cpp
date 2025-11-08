@@ -177,18 +177,19 @@ void make_seagull(U8 cannon, F64 timestamp) {
 	objects.back().update = [](Entity& cat, F64 curtime) {
 		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
 
+		glm::mat4 transform(1.0);
 		if (beats_left > SHOW_NUM_BEATS) {
-			cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
-		} else if (beats_left == 1) {
+			transform = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		} else if (beats_left <= 1) {
 			F64 dist = SEAGULL_MOVE_PER_BEAT;
 			// TODO do the jumping animation here
-			cat.model = toModel(
+			transform = glm::translate(toModel(
 				glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, // distance along lane
 				0, // unused
 				dist,
 				0,
 				1.0
-			) * glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0));
+			), glm::vec3(0.0, 0.0, -dist));
 			/*cat.model = glm::translate(
 				glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0)), 
 				-glm::vec3(0.0, glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, 0.0)
@@ -196,10 +197,11 @@ void make_seagull(U8 cannon, F64 timestamp) {
 
 			std::cout << "-----dist: " << (1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb) << "\n";
 		} else {
-			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT /* * beats_left*/, 0.0));
-			cat.mesh = (beats_left % 2) ? &meshes.cat/*test_scene*/ : &meshes.cat;
+			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * beats_left));
+			cat.mesh = (beats_left % 2) ? &meshes.cat : &meshes.cat;
 			cat.tex = (beats_left % 2) ? textures.green : textures.cat;
 		}
+		cat.model = transform * cat.pretransmodel;
 
 		//return (cat.model[3][1] >= 0.0f);
 		return beats_left < 0xf0;
@@ -332,7 +334,7 @@ int main(int argc, char** argv) {
 	}
 
 	std::string server_ip = "136.112.101.5";
-	try_connect(server_ip, 1951);
+	//try_connect(server_ip, 1951);
 	//client.Connect(server_ip, 1951);
 
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
