@@ -180,6 +180,9 @@ midi_track midi_parse_file(std::string filename, U8 lanes) {
 						switch (event.m.get_message_type())
 							{
 							case libremidi::message_type::NOTE_ON:
+								if (notes.empty()) {
+									current_time_s = 0;
+								}
 								notes.emplace_back(event.m.bytes[1], event.m.bytes[2], current_time_s);
 								break;
 							case libremidi::message_type::NOTE_OFF:
