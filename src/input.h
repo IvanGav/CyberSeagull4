@@ -61,3 +61,26 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
 }
+
+void gamepadInput(GLFWgamepadstate state, GLFWgamepadstate lastState) {
+    if (!menu_open) {
+        if (state.buttons[0] == GLFW_PRESS && lastState.buttons[0] != GLFW_PRESS) {
+            cats_thrown[0] = true;
+        }
+        if (state.buttons[1] == GLFW_PRESS && lastState.buttons[1] != GLFW_PRESS) {
+            cats_thrown[1] = true;
+        }
+        if (state.buttons[2] == GLFW_PRESS && lastState.buttons[2] != GLFW_PRESS) {
+            cats_thrown[2] = true;
+        }
+        if (state.buttons[3] == GLFW_PRESS && lastState.buttons[3] != GLFW_PRESS) {
+            cats_thrown[3] = true;
+        }
+        if (state.buttons[6] == GLFW_PRESS && lastState.buttons[6] != GLFW_PRESS) {
+            cats_thrown[4] = true;
+        }
+        if (state.buttons[7] == GLFW_PRESS && lastState.buttons[7] != GLFW_PRESS) {
+            cats_thrown[5] = true;
+        }
+    }
+}

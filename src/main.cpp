@@ -347,7 +347,7 @@ int main(int argc, char** argv) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	initMouse(window); // function in cam.h
-	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b0,b:b1,x:b2,y:b3,dpdown:+a1,dpup:-a1");
+	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b1,b:b2,x:b3,y:b0,back:b4,start:b5,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 
 	GLuint program = createShader("src/shader/triangle.vert", "src/shader/triangle.frag");
@@ -525,6 +525,8 @@ int main(int argc, char** argv) {
 
 	bool bothReady = false;
 
+	GLFWgamepadstate lastState{};
+
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -541,6 +543,8 @@ int main(int argc, char** argv) {
 		if (!menu_open) {
 			if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
 				moveFreeCamGamepad(window, cam, dt, state);
+				gamepadInput(state, lastState);
+				lastState = state;
 			}
 			else {
 				moveFreeCam(window, cam, dt);
@@ -1095,7 +1099,7 @@ void throw_cats() {
 
 	for (int i = 0; i < numcats; i++) {
 		if (cats_thrown[i]) {
-			if (cannon_can_fire[i]) { // TODO remove this later
+			if (cannon_can_fire[i] || true) { // TODO remove this later
 				throw_cat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
