@@ -100,6 +100,11 @@ static struct {
 	Mesh test_scene;
 	Mesh cat;
 	Mesh quad;
+	Mesh seagWalk2;
+	Mesh seagWalk3;
+	Mesh cannon;
+	Mesh cannon_door;
+	Mesh seagBall;
 } meshes;
 static struct {
 	GLuint green;
@@ -109,6 +114,13 @@ static struct {
 	GLuint weezer;
 	GLuint waterNormal;
 	GLuint waterOffset;
+	GLuint particleExplosion;
+	struct {
+		GLuint color;
+		GLuint norm;
+		GLuint arm;
+	} cannon;
+	GLuint seagull;
 } textures;
 
 // Networking global stuff
@@ -178,26 +190,47 @@ const U32 catnumber = 6;
 
 glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 	if (friendly)
-		return glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z));
+		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z)), (F32) -PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	else
-		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		return glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(catstartingpos.x + (distbetweencats * cannon_num), catstartingpos.y, catstartingpos.z + distancebetweenthetwoshipswhichshallherebyshootateachother)), (F32) PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void make_seagull(U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagull, glm::translate(glm::rotate(get_cannon_pos(cannon, true), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
 	objects.back().update = [](Entity& cat, F64 curtime) {
 		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
 
-		if (beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
-		else {
-			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0));
+		glm::mat4 transform(1.0);
+		if (beats_left > SHOW_NUM_BEATS) {
+			transform = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		} else if (beats_left <= 1) {
+			F64 dist = SEAGULL_MOVE_PER_BEAT;
+			// TODO do the jumping animation here
+			transform = glm::translate(toModel(
+				glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, // distance along lane
+				0, // unused
+				dist,
+				0,
+				1.0
+			), glm::vec3(0.0, 0.0, -dist));
+			/*cat.model = glm::translate(
+				glm::translate(cat.pretransmodel, glm::vec3(0.0, dist, 0.0)), 
+				-glm::vec3(0.0, glm::clamp((F32)(1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, 0.0)
+			);*/
+
+			//std::cout << "-----dist: " << (1+(curtime - (song_start_time + cat.start_time - song_spb)) / song_spb) << "\n";
 		}
+		else {
+			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * (beats_left - 1)));
+			cat.mesh = (beats_left % 2) ? &meshes.seagWalk2 : &meshes.seagWalk3;
+		}
+		cat.model = transform * cat.pretransmodel;
 
 		//return (cat.model[3][1] >= 0.0f);
-		return beats_left < 0xf0;
+		return beats_left > 0;
 		};
 }
 // Create a shader from vertex and fragment shader files
@@ -296,9 +329,16 @@ int main(int argc, char** argv) {
 	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
 	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
 	meshes.quad = Mesh::xzQuad(vertices);
+	meshes.seagWalk2 = Mesh::create(vertices, "asset/seagull/seagull_walk2.obj");
+	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
+	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
+	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
+	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
+	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
+	textures.particleExplosion = createTextureFromImage("asset/particle_explosion.png");
 
 	textures.waterNormal = createTextureFromImage("asset/waterNormal.png");
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
@@ -307,6 +347,10 @@ int main(int argc, char** argv) {
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");
 	stbi_set_flip_vertically_on_load(true);
+
+	textures.cannon.color = createTextureFromImage("asset/cannon/cannon_BaseColor.jpg");
+	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
+	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
 
 	std::string song_name;
 	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
@@ -320,18 +364,18 @@ int main(int argc, char** argv) {
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
 
 	for (int i = 0; i < 6; i++) {
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		//objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, true), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON, true));
+		objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, get_cannon_pos(i, true), CANNON, true));
 		cannons_friend[i] = &objects.back();
-		objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+		//objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(get_cannon_pos(i, false), (float)PI, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
+		objects.push_back(Entity::create(&meshes.cannon, textures.cannon.color, textures.cannon.norm, get_cannon_pos(i, false), CANNON));
 		cannons_enemy[i] = &objects.back();
 	}
 
 	std::string server_ip = "136.112.101.5";
 	try_connect(server_ip, 1951);
-	//client.Connect(server_ip, 1951);
 
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 0.0f, 10.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), CANNON));
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER);
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	genTangents(vertices);
 
@@ -349,7 +393,7 @@ int main(int argc, char** argv) {
 
 	// Create static particle sources (later change this to be dynamic or something)
 
-	ParticleSource particleSource{ glm::vec3(0.0f), glm::vec3(0.01f), RGBA8 { 255,255,255,255 }, 0.1f, 5.0f }; // live for 5 seconds
+	ParticleSource particleSource{ glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f }; // live for 5 seconds
 
 	GLuint buffer;
 	glCreateBuffers(1, &buffer);
@@ -547,12 +591,14 @@ int main(int argc, char** argv) {
 				Entity& o = objects[i];
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, objects[i].tex);
+				glBindTextureUnit(2, objects[i].normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
+
 
 			// Draw the player as a cat
 			{
@@ -560,12 +606,22 @@ int main(int argc, char** argv) {
 				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
 				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 				glBindTextureUnit(0, o.tex);
+				glBindTextureUnit(2, o.normal);
 
 				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
+
+			// Draw particles
+			glUseProgram(particleProgram);
+
+			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
+			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+			glBindTextureUnit(0, textures.particleExplosion);
+
+			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE* lastUsedParticle); // where lastUsedParticle is the number of particles
 
 			glDisable(GL_CLIP_DISTANCE0);
 		}
@@ -605,6 +661,7 @@ int main(int argc, char** argv) {
 			Entity& o = objects[i];
 			glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 			glBindTextureUnit(0, objects[i].tex);
+			glBindTextureUnit(2, objects[i].normal);
 
 			glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 			glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
@@ -612,19 +669,10 @@ int main(int argc, char** argv) {
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
 
-		// Draw particles
-		glUseProgram(particleProgram);
-
-		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
-		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, textures.green);
-
-		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-
 		// Draw water
 		glUseProgram(waterProgram);
 
-		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection * view));
+		glProgramUniformMatrix4fv(waterProgram, 4, 1, GL_FALSE, glm::value_ptr(projection* view));
 		glProgramUniformMatrix4fv(waterProgram, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
 		glProgramUniform3fv(waterProgram, 15, 1, glm::value_ptr(cam.cam.pos));
 		glProgramUniform3fv(waterProgram, 16, 1, glm::value_ptr(lightDir));
@@ -645,6 +693,15 @@ int main(int argc, char** argv) {
 
 			glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 		}
+
+		// Draw particles
+		glUseProgram(particleProgram);
+
+		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
+		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
+		glBindTextureUnit(0, textures.particleExplosion);
+
+		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
 		// Draw UI
 		ImGui_ImplOpenGL3_NewFrame();
@@ -760,11 +817,11 @@ int main(int argc, char** argv) {
 				ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
 			}
 			else {
-				ImGui::TextDisabled("Waiting for the other player…");
+				ImGui::TextDisabled("Waiting for the other playerï¿½");
 			}
 		}
 		else {
-			ImGui::TextDisabled(g_song_active ? "Match in progress…" : "Spectating (button disabled)");
+			ImGui::TextDisabled(g_song_active ? "Match in progressï¿½" : "Spectating (button disabled)");
 		}
 
 		ImGui::End();
@@ -789,6 +846,10 @@ int main(int argc, char** argv) {
 	ma_engine_uninit(&engine);
 
 	cleanup(window);
+}
+
+void draw_cannon(glm::vec3 pos) {
+	glDrawArrays(GL_TRIANGLES, meshes.cannon.offset, meshes.cannon.size);
 }
 
 void throw_cats() {
@@ -826,7 +887,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
-	objects.push_back(Entity::create(&meshes.cat, textures.cat, objects[i].model, PROECTILE, owned));
+	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
 	Entity& p = objects.back();
 
 	p.start_time = start_time;
