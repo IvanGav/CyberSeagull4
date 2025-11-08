@@ -21,6 +21,8 @@ extern bool menu_open;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         menu_open = !menu_open;
+        if(menu_open) windowMouseRelease(window);
+        else windowMouseFocus(window);
     }
     if (!menu_open) {
         if (key == GLFW_KEY_1 && action == GLFW_PRESS) {

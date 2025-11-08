@@ -118,17 +118,18 @@ void initMouse(GLFWwindow* window) {
     glfwGetCursorPos(window, &lastx, &lasty);
 }
 
-// When ESCAPE pressed, give mouse control. When mouse clicked, disable mouse again.
-void windowFocusControl(GLFWwindow* window) {
-    if (menu_open) {
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // ENABLE MOUSE MOVEMENT
-        glfwGetCursorPos(window, &lastx, &lasty);
-    } else {
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
-        glfwGetCursorPos(window, &lastx, &lasty);
-    }
+// allow free mouse movement
+void windowMouseRelease(GLFWwindow* window) {
+    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // ENABLE MOUSE MOVEMENT
+    glfwGetCursorPos(window, &lastx, &lasty);
+}
+
+// lock mouse (and listen to mouse movement)
+void windowMouseFocus(GLFWwindow* window) {
+    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // DISABLE MOUSE MOVEMENT
+    glfwGetCursorPos(window, &lastx, &lasty);
 }
 
 void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepadstate state) {

@@ -333,6 +333,7 @@ int main(int argc, char** argv) {
 	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	static char buf[64];
+	windowMouseRelease(window);
 
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
@@ -345,7 +346,6 @@ int main(int argc, char** argv) {
 
 		// per-frame input
 		glfwPollEvents();
-		windowFocusControl(window);
 
 		throw_cats();
 
@@ -656,6 +656,7 @@ int main(int argc, char** argv) {
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
 			if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
 				menu_open = false;
+				windowMouseFocus(window);
 			}
 			ImGui::End();
 			ma_engine_set_volume(&engine, volume / 100.f);
@@ -666,6 +667,7 @@ int main(int argc, char** argv) {
 			ImGui::Begin("open menu", NULL, flags);
 			if (ImGui::Button("Menu")) {
 				menu_open = true;
+				windowMouseRelease(window);
 			}
 			ImGui::End();
 
