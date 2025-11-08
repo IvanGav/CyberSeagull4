@@ -48,7 +48,7 @@ namespace cgull {
                             }
                             else
                             {
-                                m_conncted = false;
+                                m_connected = false;
                             }
                         });
                 }
