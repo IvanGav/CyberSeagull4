@@ -466,7 +466,6 @@ int main(int argc, char** argv) {
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 	static char buf[64];
 	windowMouseRelease(window);
-
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
@@ -730,7 +729,7 @@ int main(int argc, char** argv) {
 
 		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
 
-		// Draw UI
+		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -902,50 +901,105 @@ int main(int argc, char** argv) {
 		}
 		ImGui::End();
 
-		ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
-		ImGui::Text("Player 0: %s  [%s]", g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
-			g_p0_ready ? "Ready" : "Not Ready");
-		ImGui::Text("Player 1: %s  [%s]", g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
-			g_p1_ready ? "Ready" : "Not Ready");
+		ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
+		if (ImGui::Begin("Connection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			static bool ipbuf_init = false;
+			static char ipbuf[64]{};
+			if (!ipbuf_init) { std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str()); ipbuf_init = true; }
+			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) { server_ip = ipbuf; }
 
-		bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
-		bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
-		bool i_am_player = i_am_player0 || i_am_player1;
+			if (!client.IsConnected())
+			{
+				if (!g_connecting)
+				{
+					if (!g_last_connect_error.empty())
+						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 
-		// Allow showing the button if I'm in a slot OR a slot is empty (server ignores spectators anyway)
-		bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
-
-		if (!g_song_active && (i_am_player || slot_available)) {
-			if (!g_sent_ready) {
-				if (ImGui::Button("Start Game")) {
-					cgull::net::message<message_code> m;
-					m.header.id = message_code::PLAYER_READY;
-					U16 pid = player_id;   // U16!
-					m << pid;              // PUSH U16
-					if (client.IsConnected()) client.Send(m);
-					g_sent_ready = true;
+					if (ImGui::Button("Connect"))
+					{
+						g_connecting = true;
+						g_connect_started = glfwGetTime();
+						try_connect(server_ip, 1951);
+					}
 				}
-				ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
+				else
+				{
+					ImGui::Text("Connecting to %s...", server_ip.c_str());
+					if (ImGui::Button("Cancel")) { client.Disconnect(); } 
+				}
 			}
-			else {
-				ImGui::TextDisabled("Waiting for the other player�");
+			else
+			{
+				if (ImGui::Button("Disconnect")) { client.Disconnect(); }
 			}
 		}
-		else {
-			ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
-		}
-
 		ImGui::End();
 
+		// Status
+		if (ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("My HP: %d", g_my_health);
+			ImGui::Text("Enemy HP: %d", g_enemy_health);
+			if (g_game_over)
+			{
+				ImGui::Separator();
+				if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
+				else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
+				else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
+			}
+		}
+		ImGui::End();
 
+		// Lobby
+		if (ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Player 0: %s  [%s]",
+				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
+				g_p0_ready ? "Ready" : "Not Ready");
+			ImGui::Text("Player 1: %s  [%s]",
+				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
+				g_p1_ready ? "Ready" : "Not Ready");
 
+			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
+			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
+			const bool i_am_player = i_am_player0 || i_am_player1;
+			const bool slot_available = (g_p0_id == 0xffff) || (g_p1_id == 0xffff);
 
+			if (!g_song_active && (i_am_player || slot_available))
+			{
+				if (!g_sent_ready)
+				{
+					if (ImGui::Button("Start Game"))
+					{
+						cgull::net::message<message_code> m;
+						m.header.id = message_code::PLAYER_READY;
+						U16 pid = player_id; // 16-bit id
+						m << pid;
+						if (client.IsConnected()) client.Send(m);
+						g_sent_ready = true;
+					}
+					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
+				}
+				else
+				{
+					ImGui::TextDisabled("Waiting for the other player...");
+				}
+			}
+			else
+			{
+				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
+			}
+		}
+		ImGui::End();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		// tell the OS to display the frame
+		// present
 		glfwSwapBuffers(window);
+
 	}
 
 	//glDeleteFrameBuffers(1, &framebuffer);
