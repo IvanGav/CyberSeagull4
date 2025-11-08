@@ -11,7 +11,7 @@
 
 int main(int argc, char** argv) {
     uint16_t port = 1951;
-    std::string midi_path = "asset/SOOOOON MAY THE WELLLERRRRRRRMANNNNN COMEEEEEEEEEEEEEE.mid"; // default demo
+    std::string midi_path = "asset/nathan.midi"; // default demo
 
     if (argc > 1) {
         try {
