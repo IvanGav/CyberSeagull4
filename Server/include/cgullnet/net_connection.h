@@ -44,6 +44,7 @@ namespace cgull {
                         {
                             if (!ec)
                             {
+                                m_connected = true;
                                 ReadHeader();
                             }
                             else
