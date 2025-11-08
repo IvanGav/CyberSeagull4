@@ -177,10 +177,10 @@ void make_seagull(U8 cannon, F64 timestamp) {
 	objects.back().update = [](Entity& cat, F64 curtime) {
 		U8 beats_left = (U8)glm::floor(((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
 
-		if (beats_left > SHOW_NUM_BEATS) cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
-		else {
+		if (beats_left > SHOW_NUM_BEATS) 
+			cat.model = glm::translate(glm::mat4(1.0), glm::vec3(100000));
+		else
 			cat.model = glm::translate(cat.pretransmodel, glm::vec3(0.0, SEAGULL_MOVE_PER_BEAT * beats_left, 0.0));
-		}
 
 		//return (cat.model[3][1] >= 0.0f);
 		return beats_left < 0xf0;
