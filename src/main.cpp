@@ -278,7 +278,10 @@ void make_seagull(U8 note, U8 cannon, F64 timestamp) {
 		if (cats_thrown[cannon] && ccf) {
 			return false;
 		}
-		cannon_can_fire[cannon] = ccf;
+		cannon_can_fire[cannon] |= ccf;
+		if (beats_from_fire <= 1-beats_grace) {
+			cannon_can_fire[cannon] = 0;
+		}
 		cannon_note[cannon] = note;
 
 		//return (cat.model[3][1] >= 0.0f);
