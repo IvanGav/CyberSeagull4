@@ -91,9 +91,9 @@ public:
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::NEW_NOTE;
 
-                m << (U8)s.note;
-                m << (U8)s.lane;
                 m << (F64)(s.rel_time + LEAD_IN_SEC);
+                m << (U8)s.lane;
+                m << (U8)s.note;
 
                 MessageAllClients(m);
             }
