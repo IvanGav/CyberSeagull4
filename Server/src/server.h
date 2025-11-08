@@ -53,28 +53,39 @@ public:
     void StartSong() {
         {
             std::lock_guard<std::mutex> lk(song_mtx_);
-            if (schedule_.empty()) {
-                std::cerr << "[SERVER] StartSong() called with empty schedule.\n";
-                return;
+            if (schedule_.empty()) { std::cerr << "[SERVER] StartSong with empty schedule\n"; return; }
+
+            // reset per note state (replay)
+            for (auto& s : schedule_) { s.resolved = false; s.blocked.reset(); }
+
+            // reset match state
+            {
+                std::lock_guard<std::mutex> lk2(players_mtx_);
+                game_over_sent_ = false;
+                for (size_t i = 0; i < players_.size() && i < 2; ++i) hp_[players_[i]] = HEALTH_MAX;
             }
+
             song_started_ = true;
             song_start_tp_ = std::chrono::steady_clock::now();
+        }
 
-            // Tell clients to start their local clocks now.
+        // Tell clients to anchor clocks
+        {
             cgull::net::message<message_code> m;
             m.header.id = message_code::SONG_START;
             MessageAllClients(m);
         }
 
+
+        // broadcats note,lane,timestamp
         {
-            // Broadcast the entire schedule so clients can spawn seagulls early and sync visually
             std::lock_guard<std::mutex> lk(song_mtx_);
             for (const auto& s : schedule_) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::NEW_NOTE;
-                m << s.rel_time;
-                m << s.lane;
-                m << s.note;
+                m << (U8)s.note;
+                m << (U8)s.lane;
+                m << (F64)s.rel_time;
                 MessageAllClients(m);
             }
         }
@@ -93,7 +104,30 @@ protected:
     }
 
     void OnClientDisconnect(std::shared_ptr<connection_t> client) override {
-        std::cout << "[SERVER] Client [" << (client ? client->GetID() : 0) << "] disconnected\n";
+       std::cout << "[SERVER] Client [" << (client ? client->GetID() : 0) << "] disconnected\n";
+        if (!client) return;
+
+        std::optional<U16> pid;
+        {
+            std::lock_guard<std::mutex> lk(players_mtx_);
+            auto it = conn_to_pid_.find(client->GetID());
+            if (it != conn_to_pid_.end()) {
+                pid = it->second;
+                conn_to_pid_.erase(it);
+            }
+            if (pid.has_value()) {
+                // if they were one of the two players, remove them from the slots
+                auto itp = std::find(players_.begin(), players_.end(), *pid);
+                if (itp != players_.end()) {
+                    size_t idx = std::distance(players_.begin(), itp);
+                    players_.erase(itp);
+                    ready_[0] = ready_[1] = false;  
+                    hp_.erase(*pid);
+                    song_started_ = false;           // stop any in-progress match gating
+                }
+            }
+        }
+        SendLobbyState(); 
     }
 
     void OnMessage(std::shared_ptr<connection_t> client, cgull::net::message<message_code>& msg) override {
@@ -111,9 +145,12 @@ protected:
             {
                 std::lock_guard<std::mutex> lk(players_mtx_);
                 conn_to_pid_[client->GetID()] = assigned;
+              
+                // first 2 become players
                 if (players_.size() < 2) {
                     players_.push_back(assigned);
                     hp_[assigned] = HEALTH_MAX;
+                    ready_[players_.size() - 1] = false; // not ready
                 }
                 else {
                     // spectators still get an id; hp not tracked
@@ -122,6 +159,7 @@ protected:
             }
 
             MessageClient(client, reply);
+            SendLobbyState(); 
             break;
         }
 
@@ -143,10 +181,12 @@ protected:
             }
             break;
         }
-
-        case message_code::NEW_NOTE:
-        case message_code::SONG_START: {
-            // These arrive only from server; ignore any client sourced messages
+        case message_code::PLAYER_READY: {
+            U16 who = 0;
+            if (msg.body.size() >= sizeof(U16)) {
+                msg >> who;
+                OnPlayerReady(who);
+            }
             break;
         }
 
@@ -157,6 +197,47 @@ protected:
     }
 
 private:
+    // lobby and ready functions 
+    void OnPlayerReady(U16 pid) {
+        std::optional<int> idx = playerIndex(pid);
+        if (!idx.has_value()) return; // spectators can't ready
+        {
+            std::lock_guard<std::mutex> lk(players_mtx_);
+            ready_[*idx] = true;
+        }
+        SendLobbyState();
+        MaybeStartMatch();
+    }
+
+    void MaybeStartMatch() {
+        std::lock_guard<std::mutex> lk(players_mtx_);
+        if (song_started_) return;
+        if (players_.size() < 2) return;
+        if (!ready_[0] || !ready_[1]) return;
+
+        // Both ready THENNNNN START THE PARTTYYTYTYTYTYYTYTYHTYTYH!
+        std::cout << "[SERVER] Both players ready — starting match\n";
+        // Reset readiness so a replay will require pressing again
+        ready_[0] = ready_[1] = false;
+        SendLobbyState();
+        StartSong();
+    }
+
+    void SendLobbyState() {
+        cgull::net::message<message_code> m;
+        m.header.id = message_code::LOBBY_STATE;
+
+        U16 p0 = 0xffff, p1 = 0xffff; U8 r0 = 0, r1 = 0;
+        {
+            std::lock_guard<std::mutex> lk(players_mtx_);
+            if (players_.size() >= 1) { p0 = players_[0]; r0 = ready_[0] ? 1 : 0; }
+            if (players_.size() >= 2) { p1 = players_[1]; r1 = ready_[1] ? 1 : 0; }
+        }
+        // Pack in the same order the client will read
+        m << p0; m << r0; m << p1; m << r1;
+        MessageAllClients(m);
+    }
+
     // helpers
     struct ScheduledNote {
         F64  rel_time;        // seconds since SONG_START
@@ -205,26 +286,21 @@ private:
     }
 
     void StupidKnowItAllLoop() {
-        // Check  here an there for expired windows and apply damage
         while (stupidknowitall_thread_running_) {
             if (!song_started_) { std::this_thread::sleep_for(std::chrono::milliseconds(5)); continue; }
 
             const auto now_rel = SecondsSince(song_start_tp_);
-
-            // Collect health updates
             std::optional<std::pair<U16, int>> hp0, hp1;
 
             {
                 std::lock_guard<std::mutex> lk(song_mtx_);
                 for (auto& s : schedule_) {
                     if (s.resolved) continue;
-                    if (now_rel < (s.rel_time + HIT_WINDOW_SEC)) break; // schedule is sorted butttttttttttttttttttttt not ready yet
+                    if (now_rel < (s.rel_time + HIT_WINDOW_SEC)) break;
 
-                    // Decide damage per tracked player
                     for (int p = 0; p < 2; ++p) {
                         auto pid = getPlayerId(p);
                         if (!pid.has_value()) continue;
-                        // If that player did NOTT block in window, they take 1 damage and suck lmao 
                         if (!s.blocked.test(p)) {
                             auto& hp = hp_[*pid];
                             if (hp > 0) hp -= 1;
@@ -232,25 +308,22 @@ private:
                     }
                     s.resolved = true;
                 }
-
-                // Prepare hp update payloads for up to two players
                 if (players_.size() >= 1) hp0 = { players_[0], hp_[players_[0]] };
                 if (players_.size() >= 2) hp1 = { players_[1], hp_[players_[1]] };
             }
 
-            // Broadcast hp after lock
             if (hp0.has_value() || hp1.has_value()) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::HEALTH_UPDATE;
-                // Pack reverse: p1_id, p1_hp, p0_id, p0_hp (client reads reverse)
-                if (hp1.has_value()) { m << static_cast<U16>(hp1->second); m << hp1->first; }
-                else { m << static_cast<U16>(0);           m << static_cast<U16>(0xffff); }
-                if (hp0.has_value()) { m << static_cast<U16>(hp0->second); m << hp0->first; }
-                else { m << static_cast<U16>(0);           m << static_cast<U16>(0xffff); }
+                // FIFO pack to match client read order:
+                // p0_id, p0_hp, p1_id, p1_hp
+                if (hp0.has_value()) { m << hp0->first; m << (U16)hp0->second; }
+                else { m << (U16)0xffff; m << (U16)0; }
+                if (hp1.has_value()) { m << hp1->first; m << (U16)hp1->second; }
+                else { m << (U16)0xffff; m << (U16)0; }
                 MessageAllClients(m);
             }
 
-            // Check game over
             {
                 std::lock_guard<std::mutex> lk(players_mtx_);
                 if (!game_over_sent_ && players_.size() > 0) {
@@ -259,23 +332,24 @@ private:
                         if (hp_[players_[i]] <= 0) loser = players_[i];
                     }
                     if (loser.has_value()) {
-                        // Winner: first other tracked player with hp>0, else 0xffff
                         U16 winner = 0xffff;
-                        for (size_t i = 0; i < players_.size() && i < 2; ++i) {
+                        for (size_t i = 0; i < players_.size() && i < 2; ++i)
                             if (players_[i] != *loser && hp_[players_[i]] > 0) { winner = players_[i]; break; }
-                        }
                         cgull::net::message<message_code> gm;
                         gm.header.id = message_code::GAME_OVER;
                         gm << winner;
                         MessageAllClients(gm);
                         game_over_sent_ = true;
+                        song_started_ = false;        // stop tick until next ready
+                        ready_[0] = ready_[1] = false; // force re ready for another game
+                        SendLobbyState();
                     }
                 }
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(4));
         }
-    }
+     }
 
     std::optional<U16> getPlayerId(int index) {
         std::lock_guard<std::mutex> lk(players_mtx_);
@@ -295,6 +369,7 @@ private:
     std::vector<U16> players_;
     std::unordered_map<U16, int> hp_;
     bool game_over_sent_ = false;
+    bool ready_[2] = { false,false };
 
     // Song schedule
     std::mutex song_mtx_;

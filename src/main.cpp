@@ -122,6 +122,11 @@ int  g_enemy_health = 5;
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 
+// lobby
+U16  g_p0_id = 0xffff, g_p1_id = 0xffff;
+bool g_p0_ready = false, g_p1_ready = false;
+bool g_sent_ready = false;
+
 // connect gate
 static std::atomic<bool> g_connecting = false;
 static std::string g_last_connect_error;
@@ -725,6 +730,39 @@ int main(int argc, char** argv) {
 			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
 		}
 		ImGui::End();
+
+		ImGui::Begin("Lobby", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::Text("Player 0: %s  [%s]", g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
+			g_p0_ready ? "Ready" : "Not Ready");
+		ImGui::Text("Player 1: %s  [%s]", g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
+			g_p1_ready ? "Ready" : "Not Ready");
+
+		bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
+		bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
+		bool i_am_player = i_am_player0 || i_am_player1;
+
+		if (i_am_player) {
+			if (!g_sent_ready && !g_game_over) {
+				if (ImGui::Button("Start Game")) {
+					cgull::net::message<message_code> m;
+					m.header.id = message_code::PLAYER_READY;
+					m << player_id;                     // payload
+					if (client.IsConnected()) client.Send(m);
+					g_sent_ready = true;
+				}
+				ImGui::SameLine();
+				ImGui::TextDisabled(" (press when ready)");
+			}
+			else {
+				ImGui::TextDisabled("Waiting for the other player...");
+			}
+		}
+		else {
+			ImGui::TextDisabled("Spectating (button disabled)");
+		}
+		ImGui::End();
+
+
 
 
 

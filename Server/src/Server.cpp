@@ -36,8 +36,6 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    // Start the song (broadcast schedule and begin damage checkin)
-    server.StartSong();
 
     std::cout << "[SERVER] Listening on port " << port << "\n";
     while (true) {
