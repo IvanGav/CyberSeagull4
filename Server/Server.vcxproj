@@ -70,6 +70,18 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>./include</IncludePath>
+    <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
+    <LibraryPath>
+    </LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>./include</IncludePath>
+    <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
+    <LibraryPath>
+    </LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -103,7 +115,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,7 +131,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\Eatha\Documents\Projects\CyberSeagull4\Server\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,10 +139,228 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="include\libremidi\bindings\python\pylibremidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\alsa_share.cpp" />
+    <ClCompile Include="include\libremidi\examples\android\app\src\main\cpp\native-lib.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_in_alsa_rawmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_in_alsa_seq.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_in_pipewire.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_out_alsa_rawmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_out_alsa_seq.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi1_out_pipewire.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_in_alsa_rawmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_in_alsa_seq.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_in_jack.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_in_pipewire.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_in_winmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_out_alsa_rawmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_out_alsa_seq.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_out_jack.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_out_pipewire.cpp" />
+    <ClCompile Include="include\libremidi\examples\backends\midi2_out_winmidi.cpp" />
+    <ClCompile Include="include\libremidi\examples\client.cpp" />
+    <ClCompile Include="include\libremidi\examples\cmidiin.cpp" />
+    <ClCompile Include="include\libremidi\examples\cmidiin2.cpp" />
+    <ClCompile Include="include\libremidi\examples\coremidi_share.cpp" />
+    <ClCompile Include="include\libremidi\examples\coroutines.cpp" />
+    <ClCompile Include="include\libremidi\examples\c_api.c" />
+    <ClCompile Include="include\libremidi\examples\echo.cpp" />
+    <ClCompile Include="include\libremidi\examples\emscripten_midiin.cpp" />
+    <ClCompile Include="include\libremidi\examples\gui\main.cpp" />
+    <ClCompile Include="include\libremidi\examples\jack_share.cpp" />
+    <ClCompile Include="include\libremidi\examples\midi1_to_midi2.cpp" />
+    <ClCompile Include="include\libremidi\examples\midi2_echo.cpp" />
+    <ClCompile Include="include\libremidi\examples\midi2_interop.cpp" />
+    <ClCompile Include="include\libremidi\examples\midiclock_in.cpp" />
+    <ClCompile Include="include\libremidi\examples\midiclock_out.cpp" />
+    <ClCompile Include="include\libremidi\examples\midifile_dump.cpp" />
+    <ClCompile Include="include\libremidi\examples\midiobserve.cpp" />
+    <ClCompile Include="include\libremidi\examples\midiout.cpp" />
+    <ClCompile Include="include\libremidi\examples\midiprobe.cpp" />
+    <ClCompile Include="include\libremidi\examples\midi_to_pattern.cpp" />
+    <ClCompile Include="include\libremidi\examples\minimal.cpp" />
+    <ClCompile Include="include\libremidi\examples\multithread_midiout.cpp" />
+    <ClCompile Include="include\libremidi\examples\network.cpp" />
+    <ClCompile Include="include\libremidi\examples\pipewire_share.cpp" />
+    <ClCompile Include="include\libremidi\examples\poll_share.cpp" />
+    <ClCompile Include="include\libremidi\examples\protocols\remote_control.cpp" />
+    <ClCompile Include="include\libremidi\examples\qmidiin.cpp" />
+    <ClCompile Include="include\libremidi\examples\rawmidiin.cpp" />
+    <ClCompile Include="include\libremidi\examples\sysextest.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\backends\android\helpers.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\backends\emscripten\midi_access.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\backends\emscripten\midi_in.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\backends\emscripten\midi_out.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\backends\emscripten\observer.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\client.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\libremidi-c.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\libremidi.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\midi_in.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\midi_out.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\observer.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\reader.cpp" />
+    <ClCompile Include="include\libremidi\include\libremidi\writer.cpp" />
+    <ClCompile Include="include\libremidi\tests\integration\midifile_write_tracks.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\conversion.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\error.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\midifile_read.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\midifile_write.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\midi_in.cpp" />
+    <ClCompile Include="include\libremidi\tests\unit\midi_out.cpp" />
     <ClCompile Include="src\Server.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\libremidi\bindings\python\pylibremidi.hpp" />
+    <ClInclude Include="include\libremidi\examples\3rdparty\args.hxx" />
+    <ClInclude Include="include\libremidi\examples\backends\backend_test_utils.hpp" />
+    <ClInclude Include="include\libremidi\examples\utils.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\api-c.h" />
+    <ClInclude Include="include\libremidi\include\libremidi\api.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\error_domain.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_raw_ump\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq\shared_handler.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq_ump\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq_ump\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\alsa_seq_ump\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\android.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\android\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\error_domain.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\coremidi_ump\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\dummy.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\midi_access.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\emscripten\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\error_domain.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack\shared_handler.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\jack_ump\shared_handler.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\keyboard.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\keyboard\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\keyboard\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\linux\alsa.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\linux\dylib_loader.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\linux\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\linux\pipewire.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\linux\udev.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\network.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\network_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\net\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\net\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\net\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\net\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\net\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\context.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire\shared_handler.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire_ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire_ump\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire_ump\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire_ump\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\pipewire_ump\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmidi\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\error_domain.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winmm\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp\helpers.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\backends\winuwp\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\client.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\cmidi2.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\config.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\configurations.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\defaults.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\conversion.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\memory.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\midi_api.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\midi_in.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\midi_out.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\midi_stream_decoder.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\observer.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\semaphore.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\detail\ump_stream.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\error.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\error_handler.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\input_configuration.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\libremidi-c.h" />
+    <ClInclude Include="include\libremidi\include\libremidi\libremidi.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\message.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\observer_configuration.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\output_configuration.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\protocols\remote_control.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\reader.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\shared_context.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\system_error2.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\ump.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\ump_events.hpp" />
+    <ClInclude Include="include\libremidi\include\libremidi\writer.hpp" />
+    <ClInclude Include="include\libremidi\tests\include_catch.hpp" />
     <ClInclude Include="src\message.h" />
+    <ClInclude Include="src\midi.h" />
     <ClInclude Include="src\server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
