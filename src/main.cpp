@@ -102,7 +102,7 @@ static struct {
 	Mesh seagWalk3;
 	Mesh cannon;
 	Mesh cannon_door;
-	Mesh seagull;
+	Mesh seagBall;
 } meshes;
 static struct {
 	GLuint green;
@@ -112,7 +112,6 @@ static struct {
 	GLuint weezer;
 	GLuint waterNormal;
 	GLuint waterOffset;
-	GLuint seagColor;
 	GLuint particleExplosion;
 	struct {
 		GLuint color;
@@ -184,7 +183,7 @@ glm::mat4 get_cannon_pos(U32 cannon_num, bool friendly) {
 
 void make_seagull(U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
-	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagColor, glm::translate(glm::rotate(get_cannon_pos(cannon, true), (float)-PI / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagull, glm::translate(glm::rotate(get_cannon_pos(cannon, true), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
 	objects.back().update = [](Entity& cat, F64 curtime) {
@@ -320,11 +319,10 @@ int main(int argc, char** argv) {
 	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
 	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
 	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
-	meshes.seagull = Mesh::create(vertices, "asset/seagull/seagull.obj");
+	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
 
 	textures.green = createTextureFromImage("asset/green.jpg");
 	textures.cat = createTextureFromImage("asset/cat.jpg");
-	//textures.seagColor = createTextureFromImage("asset/seagull/seag_tex.png"); // TODO here
 	textures.seagull = createTextureFromImage("asset/seagull/seag_tex.png");
 	textures.particleExplosion = createTextureFromImage("asset/particle_explosion.png");
 
@@ -826,7 +824,7 @@ void throw_cat(int cat_num, bool owned, double start_time) {
 	playSound(&engine, "asset/cat-meow-401729-2.wav", false, weezer_notes[cat_num]);
 
 	// Spawn projectile using the chosen cannon's transform
-	objects.push_back(Entity::create(&meshes.seagull, textures.seagull, objects[i].model, PROECTILE));
+	objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, objects[i].model, PROECTILE));
 	Entity& p = objects.back();
 
 	p.start_time = start_time;
