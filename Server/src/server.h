@@ -83,9 +83,9 @@ public:
             for (const auto& s : schedule_) {
                 cgull::net::message<message_code> m;
                 m.header.id = message_code::NEW_NOTE;
-                m << (U8)s.note;
+                m << (F64)s.rel_time;  // last popped by client
                 m << (U8)s.lane;
-                m << (F64)s.rel_time;
+                m << (U8)s.note;
                 MessageAllClients(m);
             }
         }
@@ -233,8 +233,8 @@ private:
             if (players_.size() >= 1) { p0 = players_[0]; r0 = ready_[0] ? 1 : 0; }
             if (players_.size() >= 2) { p1 = players_[1]; r1 = ready_[1] ? 1 : 0; }
         }
-        // Pack in the same order the client will read
-        m << p0; m << r0; m << p1; m << r1;
+        
+        m << r1; m << p1; m << r0; m << p0;
         MessageAllClients(m);
     }
 
@@ -317,10 +317,13 @@ private:
                 m.header.id = message_code::HEALTH_UPDATE;
                 // FIFO pack to match client read order:
                 // p0_id, p0_hp, p1_id, p1_hp
-                if (hp0.has_value()) { m << hp0->first; m << (U16)hp0->second; }
-                else { m << (U16)0xffff; m << (U16)0; }
-                if (hp1.has_value()) { m << hp1->first; m << (U16)hp1->second; }
-                else { m << (U16)0xffff; m << (U16)0; }
+                U16 p0_id = hp0 ? hp0->first : (U16)0xffff;
+                U16 p0_hp = hp0 ? (U16)hp0->second : (U16)0;
+                U16 p1_id = hp1 ? hp1->first : (U16)0xffff;
+                U16 p1_hp = hp1 ? (U16)hp1->second : (U16)0;
+
+                m << p1_hp; m << p1_id; m << p0_hp; m << p0_id;
+
                 MessageAllClients(m);
             }
 
