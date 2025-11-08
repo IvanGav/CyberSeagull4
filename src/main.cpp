@@ -93,7 +93,7 @@ Entity* cannons_enemy[6];
 // Static data
 static int width = 1920;
 static int height = 1080;
-const F32 WATER_HEIGHT = -2.0f;
+const F32 WATER_HEIGHT = -3.0f;
 const B8 INFINITE_FIRE = false;
 static GLuint vao;
 ma_engine engine;
@@ -454,7 +454,7 @@ int main(int argc, char** argv) {
 	std::string server_ip = "136.112.101.5";
 	// try_connect(server_ip, 1951);
 
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, WATER_HEIGHT, 0.0f)), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	genTangents(vertices);
 
@@ -639,7 +639,7 @@ int main(int argc, char** argv) {
 
 		// Draw to water texture framebuffers
 		{
-			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = 0.0f - modified_pos.y;
+			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = WATER_HEIGHT - modified_pos.y;
 			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
 			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
 
