@@ -18,6 +18,8 @@ extern bool g_game_over;
 extern U16  g_winner;
 extern bool g_song_active;
 extern bool g_sent_ready;  
+extern int g_max_health;
+
 
 extern U16 g_p0_id, g_p1_id;
 extern bool g_p0_ready, g_p1_ready;
@@ -77,13 +79,15 @@ private:
     } last_health_;
     void apply_health_snapshot() {
         if (!last_health_.valid) return;
+        const int def = g_max_health; // 5 in your UI
+        const U16 p0hp = (last_health_.p0_id == 0xffff) ? def : last_health_.p0_hp;
+        const U16 p1hp = (last_health_.p1_id == 0xffff) ? def : last_health_.p1_hp;
 
-        U16 p1hp = last_health_.p1_id == 0xffff ? 5 : last_health_.p1_hp;
-
-        if (player_id == last_health_.p0_id) { g_my_health = last_health_.p0_hp; g_enemy_health = p1hp; }
-        else if (player_id == last_health_.p1_id) { g_my_health = p1hp; g_enemy_health = last_health_.p0_hp; }
-        else /* spectator */ { g_my_health = last_health_.p0_hp; g_enemy_health = p1hp; }
+        if (player_id == last_health_.p0_id) { g_my_health = p0hp; g_enemy_health = p1hp; }
+        else if (player_id == last_health_.p1_id) { g_my_health = p1hp; g_enemy_health = p0hp; }
+        else { g_my_health = p0hp; g_enemy_health = p1hp; }
     }
+
 
 
     void handle_message(const cgull::net::owned_message<message_code>& owned) {
@@ -104,9 +108,8 @@ private:
             U16 who = 0; F64 timestamp = 0.0; U16 count = 0;
             m >> who; m >> timestamp; m >> count;
 
-            // Now we must have exactly 'count' bytes remaining for cats
-            if (m.body.size() < count) break;
-
+            const size_t bytes_needed = static_cast<size_t>(count) * sizeof(U8);
+            if (m.body.size() < bytes_needed) break;
             std::vector<U8> cats(count);
             for (U16 i = 0; i < count; ++i) m >> cats[i];
 
@@ -137,17 +140,28 @@ private:
         }
 
         case message_code::HEALTH_UPDATE: {
-            // Server sends in LIFO-friendly order; your reads are already correct.
-            U16 p0_id = 0xffff, p1_id = 0xffff, p0_hp = 0, p1_hp = 0;
-            m >> p0_id; m >> p0_hp; m >> p1_id; m >> p1_hp;
+            if (m.body.size() < sizeof(U16) * 4) break;
+
+            // Pop in the order they were pushed (LIFO)
+            U16 a = 0, b = 0, c = 0, d = 0;
+            m >> a; m >> b; m >> c; m >> d;
+
+            U16 p0_id = a, p0_hp = b, p1_id = c, p1_hp = d;
+
+            // If we have lobby ids, ensure packet aligns with lobby slot ordering.
+            if (g_p0_id != 0xffff && g_p1_id != 0xffff) {
+                const bool looks_swapped = (p0_id == g_p1_id && p1_id == g_p0_id);
+                if (looks_swapped) { std::swap(p0_id, p1_id); std::swap(p0_hp, p1_hp); }
+            }
 
             last_health_.p0_id = p0_id; last_health_.p1_id = p1_id;
             last_health_.p0_hp = p0_hp; last_health_.p1_hp = p1_hp;
             last_health_.valid = true;
 
-            apply_health_snapshot();                // <— update bars immediately on every snapshot
+            apply_health_snapshot();
             break;
         }
+
 
         case message_code::GAME_OVER: {
             U16 winner = 0xffff; m >> winner;

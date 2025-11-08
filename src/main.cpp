@@ -163,7 +163,7 @@ seaclient client;
 // overlay state
 int  g_my_health = 5;
 int  g_enemy_health = 5;
-constexpr int g_max_health = 5;
+int g_max_health = 5;
 bool g_game_over = false;
 U16  g_winner = 0xffff;
 bool g_song_active = false;
@@ -184,11 +184,14 @@ void try_connect(const std::string& ip, U16 port) {
 	g_last_connect_error.clear();
 	g_connecting = true;
 
-	player_id = 0xffff; 
+	player_id = 0xffff;
 	bool ok = client.Connect(ip, port);
-	if (!ok) g_last_connect_error = "Failed to start connection";
-	g_connecting = false;
+	if (!ok) {
+		g_last_connect_error = "Failed to start connection";
+		g_connecting = false; // only clear on immediate failure
+	}
 }
+
 
 
 static void reset_network_state() {
@@ -604,7 +607,7 @@ int main(int argc, char** argv) {
 		if (client.IsConnected()) {
 			client.check_messages();
 		}
-
+		
 		if (client.IsConnected()) {
 			g_connecting = false;
 		}
@@ -612,8 +615,9 @@ int main(int argc, char** argv) {
 			g_connecting = false;
 			g_last_connect_error = "Timed out connecting to " + server_ip;
 			client.Disconnect();
-			reset_network_state(); 
+			reset_network_state();
 		}
+
 
 
 		// Update particles
@@ -933,22 +937,13 @@ int main(int argc, char** argv) {
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						g_connect_started = glfwGetTime();
-						g_last_connect_error.clear();
-						g_connecting = true;
-						std::thread([server_ip]() {
-							player_id = 0xffff; // ensure HELLO is sent after (re)connect
-							bool ok = client.Connect(server_ip, 1951);
-							if (!ok) g_last_connect_error = "Failed to start connection";
-							g_connecting = false;
-							}).detach();
+						try_connect(server_ip, 1951);
 					}
-
 				}
 				else {
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					ImGui::Text("Connecting to %s...", server_ip.c_str());
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 *  spacing)));
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 * spacing)));
 					if (ImGui::Button("Cancel")) {
 						client.Disconnect();
 						reset_network_state();
