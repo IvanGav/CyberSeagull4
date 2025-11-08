@@ -765,11 +765,14 @@ int main(int argc, char** argv) {
 				ImGui::SliderInt("val 4", &val4, 0, 256);
 				ImGui::Text(((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str()));
 			*/
-			ImGuiInputTextFlags inflags = ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue;
 			F32 inputw = width/20, inputx = width/10, inputy = menuy + menuh, spacing = height/20;
 			ImGui::SetCursorPos(ImVec2(inputx, inputy));
 			ImGui::PushItemWidth(inputw);
-			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
+			
+			
+			
+			
+			/*
 			if (ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf), inflags) && !client.IsConnected()) goto inputChange;
 			ImGui::PopItemWidth();
 			if (!client.IsConnected()) {
@@ -792,10 +795,62 @@ int main(int argc, char** argv) {
 					client.Disconnect();
 				}
 			}
+			*/
+			
+			
+			// Editable server IP and connect disconnect buttons
+			static bool ipbuf_init = false;
+			static char ipbuf[64];
+			if (!ipbuf_init) {
+				std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str());
+				ipbuf_init = true;
+			}
+
+
+			ImGuiInputTextFlags inflags = ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue;
+			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
+			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
+				server_ip = ipbuf;
+			}
+
+			if (!client.IsConnected()) {
+				if (!g_connecting) {
+					if (!g_last_connect_error.empty()) {
+						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
+					}
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+					if (ImGui::InvisibleButton("Connect", ImVec2(buttonw, buttonh))) {
+						g_connecting = true;
+						g_connect_started = glfwGetTime();
+						try_connect(server_ip, 1951);
+					}
+				}
+				else {
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+					ImGui::Text("Connecting to %s...", server_ip.c_str());
+					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 *  spacing)));
+					if (ImGui::Button("Cancel")) { client.Disconnect(); } // leave g_connecting; thread will clear it :     )
+				}
+			}
+			else {
+				F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				ImGui::Image((ImTextureID)textures.menu.leave, ImVec2(buttondisw, buttondish));
+				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
+				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
+					client.Disconnect();
+				}
+			}
+			
+			
+			
 			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 2) + buttonh));
 			ImGui::PushItemWidth(inputw*4);
 			ImGui::SliderFloat("Volume", &volume, 0, 256);
 			ImGui::PopItemWidth();
+			
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
 			ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
@@ -819,72 +874,9 @@ int main(int argc, char** argv) {
 		}
 
 		ImGui::SetNextWindowSize(ImVec2(500, 500));
-		ImGui::SetNextWindowPos(ImVec2(200, 200));
-		ImGui::Begin("note multiplier", NULL, flags);
-		ImGui::Text("Frame time: %f", dt * 1000.0);
-		ImGui::End();
-
-
-		ImGui::SetNextWindowSize(ImVec2(500, 500));
 		ImGui::SetNextWindowPos(ImVec2(20, 20));
 		ImGui::Begin("ip", NULL, flags);
-		//ImGui::SliderInt("val 1", &val1, 0, 256);
-		//ImGui::SliderInt("val 2", &val2, 0, 256);
-		//ImGui::SliderInt("val 3", &val3, 0, 256);
-		//ImGui::SliderInt("val 4", &val4, 0, 256);
-		//ImGui::Text((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str());
-		//if (!client.IsConnected()) {
-		//	if (ImGui::Button("Connect")) {
-		//		server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
-		//		client.Connect(server_ip, 1951);
-		//	}
-		//}
-		//else {
-		//	if (ImGui::Button("Disconnect")) {
-		//		client.Disconnect();
-		//	}
-		//}
-		// Editable server IP and connect disconnect buttons
-		static bool ipbuf_init = false;
-		static char ipbuf[64];
-		if (!ipbuf_init) {
-			std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str());
-			ipbuf_init = true;
-		}
-		if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
-			server_ip = ipbuf;
-		}
-
-		if (!client.IsConnected()) {
-			if (!g_connecting) {
-				if (!g_last_connect_error.empty()) {
-					ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
-				}
-				if (ImGui::Button("Connect")) {
-					g_connecting = true;
-					g_connect_started = glfwGetTime();
-					try_connect(server_ip, 1951);
-				}
-			}
-			else {
-				ImGui::Text("Connecting to %s...", server_ip.c_str());
-				if (ImGui::Button("Cancel")) { client.Disconnect(); } // leave g_connecting; thread will clear it :     )
-			}
-			ma_engine_set_volume(&engine, volume / 100.f);
-		}
-    /*
-    TODO merge here
-    
-		else {
-			ImGui::SetNextWindowSize(ImVec2(50, 50));
-			ImGui::SetNextWindowPos(ImVec2(50, 50));
-			ImGui::Begin("open menu", NULL, flags);
-			if (ImGui::Button("Menu")) {
-				menu_open = true;
-				windowMouseRelease(window);
-			}
-			ImGui::End();
-    */
+		
 		ImGui::End();
 
 		ImGui::Begin("Status", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
