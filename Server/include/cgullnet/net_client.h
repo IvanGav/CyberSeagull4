@@ -11,52 +11,61 @@ namespace cgull {
         class client_interface
         {
         public:
-            client_interface() : m_socket(m_context)
-            {
-            }
-
-            virtual ~client_interface()
-            {
-                Disconnect();
-            }
+            client_interface() : m_socket(m_context) {}
+            ~client_interface() { Disconnect(); }
 
             bool Connect(const std::string& host, const uint16_t port)
             {
                 try
                 {
+                    // If a previous run stopped the context, it must be restarted
+                    if (m_context.stopped())
+                        m_context.restart();
+
+                    // If a previous thread is still around, make sure it's joined
+                    if (thrContext.joinable()) {
+                        m_context.stop();
+                        thrContext.join();
+                        m_context.restart();
+                    }
+
                     asio::ip::tcp::resolver resolver(m_context);
                     auto endpoints = resolver.resolve(host, std::to_string(port));
 
-                    m_connection = std::make_unique<connection<T>>(owner::client, m_context, asio::ip::tcp::socket(m_context), m_qMessagesIn);
+                    // New connection object per attempt
+                    m_connection = std::make_unique<connection<T>>(
+                        owner::client, m_context, asio::ip::tcp::socket(m_context), m_qMessagesIn);
+
                     m_connection->ConnectToServer(endpoints);
 
-                    // Start context thread if not running
-                    if (!thrContext.joinable())
-                        thrContext = std::thread([this]() { m_context.run(); });
+                    // Kick the io_context
+                    thrContext = std::thread([this]() { m_context.run(); });
+                    return true;
                 }
-                catch (std::exception& e)
+                catch (const std::exception& e)
                 {
-                    std::cerr << "[CLIENT] Exception: " << e.what() << "\n";
+                    std::cerr << "[CLIENT] Connect exception: " << e.what() << "\n";
                     return false;
                 }
-
-                return true;
             }
 
             void Disconnect()
             {
                 if (IsConnected())
-                    m_connection->Disconnect();
+                    m_connection->Disconnect(); // posts close on the context thread
 
                 m_context.stop();
-                if (thrContext.joinable()) thrContext.join();
+                if (thrContext.joinable())
+                    thrContext.join();
+
+                m_connection.reset();
             }
 
             bool IsConnected() const
             {
-                if (m_connection) return m_connection->IsConnected();
-                return false;
+                return m_connection ? m_connection->IsConnected() : false;
             }
+
 
             void Send(const message<T>& msg)
             {
