@@ -403,7 +403,7 @@ int main(int argc, char** argv) {
 	}
 
 	std::string server_ip = "136.112.101.5";
-	try_connect(server_ip, 1951);
+	// try_connect(server_ip, 1951);
 
 	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
@@ -832,7 +832,7 @@ int main(int argc, char** argv) {
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
 					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-					if (ImGui::InvisibleButton("Connect", ImVec2(buttonw, buttonh))) {
+					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
 						g_connecting = true;
 						g_connect_started = glfwGetTime();
 						try_connect(server_ip, 1951);
@@ -917,8 +917,7 @@ int main(int argc, char** argv) {
 					if (!g_last_connect_error.empty())
 						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 
-					if (ImGui::Button("Connect"))
-					{
+					if (ImGui::Button("Join Game")) {
 						g_connecting = true;
 						g_connect_started = glfwGetTime();
 						try_connect(server_ip, 1951);
