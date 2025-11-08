@@ -11,7 +11,7 @@
 #include <atomic>
 #include <thread>
 
-#ifdef __MSC_VER
+#ifdef _MSC_VER
 extern "C"
 {
 	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
