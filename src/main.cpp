@@ -1073,11 +1073,11 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 		glm::vec3 self_pos = glm::vec3(cat.model[3]);
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].type != PROECTILE || // only collide with seagulls
-				objects[i].model == cat.model // don't collidewith self
+				objects[i].owned == cat.owned // don't collide with own faction
 			) continue;
 			glm::vec3 enemy_pos = glm::vec3(objects[i].model[3]);
 			F32 dist = glm::length(self_pos - enemy_pos);
-			if (dist < 10.0) {
+			if (dist < 5.0) {
 				featherSource.pos = self_pos;
 				featherSource.spawnParticles(100);
 				objects[i].markedForDeath = true;
