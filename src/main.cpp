@@ -90,6 +90,7 @@ Entity* cannons_enemy[6];
 // F32 weezer[] = { 1.f, 1.05943508007, 1.f, 1.33482398807, 1.4982991247, 1.33482398807, 1.f, 0.89087642854, 0.79367809502, 1.f };
 
 // Static data
+static F32 WATER_HEIGHT = -2.0;
 static int width = 1920;
 static int height = 1080;
 static GLuint vao;
@@ -413,7 +414,7 @@ int main(int argc, char** argv) {
 	std::string server_ip = "136.112.101.5";
 	// try_connect(server_ip, 1951);
 
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::mat4(1.0f), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
+	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, WATER_HEIGHT, 0.0)), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	genTangents(vertices);
 
@@ -593,7 +594,7 @@ int main(int argc, char** argv) {
 
 		// Draw to water texture framebuffers
 		{
-			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = 0.0f - modified_pos.y;
+			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = WATER_HEIGHT - modified_pos.y;
 			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
 			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
 
@@ -629,6 +630,7 @@ int main(int argc, char** argv) {
 			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
 			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
 			glProgramUniform1i(program, 19, true);
+			glProgramUniform1f(program, 20, WATER_HEIGHT);
 			glBindTextureUnit(1, shadowmap);
 
 			for (int i = 0; i < objects.size(); i++) {
