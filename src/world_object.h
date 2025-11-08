@@ -245,4 +245,5 @@ struct Entity {
     }
 
     std::function<bool(Entity&, F64)> update;
+    bool markedForDeath = false;
 };
