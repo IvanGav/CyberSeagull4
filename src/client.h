@@ -9,7 +9,7 @@
 extern U16 player_id;
 extern F64 cur_time_sec;
 extern std::vector<Entity> objects;
-void make_seagull(U8 cannon, F64 timestamp);
+void make_seagull(U8 note, U8 cannon, F64 timestamp);
 
 
 extern int g_my_health; 
@@ -93,7 +93,7 @@ private:
             if (m.body.size() < sizeof(U8) + sizeof(U8) + sizeof(F64)) break;
             U8 note = 0, cannon = 0; F64 timestamp = 0;
             m >> note; m >> cannon; m >> timestamp;
-            make_seagull(cannon, timestamp);
+            make_seagull(note, cannon, timestamp);
             break;
         }
         case message_code::SONG_START: {
