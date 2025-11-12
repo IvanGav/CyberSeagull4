@@ -138,7 +138,7 @@ private:
             g_game_over   = false;
             g_sent_ready  = false;
             std::cout << "[CLIENT] SONG_START spb=" << song_spb << "\n";
-            playSound(&engine, "asset/wellerman.wav", MA_FALSE, 1.0f);
+            // playSound(&engine, "asset/wellerman.wav", MA_FALSE, 1.0f);
             break;
         }
 

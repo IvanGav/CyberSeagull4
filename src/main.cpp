@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
 	textures.cannon.norm = createTextureFromImage("asset/cannon/cannon_Normal.jpg");
 	textures.cannon.arm = createTextureFromImage("asset/cannon/cannon_ARM.jpg");
 
-	textures.ship.color = createTextureFromImage("asset/ship/ship_BaseColor.png");
+	textures.ship.color = createTextureFromImage("asset/ship/ship_BaseColor.png"); 
 	textures.ship.norm = createTextureFromImage("asset/ship/ship_Normal.png");
 	textures.ship.arm = createTextureFromImage("asset/ship/ship_ARM.png");
 
