@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Windows.h"
-
 #ifdef _WIN32
+#include "Windows.h"
 #define ioctl ioctlsocket
 #define close closesocket
 #else
+#include <sys/socket.h>
 #define INVALID_SOCKET (-1)
 #endif
 
