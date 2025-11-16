@@ -117,7 +117,7 @@ bool do_network_server() {
 		char buffer[16];
 		int amountReceived = recv(client, buffer, 16, 0);
 		if (amountReceived >= 0) {
-			printf("Received:\n%s", buffer);
+			printf("Received:\n%s\n", buffer);
 		}
 		close(client);
 	}
