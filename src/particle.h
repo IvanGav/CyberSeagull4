@@ -9,9 +9,6 @@
 	packParticles();
 */
 
-#include "util.h"
-#include "rng.h"
-
 // glm: linear algebra library
 #define GLM_ENABLE_EXPERIMENTAL 1
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
@@ -20,6 +17,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "util.h"
+#include "rng.h"
+#include "cam.h"
 
 #define MAX_PARTICLES 1000000
 #define VERTICES_PER_PARTICLE 6

@@ -58,19 +58,19 @@ extern "C"
 // This project
 #include "util.h"
 #include "world_object.h"
+#include "light.h"
 
 //#include "server.h"
 #include "client.h"
 #include "message.h"
 
-#include "cam.h"
 #include "debug.h"
-#include "light.h"
+#include "graphics.h"
 #include "particle.h"
+#include "cam.h"
 #include "game.h"
 #include "music.h"
 #include "input.h"
-#include "graphics.h"
 
 #include "midi.h"
 
@@ -100,6 +100,8 @@ static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
 bool menu_open = true;
+
+// Graphics global data
 extern std::vector<Vertex> vertices;
 extern std::vector<Entity> objects;
 extern struct meshes;
@@ -167,7 +169,6 @@ static void reset_network_state() {
 // forward declarations
 GLFWwindow* init();
 void cleanup(GLFWwindow* window);
-glm::mat4 baseTransform(const std::vector<Vertex>& vertices);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
@@ -440,59 +441,22 @@ int main(int argc, char** argv) {
 		// Update the light direction
 		sun.setLightDirVec3(lightDir);
 
-		draw_shadows(sun.combined);
+		// Update the shadowmap texture
+		render_shadows(sun);
 
-		// Draw to water texture framebuffers
+		// Update the reflection texture
 		{
 			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = WATER_HEIGHT - modified_pos.y;
 			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
 			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
 
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffers.reflection_framebuffer);
-
 			glViewport(0, 0, width, height);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			glDisable(GL_DEPTH_TEST);
-			glDepthMask(GL_FALSE);
-
-			// Draw the skybox
-			glUseProgram(cubeProgram);
-
-			glBindTextureUnit(2, textures.skybox);
-
-			glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, glm::value_ptr(projection * glm::mat4(glm::mat3(modified_view))));
-
-			glDrawArrays(GL_TRIANGLES, 0, 36); // number of vertices in a cube; aka a magic number
-
-			glEnable(GL_DEPTH_TEST);
-			glDepthMask(GL_TRUE);
-
-			glEnable(GL_CLIP_DISTANCE0);
-
-			// Draw scene
-			glUseProgram(program);
-
-			glProgramUniformMatrix4fv(program, 4, 1, GL_FALSE, glm::value_ptr(projection * modified_view));
-			glProgramUniformMatrix4fv(program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
-			glProgramUniform3fv(program, 15, 1, glm::value_ptr(modified_pos));
-			glProgramUniform3fv(program, 16, 1, glm::value_ptr(lightDir));
-			glProgramUniform3fv(program, 17, 1, glm::value_ptr(lightColor));
-			glProgramUniform2f(program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
-			glProgramUniform1i(program, 19, true);
-			glBindTextureUnit(1, shadowmap);
-
-			for (int i = 0; i < objects.size(); i++) {
-				Entity& o = objects[i];
-				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
-				glBindTextureUnit(0, objects[i].tex);
-				glBindTextureUnit(2, objects[i].normal);
-
-				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
-				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
-
-				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
-			}
+			draw_skybox(projection, view);
+			draw_objects(projection, view, sun, cam.cam);
+			draw_particles(projection, view);
 
 			// Draw the player as a cat
 			{
@@ -502,27 +466,11 @@ int main(int argc, char** argv) {
 				glBindTextureUnit(0, o.tex);
 				glBindTextureUnit(2, o.normal);
 
-				glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
-				glProgramUniformMatrix3fv(program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+				glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+				glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			}
-
-			// Draw particles
-			glDepthMask(GL_FALSE);
-			glUseProgram(particleProgram);
-
-			glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(modified_view));
-			glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-			glBindTextureUnit(0, particle_textures[0]);
-			glBindTextureUnit(1, particle_textures[1]);
-			glBindTextureUnit(2, particle_textures[2]);
-			glBindTextureUnit(3, particle_textures[3]);
-
-			glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-			glDepthMask(GL_TRUE);
-
-			glDisable(GL_CLIP_DISTANCE0);
 		}
 
 		// Draw to screen
@@ -531,24 +479,9 @@ int main(int argc, char** argv) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw_skybox(projection, view);
-
 		draw_objects(projection, view, sun, cam.cam);
-
-		draw_water(projection, view);
-
-		// Draw particles
-		glDepthMask(GL_FALSE);
-		glUseProgram(particleProgram);
-
-		glProgramUniformMatrix4fv(particleProgram, 0, 1, GL_FALSE, glm::value_ptr(view));
-		glProgramUniformMatrix4fv(particleProgram, 4, 1, GL_FALSE, glm::value_ptr(projection));
-		glBindTextureUnit(0, particle_textures[0]);
-		glBindTextureUnit(1, particle_textures[1]);
-		glBindTextureUnit(2, particle_textures[2]);
-		glBindTextureUnit(3, particle_textures[3]);
-
-		glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
-		glDepthMask(GL_TRUE);
+		draw_water(projection, view, sun, cam.cam, cur_time_sec, water);
+		draw_particles(projection, view);
 
 		// TEMP UI FIX
 		ImGui_ImplOpenGL3_NewFrame();
@@ -807,11 +740,7 @@ int main(int argc, char** argv) {
 
 	}
 
-	//glDeleteFrameBuffers(1, &framebuffer);
-	glDeleteBuffers(1, &buffer);
-	//glDeleteTextures(1, &tex); // TODO delete all textures here
-	glDeleteProgram(program);
-	glDeleteProgram(shadowShader);
+	graphics_cleanup();
 
 	ma_engine_uninit(&engine);
 
@@ -981,26 +910,6 @@ void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F3
 	else {
 		delete s;
 	}
-}
-
-
-/* Gameplay related functions */
-
-// Given an object, give a transform matrix that roughly scales it down to appropriate size; don't use for percise transformations
-glm::mat4 baseTransform(const std::vector<Vertex>& vertices) {
-	glm::vec3 minPoint(INFINITY);
-	glm::vec3 maxPoint(-INFINITY);
-
-	for (Vertex v : vertices) {
-		minPoint = glm::min(minPoint, v.position);
-		maxPoint = glm::max(maxPoint, v.position);
-	}
-
-	const glm::vec3 center = (maxPoint + minPoint) / 2.0f;
-	const glm::vec3 size = maxPoint - minPoint;
-	const float scale = 1.0f / std::max(size.x, std::max(size.y, size.z));
-
-	return glm::scale(glm::mat4(1.0f), glm::vec3(scale)) * glm::translate(glm::mat4(1.0f), -center);
 }
 
 /* Graphics Functions */

@@ -3,6 +3,9 @@
 // GLAD: OpenGL function loader
 #include <glad/glad.h>
 
+// tiny_obj_loader: load 3D models in the .obj format
+#include <tinyobjloader/tiny_obj_loader.h>
+
 // glm: linear algebra library
 #define GLM_ENABLE_EXPERIMENTAL 1
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE 1

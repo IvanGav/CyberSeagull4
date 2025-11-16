@@ -121,6 +121,93 @@ void initWaterFramebuffer(int width, int height) {
 	glBindTextureUnit(0, dyn_textures.reflection_tex);
 }
 
+/* Util graphics functions */
+
+// Create a shader from vertex and fragment shader files
+GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fs = 0;
+
+	std::string vsSource = readFile(vsPath);
+	const char* vsSource_cstr = vsSource.c_str();
+
+	glShaderSource(vs, 1, &vsSource_cstr, nullptr);
+	glCompileShader(vs);
+	getCompileStatus(vs);
+
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vs);
+
+	if (fsPath) {
+		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+
+		std::string fsSource = readFile(fsPath);
+		const char* fsSource_cstr = fsSource.c_str();
+
+		glShaderSource(fs, 1, &fsSource_cstr, nullptr);
+
+		glCompileShader(fs);
+		getCompileStatus(fs);
+
+		glAttachShader(program, fs);
+	}
+
+	glLinkProgram(program);
+	getLinkStatus(program);
+
+	glDetachShader(program, vs);
+	glDeleteShader(vs);
+
+	return program;
+}
+
+void genTangents() {
+	std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
+	std::unordered_map<VertexKey, int> counts;
+
+	for (size_t i = 0; i < vertices.size(); i += 3) {
+		Vertex& v0 = vertices[i];
+		Vertex& v1 = vertices[i + 1];
+		Vertex& v2 = vertices[i + 2];
+
+		glm::vec3 edge1 = v1.position - v0.position;
+		glm::vec3 edge2 = v2.position - v0.position;
+		glm::vec2 deltaUV1 = v1.uv - v0.uv;
+		glm::vec2 deltaUV2 = v2.uv - v0.uv;
+
+		float det = deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x;
+		glm::vec3 tangent(1.0f, 0.0f, 0.0f);
+
+		if (det != 0.0f) {
+			float invDet = 1.0f / det;
+			tangent = invDet * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
+		}
+
+		VertexKey keys[3] = {
+			{v0.position, v0.normal, v0.uv},
+			{v1.position, v1.normal, v1.uv},
+			{v2.position, v2.normal, v2.uv}
+		};
+
+		for (const auto& key : keys) {
+			accumulatedTangents[key] += tangent;
+			counts[key]++;
+		}
+	}
+
+	for (auto& vertex : vertices) {
+		VertexKey key = { vertex.position, vertex.normal, vertex.uv };
+		if (counts[key] > 0) {
+			vertex.tangent = glm::normalize(accumulatedTangents[key]);
+		}
+	}
+}
+
+void send_particle_data_to_gpu() {
+	glNamedBufferSubData(buffers.particle_vertices, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
+	glNamedBufferSubData(buffers.particle_data, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+}
+
 /* Initialization functions */
 
 void init_meshes() {
@@ -285,7 +372,20 @@ void draw_objects(const glm::mat4& proj, const glm::mat4& view, const Directiona
 	}
 }
 
-void draw_particles() {
+void draw_particles(const glm::mat4& proj, const glm::mat4& view) {
+	// Draw particles
+	glDepthMask(GL_FALSE);
+	glUseProgram(programs.particle);
+
+	glProgramUniformMatrix4fv(programs.particle, 0, 1, GL_FALSE, glm::value_ptr(view));
+	glProgramUniformMatrix4fv(programs.particle, 4, 1, GL_FALSE, glm::value_ptr(proj));
+	glBindTextureUnit(0, particle_textures[0]);
+	glBindTextureUnit(1, particle_textures[1]);
+	glBindTextureUnit(2, particle_textures[2]);
+	glBindTextureUnit(3, particle_textures[3]);
+
+	glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_PARTICLE * lastUsedParticle); // where lastUsedParticle is the number of particles
+	glDepthMask(GL_TRUE);
 }
 
 void draw_water(const glm::mat4& proj, const glm::mat4& view, const DirectionalLight& sun, const Cam& cam, F64 time, Entity& water) {
@@ -314,7 +414,7 @@ void draw_water(const glm::mat4& proj, const glm::mat4& view, const DirectionalL
 	}
 }
 
-void draw_shadows(glm::mat4 const& combined) {
+void render_shadows(const DirectionalLight& sun) {
 	// Draw to shadow map framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffers.shadowmap);
 	glViewport(0, 0, shadowmap_width, shadowmap_height);
@@ -324,7 +424,7 @@ void draw_shadows(glm::mat4 const& combined) {
 
 	glUseProgram(programs.shadow);
 
-	glProgramUniformMatrix4fv(programs.shadow, 4, 1, GL_FALSE, glm::value_ptr(combined));
+	glProgramUniformMatrix4fv(programs.shadow, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
 	for (int i = 0; i < objects.size(); i++) {
 		Entity& o = objects[i];
 
@@ -334,93 +434,13 @@ void draw_shadows(glm::mat4 const& combined) {
 	}
 }
 
-void draw_shadows(glm::mat4& proj, glm::mat4& view) {
-	draw_shadows(proj * view);
-}
+/* Cleanup */
 
-/* Util graphics functions */
-
-// Create a shader from vertex and fragment shader files
-GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = 0;
-
-	std::string vsSource = readFile(vsPath);
-	const char* vsSource_cstr = vsSource.c_str();
-
-	glShaderSource(vs, 1, &vsSource_cstr, nullptr);
-	glCompileShader(vs);
-	getCompileStatus(vs);
-
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vs);
-
-	if (fsPath) {
-		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-
-		std::string fsSource = readFile(fsPath);
-		const char* fsSource_cstr = fsSource.c_str();
-
-		glShaderSource(fs, 1, &fsSource_cstr, nullptr);
-
-		glCompileShader(fs);
-		getCompileStatus(fs);
-
-		glAttachShader(program, fs);
-	}
-
-	glLinkProgram(program);
-	getLinkStatus(program);
-
-	glDetachShader(program, vs);
-	glDeleteShader(vs);
-
-	return program;
-}
-
-void genTangents() {
-	std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
-	std::unordered_map<VertexKey, int> counts;
-
-	for (size_t i = 0; i < vertices.size(); i += 3) {
-		Vertex& v0 = vertices[i];
-		Vertex& v1 = vertices[i + 1];
-		Vertex& v2 = vertices[i + 2];
-
-		glm::vec3 edge1 = v1.position - v0.position;
-		glm::vec3 edge2 = v2.position - v0.position;
-		glm::vec2 deltaUV1 = v1.uv - v0.uv;
-		glm::vec2 deltaUV2 = v2.uv - v0.uv;
-
-		float det = deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x;
-		glm::vec3 tangent(1.0f, 0.0f, 0.0f);
-
-		if (det != 0.0f) {
-			float invDet = 1.0f / det;
-			tangent = invDet * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
-		}
-
-		VertexKey keys[3] = {
-			{v0.position, v0.normal, v0.uv},
-			{v1.position, v1.normal, v1.uv},
-			{v2.position, v2.normal, v2.uv}
-		};
-
-		for (const auto& key : keys) {
-			accumulatedTangents[key] += tangent;
-			counts[key]++;
-		}
-	}
-
-	for (auto& vertex : vertices) {
-		VertexKey key = { vertex.position, vertex.normal, vertex.uv };
-		if (counts[key] > 0) {
-			vertex.tangent = glm::normalize(accumulatedTangents[key]);
-		}
-	}
-}
-
-void send_particle_data_to_gpu() {
-	glNamedBufferSubData(buffers.particle_vertices, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-	glNamedBufferSubData(buffers.particle_data, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+// It doesn't do anything, but you can call it for your personal peace of mind anyway =)
+void graphics_cleanup() {
+	////glDeleteFrameBuffers(1, &framebuffer);
+	//glDeleteBuffers(1, &buffer);
+	////glDeleteTextures(1, &tex); // TODO delete all textures here
+	//glDeleteProgram(program);
+	//glDeleteProgram(shadowShader);
 }
