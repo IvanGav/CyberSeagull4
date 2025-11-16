@@ -7,6 +7,7 @@
 #else
 #include <sys/socket.h>
 #define INVALID_SOCKET (-1)
+typedef int SOCKET;
 #endif
 
 #define CNET_RECV_BUF_SIZE (1024 * 32)
