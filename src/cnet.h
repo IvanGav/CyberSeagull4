@@ -65,7 +65,7 @@ bool do_nework_client() {
 	}
 	send(server, "duck", 5, 0);
 	close(server);
-
+	return true;
 }
 
 bool do_network_server() {
@@ -121,6 +121,7 @@ bool do_network_server() {
 		}
 		close(client);
 	}
+	return true;
 }
 
 }
