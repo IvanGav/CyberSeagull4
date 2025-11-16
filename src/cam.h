@@ -13,7 +13,10 @@
 static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
+
 extern bool menu_open;
+extern std::vector<char> midi_keys_velocity;
+extern std::vector<char> midi_control_velocity;
 
 F32 mouse_sensitivity = 0.005;
 F64 lastx; F64 lasty;
@@ -31,11 +34,19 @@ enum KeyboardAction {
     MOVE_DOWN
 };
 
+enum CamType {
+    STATIC,
+    FREECAM
+};
+
+/* Camera proper */
+
 // Generic camera
 struct Cam {
     glm::vec3 pos; // world position
     F32 theta; // rotation of camera in xz plane
     F32 y_theta; // angle of camera from xz plane to y axis
+    CamType type;
 
     glm::vec3 lookDir() {
         float xmag = sin(theta) * cos(y_theta);
@@ -43,64 +54,57 @@ struct Cam {
         float ymag = sin(y_theta);
         return glm::vec3(xmag, ymag, zmag);
     }
-};
-
-// First person free camera controls
-struct FreeCam {
-    Cam cam;
     void buttonPress(KeyboardAction action, F32 dt) {
-        int numRotations = 30; // basically speed of rotating
-        if (action == MOVE_FORWARD) {
-            cam.pos.x += sin(cam.theta) * dt;
-            cam.pos.z += cos(cam.theta) * dt;
-        }
-        if (action == MOVE_BACKWARD) {
-            cam.pos.x -= sin(cam.theta) * dt;
-            cam.pos.z -= cos(cam.theta) * dt;
-        }
-        if (action == STRAFE_LEFT) {
-            cam.pos.x += sin(cam.theta + PI / 2.0) * dt;
-            cam.pos.z += cos(cam.theta + PI / 2.0) * dt;
-        }
-        if (action == STRAFE_RIGHT) {
-            cam.pos.x -= sin(cam.theta + PI / 2.0) * dt;
-            cam.pos.z -= cos(cam.theta + PI / 2.0) * dt;
-        }
-        if (action == TURN_RIGHT) {
-            cam.theta -= (PI * 2.0) / numRotations * dt;
-        }
-        if (action == TURN_LEFT) {
-            cam.theta += (PI * 2.0) / numRotations * dt;
-        }
-        if (action == TURN_DOWN) {
-            cam.y_theta -= (PI * 2.0) / numRotations * dt;
-            cam.y_theta = std::max<F32>(-PI / 2.0 + 0.01, cam.y_theta);
-        }
-        if (action == TURN_UP) {
-            cam.y_theta += (PI * 2.0) / numRotations * dt;
-            cam.y_theta = std::min<F32>(PI / 2.0 - 0.01, cam.y_theta);
-        }
-        if (action == MOVE_UP) {
-            cam.pos.y += 0.5 * dt;
-        }
-        if (action == MOVE_DOWN) {
-            cam.pos.y -= 0.5 * dt;
-        }
+        if (type == CamType::FREECAM) buttonPressFreeCam(action, dt);
     }
     void mouseMove(F32 dx, F32 dy) {
-        cam.theta -= dx * mouse_sensitivity;
-        cam.y_theta -= dy * mouse_sensitivity;
-        cam.y_theta = std::clamp<F32>(cam.y_theta, -PI / 2.0 + epsilon, PI / 2.0 - epsilon);
+        if (type == CamType::FREECAM) mouseMoveFreeCam(dx, dy);
     }
-};
-
-// RTS camera (SC2, BAR, etc) controls
-struct RTSCam {
-    Cam cam;
-    glm::vec3 anchor; // rotation origin
-    F32 anchor_dist; // distance from origin
-
-    // TODO: Unimplemented and possibly unnecessary; just here to demonstrate why I have a "generic" `Cam`
+private:
+    void buttonPressFreeCam(KeyboardAction action, F32 dt) {
+        int numRotations = 30; // basically speed of rotating
+        if (action == MOVE_FORWARD) {
+            pos.x += sin(theta) * dt;
+            pos.z += cos(theta) * dt;
+        }
+        if (action == MOVE_BACKWARD) {
+            pos.x -= sin(theta) * dt;
+            pos.z -= cos(theta) * dt;
+        }
+        if (action == STRAFE_LEFT) {
+            pos.x += sin(theta + PI / 2.0) * dt;
+            pos.z += cos(theta + PI / 2.0) * dt;
+        }
+        if (action == STRAFE_RIGHT) {
+            pos.x -= sin(theta + PI / 2.0) * dt;
+            pos.z -= cos(theta + PI / 2.0) * dt;
+        }
+        if (action == TURN_RIGHT) {
+            theta -= (PI * 2.0) / numRotations * dt;
+        }
+        if (action == TURN_LEFT) {
+            theta += (PI * 2.0) / numRotations * dt;
+        }
+        if (action == TURN_DOWN) {
+            y_theta -= (PI * 2.0) / numRotations * dt;
+            y_theta = std::max<F32>(-PI / 2.0 + 0.01, y_theta);
+        }
+        if (action == TURN_UP) {
+            y_theta += (PI * 2.0) / numRotations * dt;
+            y_theta = std::min<F32>(PI / 2.0 - 0.01, y_theta);
+        }
+        if (action == MOVE_UP) {
+            pos.y += 0.5 * dt;
+        }
+        if (action == MOVE_DOWN) {
+            pos.y -= 0.5 * dt;
+        }
+    }
+    void mouseMoveFreeCam(F32 dx, F32 dy) {
+        theta -= dx * mouse_sensitivity;
+        y_theta -= dy * mouse_sensitivity;
+        y_theta = std::clamp<F32>(y_theta, -PI / 2.0 + epsilon, PI / 2.0 - epsilon);
+    }
 };
 
 /* Other functions */
@@ -131,41 +135,35 @@ void windowMouseFocus(GLFWwindow* window) {
     glfwGetCursorPos(window, &lastx, &lasty);
 }
 
-void moveFreeCamGamepad(GLFWwindow* window, FreeCam& cam, double dt, GLFWgamepadstate state) {
+/* Move camera; call from main */
+
+void moveCamGamepad(GLFWwindow* window, Cam& cam, double dt, GLFWgamepadstate state) {
     dt *= 5.0;
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || state.buttons[0] == GLFW_PRESS)
+    if (state.buttons[0] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_FORWARD, dt);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || state.buttons[1] == GLFW_PRESS)
+    if (state.buttons[1] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_BACKWARD, dt);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || state.buttons[3] == GLFW_PRESS)
+    if (state.buttons[3] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::STRAFE_LEFT, dt);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || state.buttons[2] == GLFW_PRESS)
+    if (state.buttons[2] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::STRAFE_RIGHT, dt);
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS || state.buttons[13] == GLFW_PRESS)
+    if (state.buttons[13] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_UP, dt);
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS || state.buttons[11] == GLFW_PRESS)
+    if (state.buttons[11] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_DOWN, dt);
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || state.buttons[14] == GLFW_PRESS)
+    if (state.buttons[14] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_LEFT, dt);
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS || state.buttons[12] == GLFW_PRESS)
+    if (state.buttons[12] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::TURN_RIGHT, dt);
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || state.buttons[6] == GLFW_PRESS)
+    if (state.buttons[6] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_DOWN, dt);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS || state.buttons[7] == GLFW_PRESS)
+    if (state.buttons[7] == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_UP, dt);
-
-    // mouse input
-    F64 xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    cam.mouseMove(xpos - lastx, ypos - lasty);
-    lastx = xpos; lasty = ypos;
 }
 
-extern std::vector<char> midi_keys_velocity;
-extern std::vector<char> midi_control_velocity;
-void moveFreeCamMidi(GLFWwindow* window, FreeCam& cam, double dt) {
+void moveCamMidi(GLFWwindow* window, Cam& cam, double dt) {
     double look_multiplier = 10.f;
     double move_multiplier = 10.f;
     if (midi_keys_velocity[55]) {
@@ -184,8 +182,6 @@ void moveFreeCamMidi(GLFWwindow* window, FreeCam& cam, double dt) {
         double ndt = (dt * midi_keys_velocity[60] / 128.f) * move_multiplier;
 		cam.buttonPress(KeyboardAction::STRAFE_RIGHT, ndt);
     }
-
-
     if (midi_control_velocity[74]) {
         double ndt = (dt * midi_control_velocity[74] / 128.f) * look_multiplier;
 		cam.buttonPress(KeyboardAction::TURN_LEFT, ndt);
@@ -213,7 +209,7 @@ void moveFreeCamMidi(GLFWwindow* window, FreeCam& cam, double dt) {
     }
 }
 
-void moveFreeCam(GLFWwindow* window, FreeCam& cam, double dt) {
+void moveCamKeyboard(GLFWwindow* window, Cam& cam, double dt) {
     dt *= 5.0;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cam.buttonPress(KeyboardAction::MOVE_FORWARD, dt);

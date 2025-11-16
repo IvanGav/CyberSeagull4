@@ -20,7 +20,7 @@ extern seaclient client;
 extern double cur_time_sec;
 extern bool menu_open;
 extern ParticleSource featherSource;
-extern FreeCam cam;
+extern Cam cam;
 
 void make_seagull(U8 note, U8 cannon, F64 timestamp);
 
@@ -56,7 +56,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
 
         if (key == GLFW_KEY_O && action == GLFW_PRESS) {
-            featherSource.pos = cam.cam.pos;
+            featherSource.pos = cam.pos;
             featherSource.spawnParticles(100);
         }
 

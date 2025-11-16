@@ -346,17 +346,18 @@ void draw_skybox(glm::mat4& proj, glm::mat4& view) {
 	glDepthMask(GL_TRUE);
 }
 
-void draw_objects(const glm::mat4& proj, const glm::mat4& view, const DirectionalLight& sun, const Cam& cam) {
+// if do_clip is true, make sure to set clipY (int, location 20)
+void draw_objects(const glm::mat4& proj, const glm::mat4& view, const DirectionalLight& sun, const glm::vec3& cam_pos, bool do_clip = false) {
 	// Draw scene
 	glUseProgram(programs.program);
 
 	glProgramUniformMatrix4fv(programs.program, 4, 1, GL_FALSE, glm::value_ptr(proj * view));
 	glProgramUniformMatrix4fv(programs.program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
-	glProgramUniform3fv(programs.program, 15, 1, glm::value_ptr(cam.pos));
+	glProgramUniform3fv(programs.program, 15, 1, glm::value_ptr(cam_pos));
 	glProgramUniform3fv(programs.program, 16, 1, glm::value_ptr(sun.dir));
 	glProgramUniform3fv(programs.program, 17, 1, glm::value_ptr(glm::vec3(1.0)));
 	glProgramUniform2f(programs.program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
-	glProgramUniform1i(programs.program, 19, false);
+	glProgramUniform1i(programs.program, 19, do_clip);
 	glBindTextureUnit(1, dyn_textures.shadowmap);
 
 	for (int i = 0; i < objects.size(); i++) {
@@ -388,13 +389,13 @@ void draw_particles(const glm::mat4& proj, const glm::mat4& view) {
 	glDepthMask(GL_TRUE);
 }
 
-void draw_water(const glm::mat4& proj, const glm::mat4& view, const DirectionalLight& sun, const Cam& cam, F64 time, Entity& water) {
+void draw_water(const glm::mat4& proj, const glm::mat4& view, const DirectionalLight& sun, const glm::vec3& cam_pos, F64 time, Entity& water) {
 	// Draw water
 	glUseProgram(programs.water);
 
 	glProgramUniformMatrix4fv(programs.water, 4, 1, GL_FALSE, glm::value_ptr(proj * view));
 	glProgramUniformMatrix4fv(programs.water, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
-	glProgramUniform3fv(programs.water, 15, 1, glm::value_ptr(cam.pos));
+	glProgramUniform3fv(programs.water, 15, 1, glm::value_ptr(cam_pos));
 	glProgramUniform3fv(programs.water, 16, 1, glm::value_ptr(sun.dir));
 	glProgramUniform3fv(programs.water, 17, 1, glm::value_ptr(glm::vec3(1.0)));
 	glProgramUniform2f(programs.water, 18, (F32)shadowmap_height, (F32)shadowmap_width);

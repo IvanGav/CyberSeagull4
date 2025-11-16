@@ -150,10 +150,10 @@ void advanceParticles(F32 dt) {
 
 // Call after adding new particles, before drawing them
 // After calling this, `lastUsedParticle + 1` is the total number of particles
-void sortParticles(const Cam& c, const glm::vec3 cam_forward) {
+void sortParticles(Cam& c) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
-			particles[i].camdist = glm::dot(cam_forward, (particles[i].pos - c.pos));
+			particles[i].camdist = glm::dot(c.lookDir(), (particles[i].pos - c.pos));
 		}
 	}
 	std::sort(particles, &particles[lastUsedParticle]);

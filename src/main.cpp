@@ -10,6 +10,7 @@
 #include <time.h>
 #include <atomic>
 #include <thread>
+#include <random>
 
 #ifdef _MSC_VER
 extern "C"
@@ -44,7 +45,6 @@ extern "C"
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-
 // ImGUI: gui library
 #include <imgui/imgui.h>
 #include <imgui/imgui_stdlib.h>
@@ -63,7 +63,6 @@ extern "C"
 //#include "server.h"
 #include "client.h"
 #include "message.h"
-
 #include "debug.h"
 #include "graphics.h"
 #include "particle.h"
@@ -71,12 +70,12 @@ extern "C"
 #include "game.h"
 #include "music.h"
 #include "input.h"
-
 #include "midi.h"
 
+// CHEATS/DEV OPTIONS
+const B8 INFINITE_FIRE = false;
+const B8 SPAWN_WITH_FREECAM = false;
 
-
-#include <random>
 static std::mt19937 rng{ std::random_device{}() };
 
 static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
@@ -85,7 +84,7 @@ static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 std::vector<ma_sound*> liveSounds;
 
 
-FreeCam cam = FreeCam{ Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375 } };
+Cam cam = Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375, SPAWN_WITH_FREECAM ? CamType::FREECAM : CamType::STATIC };
 
 Entity* cannons_friend[6];
 Entity* cannons_enemy[6];
@@ -95,7 +94,6 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-const B8 INFINITE_FIRE = false;
 static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
@@ -301,14 +299,17 @@ int main(int argc, char** argv) {
 	// Create static particle sources (later change this to be dynamic or something)
 	particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f, 0 }; // live for 1 seconds
 	particleSource.setSheetRes(8, 8);
-	particleSource.scaleOverTime = 1.0F;
+	particleSource.scaleOverTime = 0.9;
+	particleSource.gravity = 0.0;
+	particleSource.drag = 0.9;
+	particleSource.initVelScale = 3.0;
 
 	featherSource = { glm::vec3(0.0), glm::vec3(0.0), RGBA8 {255,255,255,255}, 0.6f, 2.0f, 1 }; // live for 2 seconds
-	featherSource.randomRotation = 2.0F * PI;
+	featherSource.randomRotation = 2.0f * PI;
 	featherSource.randomRotationOverTime = 10.0;
-	featherSource.gravity = 10.0F;
-	featherSource.drag = 0.95F;
-	featherSource.initVelScale = 8.0F;
+	featherSource.gravity = 10.0;
+	featherSource.drag = 0.95;
+	featherSource.initVelScale = 8.0;
 
 	// Bind textures to particle array
 	particle_textures[0] = textures.particleExplosion;
@@ -361,19 +362,16 @@ int main(int argc, char** argv) {
 			gamepadInput(state, lastState);
 			lastState = state;
 		}
-		/*
+		
 		if (!menu_open) {
-				moveFreeCamGamepad(window, cam, dt, state);
-			}
-			else {
-				moveFreeCam(window, cam, dt);
-			}
+			moveCamGamepad(window, cam, dt, state);
+			moveCamKeyboard(window, cam, dt);
 			if (midi_exists) {
 				extern std::vector<char> midi_keys_velocity;
-				moveFreeCamMidi(window, cam, dt);
+				moveCamMidi(window, cam, dt);
 			}
 		}
-		*/
+		
 
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].update) {
@@ -430,12 +428,12 @@ int main(int argc, char** argv) {
 		// Update particles
 		advanceParticles(dt);
 		//particleSource.spawnParticle();
-		sortParticles(cam.cam, cam.cam.lookDir());
+		sortParticles(cam);
 		packParticles();
 		send_particle_data_to_gpu();
 
 		// get cam matrices
-		glm::mat4 view = glm::lookAt(cam.cam.pos, cam.cam.pos + cam.cam.lookDir(), cam_up);
+		glm::mat4 view = glm::lookAt(cam.pos, cam.pos + cam.lookDir(), cam_up);
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)(width) / height, 0.1f, 1000.0f);
 
 		// Update the light direction
@@ -446,31 +444,32 @@ int main(int argc, char** argv) {
 
 		// Update the reflection texture
 		{
-			glm::vec3 modified_pos = cam.cam.pos; modified_pos.y = WATER_HEIGHT - modified_pos.y;
-			glm::vec3 modified_look_dir = glm::vec3(sin(cam.cam.theta) * cos(-cam.cam.y_theta), sin(-cam.cam.y_theta), cos(cam.cam.theta) * cos(-cam.cam.y_theta));
+			glm::vec3 modified_pos = cam.pos; modified_pos.y = 2 * WATER_HEIGHT - modified_pos.y;
+			glm::vec3 modified_look_dir = glm::vec3(sin(cam.theta) * cos(-cam.y_theta), sin(-cam.y_theta), cos(cam.theta) * cos(-cam.y_theta));
 			glm::mat4 modified_view = glm::lookAt(modified_pos, modified_pos + modified_look_dir, glm::vec3(0.0f, -1.0f, 0.0f));
 
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffers.reflection_framebuffer);
 			glViewport(0, 0, width, height);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			draw_skybox(projection, view);
-			draw_objects(projection, view, sun, cam.cam);
-			draw_particles(projection, view);
+			draw_skybox(projection, modified_view);
+			glEnable(GL_CLIP_DISTANCE0);
+			glProgramUniform1f(programs.program, 20, WATER_HEIGHT);
+			draw_objects(projection, modified_view, sun, modified_pos, true);
+			glDisable(GL_CLIP_DISTANCE0);
+			draw_particles(projection, modified_view);
 
 			// Draw the player as a cat
-			{
-				auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.cam.pos.x, cam.cam.pos.y - WATER_HEIGHT, cam.cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
-				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
-				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
-				glBindTextureUnit(0, o.tex);
-				glBindTextureUnit(2, o.normal);
-
-				glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
-				glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
-
-				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
-			}
+			//{
+			//	auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.pos.x, cam.pos.y - WATER_HEIGHT, cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
+			//	Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
+			//	glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+			//	glBindTextureUnit(0, o.tex);
+			//	glBindTextureUnit(2, o.normal);
+			//	glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+			//	glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+			//	glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
+			//}
 		}
 
 		// Draw to screen
@@ -479,8 +478,8 @@ int main(int argc, char** argv) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw_skybox(projection, view);
-		draw_objects(projection, view, sun, cam.cam);
-		draw_water(projection, view, sun, cam.cam, cur_time_sec, water);
+		draw_objects(projection, view, sun, cam.pos);
+		draw_water(projection, view, sun, cam.pos, cur_time_sec, water);
 		draw_particles(projection, view);
 
 		// TEMP UI FIX
