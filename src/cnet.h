@@ -104,7 +104,7 @@ bool do_network_server() {
 		return false;
 	}
 	struct sockaddr_in sockAddr;
-	int addrLen = sizeof(sockAddr);
+	socklen_t addrLen = sizeof(sockAddr);
 	const int CLIENT_COUNT = 1;
 	Client client[CLIENT_COUNT];
 	while (true) {
