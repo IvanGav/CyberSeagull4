@@ -72,6 +72,7 @@ extern "C"
 #include "input.h"
 
 #include "midi.h"
+#include "cnet.h"
 
 
 
@@ -332,6 +333,12 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 }
 
 int main(int argc, char** argv) {
+	if (argc >= 2 && strcmp(argv[1], "-server") == 0) {
+		CNet::do_network_server();
+	} else {
+		CNet::do_nework_client();
+	}
+	return 0;
 	//if (argc > 1) {
 	//	if (argv[1][0] == '-' && argv[1][1] == 'S') {
 	//		server.Start();

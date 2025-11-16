@@ -610,6 +610,7 @@
     <ClInclude Include="include\tinyobjloader\tiny_obj_loader.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="src\cam.h" />
+    <ClInclude Include="src\cnet.h" />
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\light.h" />
