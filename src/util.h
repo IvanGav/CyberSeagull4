@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
+#include <fstream>
 
 // glm: linear algebra library
 #define GLM_ENABLE_EXPERIMENTAL 1
@@ -113,3 +115,8 @@ struct R8 {
     }
 };
 #pragma pack(pop)
+
+std::string readFile(const char* path) {
+    std::ifstream infile(path);
+    return std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+}
