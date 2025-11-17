@@ -23,6 +23,8 @@ struct DirectionalLight {
     glm::mat4 projection;
     glm::mat4 combined;
 
+    glm::vec3 dir;
+
     // Set an area to be illuminated
     void illuminateArea(float unit) {
         projection = glm::ortho(-unit, unit, -unit, unit, -unit, unit);
@@ -31,13 +33,15 @@ struct DirectionalLight {
 
     // Set a light angle
     void setLightDirVec3(glm::vec3 angle) {
-        view = glm::lookAt(glm::vec3(0.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        dir = angle;
+        view = glm::lookAt(glm::vec3(0.0f), dir, glm::vec3(0.0f, 1.0f, 0.0f));
         combined = projection * view;
     }
 
     // Set a light angle based on azimuth and altitude. Angle in radians.
     void setLightDir(double azimuth, double altitude) {
-        view = glm::lookAt(glm::vec3(0.0f), getAngle(azimuth, altitude), glm::vec3(0.0f, 1.0f, 0.0f));
+        dir = getAngle(azimuth, altitude);
+        view = glm::lookAt(glm::vec3(0.0f), dir, glm::vec3(0.0f, 1.0f, 0.0f));
         combined = projection * view;
     }
 };

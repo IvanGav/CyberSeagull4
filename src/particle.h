@@ -9,9 +9,6 @@
 	packParticles();
 */
 
-#include "util.h"
-#include "rng.h"
-
 // glm: linear algebra library
 #define GLM_ENABLE_EXPERIMENTAL 1
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
@@ -20,6 +17,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "util.h"
+#include "rng.h"
+#include "cam.h"
 
 #define MAX_PARTICLES 1000000
 #define VERTICES_PER_PARTICLE 6
@@ -151,10 +150,10 @@ void advanceParticles(F32 dt) {
 
 // Call after adding new particles, before drawing them
 // After calling this, `lastUsedParticle + 1` is the total number of particles
-void sortParticles(const Cam& c, const glm::vec3 cam_forward) {
+void sortParticles(Cam& c) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
-			particles[i].camdist = glm::dot(cam_forward, (particles[i].pos - c.pos));
+			particles[i].camdist = glm::dot(c.lookDir(), (particles[i].pos - c.pos));
 		}
 	}
 	std::sort(particles, &particles[lastUsedParticle]);

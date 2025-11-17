@@ -612,6 +612,7 @@
     <ClInclude Include="src\cam.h" />
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\game.h" />
+    <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\music.h" />
     <ClInclude Include="src\particle.h" />
