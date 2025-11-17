@@ -20,6 +20,7 @@
 #include "cam.h"
 
 /* Global data */
+static GLuint vao;
 
 int shadowmap_width = 4096;
 int shadowmap_height = 4096;
@@ -320,6 +321,15 @@ void init_programs() {
 
 // CALL THIS FUNCTION FROM MAIN ONCE, NO OTHER GRAPHICS INIT FUNCTIONS
 void init_graphics(int width, int height) {
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	init_programs();
 	init_meshes();
 	init_textures();
@@ -363,8 +373,8 @@ void draw_objects(const glm::mat4& proj, const glm::mat4& view, const Directiona
 	for (int i = 0; i < objects.size(); i++) {
 		Entity& o = objects[i];
 		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
-		glBindTextureUnit(0, objects[i].tex);
-		glBindTextureUnit(2, objects[i].normal);
+		glBindTextureUnit(0, o.tex);
+		glBindTextureUnit(2, o.normal);
 
 		glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 		glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
@@ -444,4 +454,57 @@ void graphics_cleanup() {
 	////glDeleteTextures(1, &tex); // TODO delete all textures here
 	//glDeleteProgram(program);
 	//glDeleteProgram(shadowShader);
+}
+
+/* Window */
+
+// Create window
+GLFWwindow* init_window(int width, int height) {
+	// initialize GLFW and let it know the OpenGL version we intend to use
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	glfwWindowHint(GLFW_SAMPLES, 8);
+	glfwSwapInterval(1);
+
+	// create window using GLFW and set it as the active OpenGL context for the current thread
+	GLFWwindow* window = glfwCreateWindow(width, height, "Cyber Seagull 4", nullptr, nullptr);
+	glfwMakeContextCurrent(window);
+
+	// load OpenGL function pointers from the graphics driver
+	gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress));
+
+	// enable OpenGL debug messages
+	// DEBUG
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(glDebugOutput, nullptr);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+
+	// make OpenGL normal-style (laugh out loud)
+	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+	glCreateVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	// initialize ImGUI
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 460 core");
+
+	// make stb flip images
+	stbi_set_flip_vertically_on_load(true);
+
+	return window;
+}
+
+// Delete window
+void cleanup_window(GLFWwindow* window) {
+	glDeleteVertexArrays(1, &vao);
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	glfwDestroyWindow(window);
+	glfwTerminate();
 }

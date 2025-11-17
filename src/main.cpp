@@ -74,7 +74,7 @@ extern "C"
 
 // CHEATS/DEV OPTIONS
 const B8 INFINITE_FIRE = false;
-const B8 SPAWN_WITH_FREECAM = false;
+const B8 USE_FREECAM = false;
 
 static std::mt19937 rng{ std::random_device{}() };
 
@@ -84,7 +84,7 @@ static std::uniform_real_distribution<float> randomPitch(0.02f, 1.15f);
 std::vector<ma_sound*> liveSounds;
 
 
-Cam cam = Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375, SPAWN_WITH_FREECAM ? CamType::FREECAM : CamType::STATIC };
+Cam cam = Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375, USE_FREECAM ? CamType::FREECAM : CamType::STATIC };
 
 Entity* cannons_friend[6];
 Entity* cannons_enemy[6];
@@ -94,7 +94,6 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-static GLuint vao;
 ma_engine engine;
 double cur_time_sec;
 bool menu_open = true;
@@ -165,13 +164,12 @@ static void reset_network_state() {
 }
 
 // forward declarations
-GLFWwindow* init();
-void cleanup(GLFWwindow* window);
 void cleanupFinishedSounds();
 void playWithRandomPitch(ma_engine* engine, const char* filePath);
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch = 1);
 void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume = 1);
 void throw_cats();
+void window_size_callback(GLFWwindow* window, int new_width, int new_height);
 //void throw_cat(int cat_num, bool owned, F64);
 
 const F64 distancebetweenthetwoshipswhichshallherebyshootateachother = 100;
@@ -254,20 +252,16 @@ int main(int argc, char** argv) {
 	//		return 0;
 	//	}
 	//}
-	GLFWwindow* window = init();
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	glDepthMask(GL_TRUE);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+	GLFWwindow* window = init_window(width, height);
 	initMouse(window); // function in cam.h
 	glfwUpdateGamepadMappings("03000000ba1200004b07000000000000,Guitar Hero,platform:Windows,a:b1,b:b2,x:b3,y:b0,back:b4,start:b5,dpdown:+a1,dpup:-a1");
 	initDefaultTexture();
 	init_graphics(width, height);
+
+	// Set up window callbacks **NO LONGER IN init_window!!!**
+
+	glfwSetWindowSizeCallback(window, window_size_callback);
+	glfwSetKeyCallback(window, key_callback);
 
 	// Create geometry
 
@@ -461,7 +455,7 @@ int main(int argc, char** argv) {
 
 			// Draw the player as a cat
 			//{
-			//	auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.pos.x, cam.pos.y - WATER_HEIGHT, cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
+			//	auto _model = glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.pos.x, cam.pos.y, cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f));
 			//	Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
 			//	glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 			//	glBindTextureUnit(0, o.tex);
@@ -470,6 +464,30 @@ int main(int argc, char** argv) {
 			//	glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 			//	glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 			//}
+
+			glUseProgram(programs.program);
+
+			glProgramUniformMatrix4fv(programs.program, 4, 1, GL_FALSE, glm::value_ptr(projection * modified_view));
+			glProgramUniformMatrix4fv(programs.program, 11, 1, GL_FALSE, glm::value_ptr(sun.combined));
+			glProgramUniform3fv(programs.program, 15, 1, glm::value_ptr(modified_pos));
+			glProgramUniform3fv(programs.program, 16, 1, glm::value_ptr(sun.dir));
+			glProgramUniform3fv(programs.program, 17, 1, glm::value_ptr(glm::vec3(1.0)));
+			glProgramUniform2f(programs.program, 18, (F32)shadowmap_height, (F32)shadowmap_width);
+			glProgramUniform1i(programs.program, 19, false);
+			glBindTextureUnit(1, dyn_textures.shadowmap);
+
+			{
+				auto _model = glm::rotate(glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(cam.pos.x, cam.pos.y, cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f)), cam.theta, glm::vec3(0.0, 0.0, 1.0));
+				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
+				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+				glBindTextureUnit(0, o.tex);
+				glBindTextureUnit(2, o.normal);
+
+				glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+				glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
+
+				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
+			}
 		}
 
 		// Draw to screen
@@ -739,11 +757,9 @@ int main(int argc, char** argv) {
 
 	}
 
-	graphics_cleanup();
-
 	ma_engine_uninit(&engine);
-
-	cleanup(window);
+	graphics_cleanup();
+	cleanup_window(window);
 }
 
 void draw_cannon(glm::vec3 pos) {
@@ -917,59 +933,4 @@ void window_size_callback(GLFWwindow* window, int new_width, int new_height) {
 	width = new_width;
 	height = new_height;
 	initWaterFramebuffer(width, height);
-}
-
-/* Window */
-
-// Create window
-GLFWwindow* init() {
-	// initialize GLFW and let it know the OpenGL version we intend to use
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_SAMPLES, 8);
-	glfwSwapInterval(1);
-
-	// create window using GLFW and set it as the active OpenGL context for the current thread
-	GLFWwindow* window = glfwCreateWindow(width, height, "Cyber Seagull 4", nullptr, nullptr);
-	glfwMakeContextCurrent(window);
-
-	// load OpenGL function pointers from the graphics driver
-	gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress));
-
-	// enable OpenGL debug messages
-	// DEBUG
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(glDebugOutput, nullptr);
-	glfwSetWindowSizeCallback(window, window_size_callback);
-	glfwSetKeyCallback(window, key_callback);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-
-	// make OpenGL normal-style (laugh out loud)
-	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-	glCreateVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	// initialize ImGUI
-	ImGui::CreateContext();
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 460 core");
-
-	// make stb flip images
-	stbi_set_flip_vertically_on_load(true);
-
-	return window;
-}
-
-// Delete window
-void cleanup(GLFWwindow* window) {
-	glDeleteVertexArrays(1, &vao);
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-	glfwDestroyWindow(window);
-	glfwTerminate();
 }
