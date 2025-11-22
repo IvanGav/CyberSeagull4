@@ -15,7 +15,7 @@ static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
 
 extern bool menuOpen;
-extern std::vector<char> midi_keys_velocity;
+extern std::vector<char> midiKeysVelocity;
 extern std::vector<char> midi_control_velocity;
 
 F32 mouse_sensitivity = 0.005;
@@ -166,20 +166,20 @@ void moveCamGamepad(GLFWwindow* window, Cam& cam, double dt, GLFWgamepadstate st
 void moveCamMidi(GLFWwindow* window, Cam& cam, double dt) {
     double look_multiplier = 10.f;
     double move_multiplier = 10.f;
-    if (midi_keys_velocity[55]) {
-        double ndt = (dt * midi_keys_velocity[55] / 128.f) * move_multiplier;
+    if (midiKeysVelocity[55]) {
+        double ndt = (dt * midiKeysVelocity[55] / 128.f) * move_multiplier;
 		cam.buttonPress(KeyboardAction::MOVE_FORWARD, ndt);
     }
-    if (midi_keys_velocity[57]) {
-        double ndt = (dt * midi_keys_velocity[57] / 128.f) * move_multiplier;
+    if (midiKeysVelocity[57]) {
+        double ndt = (dt * midiKeysVelocity[57] / 128.f) * move_multiplier;
 		cam.buttonPress(KeyboardAction::MOVE_BACKWARD, ndt);
     }
-    if (midi_keys_velocity[59]) {
-        double ndt = (dt * midi_keys_velocity[59] / 128.f) * move_multiplier;
+    if (midiKeysVelocity[59]) {
+        double ndt = (dt * midiKeysVelocity[59] / 128.f) * move_multiplier;
 		cam.buttonPress(KeyboardAction::STRAFE_LEFT, ndt);
     }
-    if (midi_keys_velocity[60]) {
-        double ndt = (dt * midi_keys_velocity[60] / 128.f) * move_multiplier;
+    if (midiKeysVelocity[60]) {
+        double ndt = (dt * midiKeysVelocity[60] / 128.f) * move_multiplier;
 		cam.buttonPress(KeyboardAction::STRAFE_RIGHT, ndt);
     }
     if (midi_control_velocity[74]) {

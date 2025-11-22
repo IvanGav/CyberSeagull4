@@ -26,10 +26,10 @@ int shadowmap_width = 4096;
 int shadowmap_height = 4096;
 
 // Global array of all entities in the world
-std::vector<Entity> objects;
+std::vector<Entity> g_objects;
 
 // Global array of vertex data (meshes)
-std::vector<Vertex> vertices;
+std::vector<Vertex> g_vertices;
 
 // List of meshes (indexing into `vertices`)
 static struct {
@@ -166,10 +166,10 @@ void genTangents() {
 	std::unordered_map<VertexKey, glm::vec3> accumulatedTangents;
 	std::unordered_map<VertexKey, int> counts;
 
-	for (size_t i = 0; i < vertices.size(); i += 3) {
-		Vertex& v0 = vertices[i];
-		Vertex& v1 = vertices[i + 1];
-		Vertex& v2 = vertices[i + 2];
+	for (size_t i = 0; i < g_vertices.size(); i += 3) {
+		Vertex& v0 = g_vertices[i];
+		Vertex& v1 = g_vertices[i + 1];
+		Vertex& v2 = g_vertices[i + 2];
 
 		glm::vec3 edge1 = v1.position - v0.position;
 		glm::vec3 edge2 = v2.position - v0.position;
@@ -196,7 +196,7 @@ void genTangents() {
 		}
 	}
 
-	for (auto& vertex : vertices) {
+	for (auto& vertex : g_vertices) {
 		VertexKey key = { vertex.position, vertex.normal, vertex.uv };
 		if (counts[key] > 0) {
 			vertex.tangent = glm::normalize(accumulatedTangents[key]);
@@ -212,16 +212,16 @@ void send_particle_data_to_gpu() {
 /* Initialization functions */
 
 void init_meshes() {
-	meshes.test_scene = Mesh::create(vertices, "asset/test_scene.obj");
-	meshes.cat = Mesh::create(vertices, "asset/cat.obj");
-	meshes.quad = Mesh::xzQuad(vertices);
-	meshes.seagWalk2 = Mesh::create(vertices, "asset/seagull/seagull_walk2.obj");
-	meshes.seagWalk3 = Mesh::create(vertices, "asset/seagull/seagull_walk3.obj");
-	meshes.cannon = Mesh::create(vertices, "asset/cannon/cannon.obj");
-	meshes.cannon_door = Mesh::create(vertices, "asset/cannon/cannon_door.obj");
-	meshes.seagBall = Mesh::create(vertices, "asset/seagull/seagull.obj");
-	meshes.ship = Mesh::create(vertices, "asset/ship/ship.obj");
-	meshes.shipNoMast = Mesh::create(vertices, "asset/ship/ship_no_mast.obj");
+	meshes.test_scene = Mesh::create(g_vertices, "asset/test_scene.obj");
+	meshes.cat = Mesh::create(g_vertices, "asset/cat.obj");
+	meshes.quad = Mesh::xzQuad(g_vertices);
+	meshes.seagWalk2 = Mesh::create(g_vertices, "asset/seagull/seagull_walk2.obj");
+	meshes.seagWalk3 = Mesh::create(g_vertices, "asset/seagull/seagull_walk3.obj");
+	meshes.cannon = Mesh::create(g_vertices, "asset/cannon/cannon.obj");
+	meshes.cannon_door = Mesh::create(g_vertices, "asset/cannon/cannon_door.obj");
+	meshes.seagBall = Mesh::create(g_vertices, "asset/seagull/seagull.obj");
+	meshes.ship = Mesh::create(g_vertices, "asset/ship/ship.obj");
+	meshes.shipNoMast = Mesh::create(g_vertices, "asset/ship/ship_no_mast.obj");
 
 	genTangents();
 }
@@ -299,7 +299,7 @@ void init_framebuffers(int width, int height) {
 // Create buffers
 void init_buffers() {
 	glCreateBuffers(1, &buffers.vertices);
-	glNamedBufferStorage(buffers.vertices, vertices.size() * sizeof(Vertex), vertices.data(), 0);
+	glNamedBufferStorage(buffers.vertices, g_vertices.size() * sizeof(Vertex), g_vertices.data(), 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffers.vertices);
 
 	glCreateBuffers(1, &buffers.particle_vertices);
@@ -320,7 +320,7 @@ void init_programs() {
 }
 
 // CALL THIS FUNCTION FROM MAIN ONCE, NO OTHER GRAPHICS INIT FUNCTIONS
-void init_graphics(int width, int height) {
+void initGraphics(int width, int height) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_TRUE);
@@ -370,8 +370,8 @@ void draw_objects(const glm::mat4& proj, const glm::mat4& view, const Directiona
 	glProgramUniform1i(programs.program, 19, do_clip);
 	glBindTextureUnit(1, dyn_textures.shadowmap);
 
-	for (int i = 0; i < objects.size(); i++) {
-		Entity& o = objects[i];
+	for (int i = 0; i < g_objects.size(); i++) {
+		Entity& o = g_objects[i];
 		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
 		glBindTextureUnit(0, o.tex);
 		glBindTextureUnit(2, o.normal);
@@ -436,8 +436,8 @@ void render_shadows(const DirectionalLight& sun) {
 	glUseProgram(programs.shadow);
 
 	glProgramUniformMatrix4fv(programs.shadow, 4, 1, GL_FALSE, glm::value_ptr(sun.combined));
-	for (int i = 0; i < objects.size(); i++) {
-		Entity& o = objects[i];
+	for (int i = 0; i < g_objects.size(); i++) {
+		Entity& o = g_objects[i];
 
 		glProgramUniformMatrix4fv(programs.shadow, 0, 1, GL_FALSE, glm::value_ptr(o.model));
 

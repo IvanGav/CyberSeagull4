@@ -205,11 +205,11 @@ struct Entity {
     Mesh* mesh;
     GLuint tex; // TEXTURE
     glm::mat4 model;
-    glm::mat4 pretransmodel;
-    int cat_id = -1;
+    glm::mat4 preTransModel;
+    int catID = -1;
     bool owned = false;
-    F64 start_time;
-    F32 shoot_angle;
+    F64 startTime;
+    F32 shootAngle;
     EmitterType type;
     GLuint normal; // NORMAL MAP
 
@@ -233,10 +233,10 @@ struct Entity {
         o.type = type;
         if (type == CANNON) {
             if (owned) {
-                o.cat_id = owned_cat_id++;
+                o.catID = owned_cat_id++;
             }
             else {
-				o.cat_id = not_owned_cat_id++;
+				o.catID = not_owned_cat_id++;
             }
         }
         o.owned = owned;

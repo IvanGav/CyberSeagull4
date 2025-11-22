@@ -7,18 +7,18 @@
 #include <cstdint>
 #include <iostream>
 
-extern U16 player_id;
+extern U16 g_playerID;
 extern F64 curTimeSec;
-extern std::vector<Entity> objects;
-void make_seagull(U8 note, U8 cannon, F64 timestamp);
+extern std::vector<Entity> g_objects;
+void makeSeagull(U8 note, U8 cannon, F64 timestamp);
 
-extern int  g_my_health;
-extern int  g_enemy_health;
-extern bool g_game_over;
+extern int  g_myHealth;
+extern int  g_enemyHealth;
+extern bool g_gameOver;
 extern U16  g_winner;
-extern bool g_song_active;
-extern bool g_sent_ready;  
-extern int g_max_health;
+extern bool g_songActive;
+extern bool g_sentReady;  
+extern int g_maxHealth;
 
 
 extern U16 g_p0_id, g_p1_id;
@@ -28,7 +28,7 @@ void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitc
 
 // If you’re building with C++17 or later, using inline variables here avoids ODR issues.
 // Otherwise: declare these here as `extern` and define them once in a .cpp.
-inline F64 song_start_time = 0.0;
+inline F64 songStartTime = 0.0;
 inline F64 song_spb        = 0.5; // seconds/beat
 
 static constexpr U8  SHOW_NUM_BEATS        = 10;
@@ -39,10 +39,10 @@ void throw_cat(int, bool, F64);
 class seaclient : public cgull::net::client_interface<message_code> {
 public:
     // Call this regularly in the main loop
-    void check_messages() {
+    void checkMessages() {
         if (!this->IsConnected()) { hello_sent_ = false; return; }
 
-        if (!hello_sent_ && player_id == 0xffff) {
+        if (!hello_sent_ && g_playerID == 0xffff) {
             cgull::net::message<message_code> hello;
             hello.header.id = message_code::HELLO;
             this->Send(hello);
@@ -81,13 +81,13 @@ private:
     } last_health_;
     void apply_health_snapshot() {
         if (!last_health_.valid) return;
-        const int def = g_max_health; // 5 in your UI
+        const int def = g_maxHealth; // 5 in your UI
         const U16 p0hp = (last_health_.p0_id == 0xffff) ? def : last_health_.p0_hp;
         const U16 p1hp = (last_health_.p1_id == 0xffff) ? def : last_health_.p1_hp;
 
-        if (player_id == last_health_.p0_id) { g_my_health = p0hp; g_enemy_health = p1hp; }
-        else if (player_id == last_health_.p1_id) { g_my_health = p1hp; g_enemy_health = p0hp; }
-        else { g_my_health = p0hp; g_enemy_health = p1hp; }
+        if (g_playerID == last_health_.p0_id) { g_myHealth = p0hp; g_enemyHealth = p1hp; }
+        else if (g_playerID == last_health_.p1_id) { g_myHealth = p1hp; g_enemyHealth = p0hp; }
+        else { g_myHealth = p0hp; g_enemyHealth = p1hp; }
     }
 
 
@@ -98,7 +98,7 @@ private:
         switch (m.header.id) {
         case message_code::GIVE_PLAYER_ID: {
             if (m.body.size() < sizeof(U16)) break;
-            U16 cid = 0; m >> cid; player_id = (U16)(cid & 0xffff);
+            U16 cid = 0; m >> cid; g_playerID = (U16)(cid & 0xffff);
             apply_health_snapshot();             
             break;
         }
@@ -116,7 +116,7 @@ private:
             for (U16 i = 0; i < count; ++i) m >> cats[i];
 
             // Use the provided timestamp rather than a sentinel for better sync
-            if (who != player_id) {
+            if (who != g_playerID) {
                 for (U8 c : cats) throw_cat((U32)c, false, timestamp);
             }
             break;
@@ -126,17 +126,17 @@ private:
             if (m.body.size() < sizeof(U8) + sizeof(U8) + sizeof(F64)) break;
             U8 note = 0, cannon = 0; F64 timestamp = 0;
             m >> note; m >> cannon; m >> timestamp;
-            make_seagull(note, cannon, timestamp);
+            makeSeagull(note, cannon, timestamp);
             break;
         }
 
         case message_code::SONG_START: {
             if (m.body.size() < sizeof(F64)) break;
             m >> song_spb;
-            song_start_time = curTimeSec;
-            g_song_active = true;
-            g_game_over   = false;
-            g_sent_ready  = false;
+            songStartTime = curTimeSec;
+            g_songActive = true;
+            g_gameOver   = false;
+            g_sentReady  = false;
             std::cout << "[CLIENT] SONG_START spb=" << song_spb << "\n";
             // playSound(&engine, "asset/wellerman.wav", MA_FALSE, 1.0f);
             break;
@@ -169,9 +169,9 @@ private:
         case message_code::GAME_OVER: {
             U16 winner = 0xffff; m >> winner;
             g_winner     = winner;
-            g_game_over  = true;
-            g_song_active= false;
-            g_sent_ready = false;
+            g_gameOver  = true;
+            g_songActive= false;
+            g_sentReady = false;
             break;
         }
 
@@ -181,7 +181,7 @@ private:
             m >> p0; m >> r0; m >> p1; m >> r1;
             g_p0_id = p0;  g_p1_id = p1;
             g_p0_ready = (r0 != 0); g_p1_ready = (r1 != 0);
-            if (!g_song_active && !g_p0_ready && !g_p1_ready) g_sent_ready = false;
+            if (!g_songActive && !g_p0_ready && !g_p1_ready) g_sentReady = false;
             break;
         }
 
