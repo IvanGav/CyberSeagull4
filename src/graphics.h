@@ -205,8 +205,8 @@ void genTangents() {
 }
 
 void sendParticleDataToGpu() {
-	glNamedBufferSubData(buffers.particle_vertices, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
-	glNamedBufferSubData(buffers.particle_data, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
+	glNamedBufferSubData(buffers.particle_vertices, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pVertexVertex);
+	glNamedBufferSubData(buffers.particle_data, 0, sizeof(ParticleData) * lastUsedParticle, pVertexData);
 }
 
 /* Initialization functions */
@@ -303,11 +303,11 @@ void init_buffers() {
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffers.vertices);
 
 	glCreateBuffers(1, &buffers.particle_vertices);
-	glNamedBufferData(buffers.particle_vertices, sizeof(pvertex_vertex), pvertex_vertex, GL_DYNAMIC_DRAW);
+	glNamedBufferData(buffers.particle_vertices, sizeof(pVertexVertex), pVertexVertex, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffers.particle_vertices);
 
 	glCreateBuffers(1, &buffers.particle_data);
-	glNamedBufferData(buffers.particle_data, sizeof(pvertex_data), pvertex_data, GL_DYNAMIC_DRAW);
+	glNamedBufferData(buffers.particle_data, sizeof(pVertexData), pVertexData, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffers.particle_data);
 }
 

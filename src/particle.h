@@ -63,11 +63,11 @@ struct Particle {
 	F32 gravity;
 	F32 drag;
 
-	F32 camdist;
+	F32 camDist;
 
 	bool operator<(Particle& other) {
 		// Sort in reverse order : far particles drawn first.
-		return this->camdist > other.camdist;
+		return this->camDist > other.camDist;
 	}
 };
 
@@ -75,17 +75,17 @@ struct Particle {
 Particle particles[MAX_PARTICLES];
 U32 lastUsedParticle = 0; // Exclusive; `lastUsedParticle == 2` means that there are 2 particles that may be alive: particles[0] and [1]
 
-ParticleData pvertex_data[MAX_PARTICLES];
-ParticleVertex pvertex_vertex[MAX_PARTICLES * VERTICES_PER_PARTICLE];
+ParticleData pVertexData[MAX_PARTICLES];
+ParticleVertex pVertexVertex[MAX_PARTICLES * VERTICES_PER_PARTICLE]; // WHAT DOES THIS MEAN!!!?
 
 struct ParticleSource {
 	glm::vec3 pos;
 
-	glm::vec3 init_speed;
-	RGBA8 init_color;
-	F32 init_size;
-	F32 init_life;
-	U8 tex_index = 0xff; // "out of bounds"
+	glm::vec3 initSpeed;
+	RGBA8 initColor;
+	F32 initSize;
+	F32 initLife;
+	U8 texIndex = 0xff; // "out of bounds"
 
 	U8 sheetResX = 1;
 	U8 sheetResY = 1;
@@ -99,7 +99,7 @@ struct ParticleSource {
 
 	void spawnParticle() {
 		glm::vec3 off = glm::normalize(glm::vec3(randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f, randf01() * 2.0f - 1.0f)) * randf01();
-		Particle p{ pos, init_speed + off * 4.0F * initVelScale, init_color, init_size, init_life, init_life, tex_index, sheetResX, sheetResY, scaleOverTime };
+		Particle p{ pos, initSpeed + off * 4.0F * initVelScale, initColor, initSize, initLife, initLife, texIndex, sheetResX, sheetResY, scaleOverTime };
 		p.rotation = randf01() * randomRotation;
 		p.rotationOverTime = (randf01() * 2.0F - 1.0F) * randomRotationOverTime;
 		p.gravity = gravity;
@@ -121,6 +121,7 @@ void addParticle(const Particle& p) {
 }
 
 // Assume that requested index will now be used
+// Optimization possible
 U32 getUnusedParticlePos() {
 	if (lastUsedParticle <= MAX_PARTICLES) {
 		lastUsedParticle++;
@@ -153,7 +154,7 @@ void advanceParticles(F32 dt) {
 void sortParticles(Cam& c) {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		if (particles[i].life > 0.0f) {
-			particles[i].camdist = glm::dot(c.lookDir(), (particles[i].pos - c.pos));
+			particles[i].camDist = glm::dot(c.lookDir(), (particles[i].pos - c.pos));
 		}
 	}
 	std::sort(particles, &particles[lastUsedParticle]);
@@ -166,16 +167,16 @@ void packParticles() {
 	for (U32 i = 0; i < lastUsedParticle; i++) {
 		// pvertex_data, pvertex_vertex
 		for (U32 j = 0; j < VERTICES_PER_PARTICLE; j++) {
-			pvertex_vertex[i * VERTICES_PER_PARTICLE + j].particleid = i;
-			pvertex_vertex[i * VERTICES_PER_PARTICLE + j].vertexid = j;
+			pVertexVertex[i * VERTICES_PER_PARTICLE + j].particleid = i;
+			pVertexVertex[i * VERTICES_PER_PARTICLE + j].vertexid = j;
 		}
-		pvertex_data[i].pos = particles[i].pos;
-		pvertex_data[i].color = particles[i].color.to_v4f32();
-		pvertex_data[i].dir = particles[i].axis;
-		pvertex_data[i].size = particles[i].size;
-		pvertex_data[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
-		pvertex_data[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;
-		pvertex_data[i].rotation = particles[i].rotation;
-		pvertex_data[i].tex = particles[i].tex;
+		pVertexData[i].pos = particles[i].pos;
+		pVertexData[i].color = particles[i].color.to_v4f32();
+		pVertexData[i].dir = particles[i].axis;
+		pVertexData[i].size = particles[i].size;
+		pVertexData[i].age = (particles[i].maxLife - particles[i].life) / particles[i].maxLife;
+		pVertexData[i].sheetRes = particles[i].sheetResY << 8 | particles[i].sheetResX;
+		pVertexData[i].rotation = particles[i].rotation;
+		pVertexData[i].tex = particles[i].tex;
 	}
 }
