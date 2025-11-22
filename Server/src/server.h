@@ -69,7 +69,7 @@ public:
 
         std::lock_guard<std::recursive_mutex> lk(song_mtx_);
         lanes_ = lanes;
-        spb_ = midi.seconds_per_beat;
+        spb_ = midi.secondsPerBeat;
         schedule_.clear();
         schedule_.reserve(midi.notes.size());
         for (const auto& n : midi.notes) {

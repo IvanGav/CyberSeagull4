@@ -334,20 +334,24 @@ GLuint createShader(const char* vsPath, const char* fsPath = nullptr) {
 
 int main(int argc, char** argv) {
 	if (argc >= 2 && strcmp(argv[1], "-server") == 0) {
-		CNet::do_network_server();
+		CNet::do_network_server("1951");
 	} else {
-		CNet::do_nework_client();
+		CNet::Connection* server = CNet::client_connect_to("127.0.0.1", "1951");
+		if (server) {
+			CNet::MsgHeader testMsg1{ CNet::TO_SERVER_JOIN, sizeof(CNet::MsgHeader) };
+			CNet::send_message(server->socket, &testMsg1, testMsg1.msgLength);
+			CNet::MsgHeader testMsg2{ CNet::TO_SERVER_READY, sizeof(CNet::MsgHeader) };
+			CNet::send_message(server->socket, &testMsg2, testMsg2.msgLength);
+			while (true) {
+				if (!CNet::do_client_networking(server)) {
+					CNet::client_disconnect(server);
+					break;
+				}
+				Sleep(10);
+			}
+		}
 	}
 	return 0;
-	//if (argc > 1) {
-	//	if (argv[1][0] == '-' && argv[1][1] == 'S') {
-	//		server.Start();
-	//		while (true) {
-	//			server.Update();
-	//		}
-	//		return 0;
-	//	}
-	//}
 	GLFWwindow* window = init();
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -442,7 +446,7 @@ int main(int argc, char** argv) {
 	textures.cannonExplosion = createTextureFromImage("asset/cannon_explosion.png");
 
 	std::string song_name;
-	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
+	std::vector<MIDINote> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
 
 	for (int i = 0; i < notes.size(); i++) {
 		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";

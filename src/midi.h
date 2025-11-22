@@ -2,9 +2,9 @@
 #include <libremidi/libremidi.hpp>
 #include <libremidi/reader.hpp>
 
-std::vector<char> midi_keys_velocity(128, 0);
-std::vector<char> midi_control_velocity(128, 0);
-bool midi_exists = false;
+std::vector<char> midiKeysVelocity(128, 0);
+std::vector<char> midiControlVelocity(128, 0);
+bool midiExists = false;
 
 void midi_callback(const libremidi::message&& message) {
 	std::cout << "Got message status: " << (int)(message[0]) << " \n";
@@ -13,17 +13,17 @@ void midi_callback(const libremidi::message&& message) {
 	}
 	if ((message[0] & 0b11110000) == 0b10000000) {
 		// 53 55 57 59 60
-		midi_keys_velocity[message[1]] = 0;
+		midiKeysVelocity[message[1]] = 0;
 		// std::cout << "Note Off: " << (int)message[1] << " vel: " << (int)message[2] << "\n";
 	}
 	if ((message[0] & 0b11110000) == 0b10010000) {
-		midi_keys_velocity[message[1]] = message[2];
+		midiKeysVelocity[message[1]] = message[2];
 		playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)message[1]));
 		std::cout << "Note On: " << (int)message[1] << " vel: " << (int)message[2] << "\n";
 	}
 	if ((message[0] & 0b11110000) == 0b10110000) {
 		std::cout << "CTRL: " << (int)message[1] << " val: " << (int)message[2] << "\n";
-		midi_control_velocity[message[1]] = message[2];
+		midiControlVelocity[message[1]] = message[2];
 	}
 };
 
@@ -35,7 +35,7 @@ void midi_init(libremidi::midi_in& midi) {
 		if(auto port = libremidi::midi1::in_default_port()) {
 			std::cout << "int2\n";
 			midi.open_port(*port);
-			midi_exists = true;
+			midiExists = true;
 		}
 }
 
@@ -44,11 +44,11 @@ typedef struct {
 	U8 note;
 	U8 velocity;
 	F64 time;
-} midi_note;
+} MIDINote;
 
 
-std::vector<midi_note> midi_parse_file(std::string filename, std::string& song_name) {
-	std::vector<midi_note> notes;
+std::vector<MIDINote> midi_parse_file(std::string filename, std::string& song_name) {
+	std::vector<MIDINote> notes;
 	std::ifstream file{filename, std::ios::binary};
 
 	std::vector<uint8_t> bytes;
@@ -163,16 +163,16 @@ midi_track track = midi_track::create(midi_parse_file("example.midi", track_name
 
 // at most 12 lanes supported, since currently it will not differentiate on octaves
 // for mapping, go here https://computermusicresource.com/midikeys.html
-struct midi_track {
-	std::vector<midi_note> notes;
+struct MIDITrack {
+	std::vector<MIDINote> notes;
 	U32 lanes; // how many lanes we have
 
 	F64 time; // current time from start of this track
 	U32 index; // index into `notes`, where we're at
-	U8 note_lane_map[12]; // note_lane_map[n] = lane on which to send a given note
+	U8 noteLaneMap[12]; // note_lane_map[n] = lane on which to send a given note
 
-	static midi_track create(std::vector<midi_note> notes, U32 lanes) {
-		midi_track self = { notes, lanes };
+	static MIDITrack create(std::vector<MIDINote> notes, U32 lanes) {
+		MIDITrack self = { notes, lanes };
 		self.time = 0.0;
 		self.find_note_lane_mapping();
 		return self;
@@ -181,7 +181,7 @@ struct midi_track {
 		time += dt;
 	}
 	// get the next note to be played
-	midi_note next_note() {
+	MIDINote next_note() {
 		return notes[index];
 	}
 	// time until the next note is played (if overdue, negative time)
@@ -192,9 +192,9 @@ struct midi_track {
 	// return which lane to play it on
 	// # TO GET INFO ABOUT THIS NOTE, CALL next_note BEFORE THIS FUNCTION
 	U32 play_note() {
-		midi_note n = notes[index];
+		MIDINote n = notes[index];
 		index++;
-		return note_lane_map[n.note % 12];
+		return noteLaneMap[n.note % 12];
 	}
 	// rewind to the beginning of this track
 	void play_again() {
@@ -214,7 +214,7 @@ private:
 			// assign notes to lanes
 			U8 lane_num = 0;
 			for (U32 i = 0; i < 12; i++) {
-				note_lane_map[i] = lane_num;
+				noteLaneMap[i] = lane_num;
 				lane_num += notes_found != 0;
 			}
 		}

@@ -432,3 +432,4 @@ FodyWeavers.xsd
 *.msp
 /imgui.ini
 build/
+/CyberSeagull4.exe

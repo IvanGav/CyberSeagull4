@@ -54,6 +54,8 @@ typedef U8 Flags8;
 #define B8_TRUE 1
 #define B8_FALSE 0
 
+#define ALIGN_HIGH(num, alignment) (((num) + (static_cast<decltype(num)>(alignment) - 1)) & ~(static_cast<decltype(num)>(alignment) - 1))
+
 //F32 clamp01(F32 f) {
 //    return std::max(std::min(0.0f, f), 1.0f);
 //}
