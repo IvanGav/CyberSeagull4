@@ -42,7 +42,7 @@ void page(ImGuiWindowFlags flags, static int windowWidth, static int windowHeigh
 	ImGui::SetNextWindowSize(ImVec2(windowWidth - 200, windowHeight - 200));
 	ImGui::SetNextWindowPos(ImVec2(100, 100));
 	ImGui::Begin("menu", NULL, flags);
-	ImGui::Image((ImTextureID)textures.menu.page, ImVec2(windowWidth - 200, windowHeight - 200));
+	ImGui::Image((ImTextureID)textures.menu.page.image, ImVec2(windowWidth - 200, windowHeight - 200));
 	ImGui::End();
 }
 
@@ -80,12 +80,12 @@ void menu2(
 	// menu logo
 	ImGui::SetCursorPos(ImVec2(menux, menuy));
 	ImGui::SetCursorPos(ImVec2(menux, menuy));
-	ImGui::Image((ImTextureID)textures.menu.menu_logo, ImVec2(menuw, menuh));
+	ImGui::Image((ImTextureID)textures.menu.menu_logo.image, ImVec2(menuw, menuh));
 	
 	// context
 	F32 contextw = windowWidth / 3, contexth = windowWidth / 3, contextx = (windowWidth - (2 * padding) - (contextw)) / 2 + (menuw / 2), contexty = menuy + menuh - (menuh / 2);
 	ImGui::SetCursorPos(ImVec2(contextx, contexty));
-	ImGui::Image((ImTextureID)textures.menu.context, ImVec2(contextw, contexth));
+	ImGui::Image((ImTextureID)textures.menu.context.image, ImVec2(contextw, contexth));
 
 
 	// Editable server IP and connect disconnect setup
@@ -112,7 +112,7 @@ void menu2(
 				ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
 			}
 			ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-			ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
+			ImGui::Image((ImTextureID)textures.menu.connect.image, ImVec2(buttonw, buttonh));
 			ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 			if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
 				try_connect(server_ip, 1951);
@@ -133,7 +133,7 @@ void menu2(
 	else {
 		F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
 		ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-		ImGui::Image((ImTextureID)textures.menu.leave, ImVec2(buttondisw, buttondish));
+		ImGui::Image((ImTextureID)textures.menu.leave.image, ImVec2(buttondisw, buttondish));
 		ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
 		if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
 			client.Disconnect();
@@ -145,22 +145,22 @@ void menu2(
 	F32 readyd = buttonw * 0.5, ready1x = inputx + buttonw + windowWidth / 40, ready1y = inputy + (spacing);
 	if (g_p0_ready) {
 		ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
-		ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
+		ImGui::Image((ImTextureID)textures.menu.P1Ready.image, ImVec2(readyd, readyd));
 	}
 	else {
 		ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
-		ImGui::Image((ImTextureID)textures.menu.P1NotReady, ImVec2(readyd, readyd));
+		ImGui::Image((ImTextureID)textures.menu.P1NotReady.image, ImVec2(readyd, readyd));
 	}
 
 	// Player 2 ready display
 	F32 ready2x = ready1x + readyd + windowWidth / 50, ready2y = ready1y;
 	if (g_p1_ready) {
 		ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
-		ImGui::Image((ImTextureID)textures.menu.P2Ready, ImVec2(readyd, readyd));
+		ImGui::Image((ImTextureID)textures.menu.P2Ready.image, ImVec2(readyd, readyd));
 	}
 	else {
 		ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
-		ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
+		ImGui::Image((ImTextureID)textures.menu.P2NotReady.image, ImVec2(readyd, readyd));
 	}
 
 
@@ -179,7 +179,7 @@ void menu2(
 		if (!g_sent_ready)
 		{
 			ImGui::SetCursorPos(startPos);
-			ImGui::Image((ImTextureID)textures.menu.startGame, startSize);
+			ImGui::Image((ImTextureID)textures.menu.startGame.image, startSize);
 
 			// Place the invisible button at the SAME position/size as the image:
 			ImGui::SetCursorPos(startPos);
@@ -199,7 +199,7 @@ void menu2(
 		else
 		{
 			ImGui::SetCursorPos(startPos);
-			ImGui::Image((ImTextureID)textures.menu.waitForPlayer, startSize);
+			ImGui::Image((ImTextureID)textures.menu.waitForPlayer.image, startSize);
 		}
 	}
 	else
@@ -216,7 +216,7 @@ void menu2(
 
 	// Close Yar Menu
 	ImGui::SetCursorPos(ImVec2((windowWidth - 200 - 100) / 2, windowHeight - 350));
-	ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
+	ImGui::Image((ImTextureID)textures.menu.closeMenu.image, ImVec2(100, 100));
 	ImGui::SetCursorPos(ImVec2((windowWidth - 200 - 100) / 2, windowHeight - 350));
 	if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
 		menu_open = false;

@@ -45,6 +45,13 @@ static struct {
 	Mesh shipNoMast;
 } meshes;
 
+struct Tex {
+	GLuint image;
+	U16 width;
+	U16 height;
+};
+
+
 // List of all textures
 static struct {
 	GLuint green;
@@ -67,18 +74,18 @@ static struct {
 		GLuint arm;
 	} ship;
 	struct {
-		GLuint menu_logo;
-		GLuint context;
-		GLuint page;
-		GLuint connect;
-		GLuint leave;
-		GLuint closeMenu;
-		GLuint P1Ready;
-		GLuint P1NotReady;
-		GLuint P2Ready;
-		GLuint P2NotReady;
-		GLuint startGame;
-		GLuint waitForPlayer;
+		struct Tex menu_logo;
+		struct Tex context;
+		struct Tex page;
+		struct Tex connect;
+		struct Tex leave;
+		struct Tex closeMenu;
+		struct Tex P1Ready;
+		struct Tex P1NotReady;
+		struct Tex P2Ready;
+		struct Tex P2NotReady;
+		struct Tex startGame;
+		struct Tex waitForPlayer;
 	} menu;
 	GLuint feather;
 	GLuint cannonExplosion;
@@ -236,18 +243,18 @@ void init_textures() {
 	textures.waterOffset = createTextureFromImage("asset/waterOffset.png");
 
 	stbi_set_flip_vertically_on_load(false);
-	textures.menu.menu_logo = createTextureFromImage("asset/menu_logo.png");
-	textures.menu.page = createTextureFromImage("asset/page.png");
-	textures.menu.context = createTextureFromImage("asset/context.png");
-	textures.menu.connect = createTextureFromImage("asset/ConnectButton.png");
-	textures.menu.leave = createTextureFromImage("asset/LeaveButton.png");
-	textures.menu.closeMenu = createTextureFromImage("asset/Close-Menu.png");
-	textures.menu.P1Ready = createTextureFromImage("asset/P1Ready.png");
-	textures.menu.P1NotReady = createTextureFromImage("asset/P1NotReady.png");
-	textures.menu.P2Ready = createTextureFromImage("asset/P2Ready.png");
-	textures.menu.P2NotReady = createTextureFromImage("asset/P2NotReady.png");
-	textures.menu.startGame = createTextureFromImage("asset/startGame.png");
-	textures.menu.waitForPlayer = createTextureFromImage("asset/waitForPlayer.png");
+	textures.menu.menu_logo = createTextureTypeFromImage("asset/menu_logo.png");
+	textures.menu.page = createTextureTypeFromImage("asset/page.png");
+	textures.menu.context = createTextureTypeFromImage("asset/context.png");
+	textures.menu.connect = createTextureTypeFromImage("asset/ConnectButton.png");
+	textures.menu.leave = createTextureTypeFromImage("asset/LeaveButton.png");
+	textures.menu.closeMenu = createTextureTypeFromImage("asset/Close-Menu.png");
+	textures.menu.P1Ready = createTextureTypeFromImage("asset/P1Ready.png");
+	textures.menu.P1NotReady = createTextureTypeFromImage("asset/P1NotReady.png");
+	textures.menu.P2Ready = createTextureTypeFromImage("asset/P2Ready.png");
+	textures.menu.P2NotReady = createTextureTypeFromImage("asset/P2NotReady.png");
+	textures.menu.startGame = createTextureTypeFromImage("asset/startGame.png");
+	textures.menu.waitForPlayer = createTextureTypeFromImage("asset/waitForPlayer.png");
 
 	textures.weezer = createTextureFromImage("asset/weezer.jfif");
 	textures.banner = createTextureFromImage("asset/seagull_banner.png");

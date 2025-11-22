@@ -15,6 +15,8 @@
 
 #include <functional>
 
+extern struct Tex;
+
 struct Vertex {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
@@ -113,6 +115,18 @@ GLuint createTextureFromImage(const char* path) {
     stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
     GLuint tex = createTexture(texWidth, texHeight, GL_RGBA8, true, false, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
     stbi_image_free(pixels);
+    return tex;
+}
+
+struct Tex createTextureTypeFromImage(const char* path) {
+    struct Tex tex;
+    int texWidth, texHeight;
+    stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, nullptr, STBI_rgb_alpha);
+    GLuint glu = createTexture(texWidth, texHeight, GL_RGBA8, true, false, pixels, GL_RGBA, GL_UNSIGNED_BYTE);
+    stbi_image_free(pixels);
+    tex.image = glu;
+    tex.width = texWidth;
+    tex.height = texHeight;
     return tex;
 }
 
