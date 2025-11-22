@@ -6,7 +6,7 @@ std::vector<char> midiKeysVelocity(128, 0);
 std::vector<char> midiControlVelocity(128, 0);
 bool midiExists = false;
 
-void midi_callback(const libremidi::message&& message) {
+void midiCallback(const libremidi::message&& message) {
 	std::cout << "Got message status: " << (int)(message[0]) << " \n";
 	if (message.size() == 0) {
 		return;
@@ -18,7 +18,7 @@ void midi_callback(const libremidi::message&& message) {
 	}
 	if ((message[0] & 0b11110000) == 0b10010000) {
 		midiKeysVelocity[message[1]] = message[2];
-		playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)message[1]));
+		playSound(&audioEngine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)message[1]));
 		std::cout << "Note On: " << (int)message[1] << " vel: " << (int)message[2] << "\n";
 	}
 	if ((message[0] & 0b11110000) == 0b10110000) {
@@ -28,7 +28,7 @@ void midi_callback(const libremidi::message&& message) {
 };
 
 
-void midi_init(libremidi::midi_in& midi) {
+void midiInit(libremidi::midi_in& midi) {
 		// Open a given midi port.
 		// Alternatively, to get the default port for the system:
 		std::cout << "init\n";

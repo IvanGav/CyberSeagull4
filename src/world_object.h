@@ -3,6 +3,9 @@
 // GLAD: OpenGL function loader
 #include <glad/glad.h>
 
+// tiny_obj_loader: load 3D models in the .obj format
+#include <tinyobjloader/tiny_obj_loader.h>
+
 // glm: linear algebra library
 #define GLM_ENABLE_EXPERIMENTAL 1
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
@@ -138,8 +141,8 @@ GLuint createCubeTexture(const char** filenames) {
 }
 
 // default texture
-GLuint default_tex;
-GLuint default_normal;
+GLuint defaultTex;
+GLuint defaultNormal;
 
 // call at the beginning of main
 void initDefaultTexture() {
@@ -151,7 +154,7 @@ void initDefaultTexture() {
                 hardcodedTextureData[y * 16 + x] = x < 8 == y < 8 ? 0b11111111111111110000000011111111 : 0b11111111000000000000000000000000;
             }
         }
-        default_tex = createTexture(16, 16, GL_RGBA8, false, false, hardcodedTextureData);
+        defaultTex = createTexture(16, 16, GL_RGBA8, false, false, hardcodedTextureData);
     }
 
     {
@@ -163,7 +166,7 @@ void initDefaultTexture() {
                 hardcodedTextureData[y * size + x] = RGBA8{ 127, 127, 255, 255 };
             }
         }
-        default_normal = createTexture(size, size, GL_RGBA8, false, false, hardcodedTextureData);
+        defaultNormal = createTexture(size, size, GL_RGBA8, false, false, hardcodedTextureData);
     }
 }
 
@@ -196,52 +199,57 @@ enum EmitterType {
     CANNON,
     PROECTILE
 };
-static int owned_cat_id = 0;
-static int not_owned_cat_id = 0;
+
+/* 
+possibly create object for modelMatrix
+*/
+
+static int ownedCatID = 0;
+static int notOwnedCatID = 0;
 struct Entity {
     Mesh* mesh;
     GLuint tex; // TEXTURE
-    glm::mat4 model;
-    glm::mat4 pretransmodel;
-    int cat_id = -1;
+    glm::mat4 modelMatrix; // possibly change to modelToWorldMatrix
+    glm::mat4 preTransModelMatrix;
+    int cannonID = -1;
     bool owned = false;
-    F64 start_time;
-    F32 shoot_angle;
+    F64 startTime;
+    F32 shootAngle;
     EmitterType type;
     GLuint normal; // NORMAL MAP
 
     // You can use "default_tex" if you don't need a texture
-    static Entity create(Mesh* mesh, GLuint tex = default_tex, GLuint normal = default_normal) {
+    static Entity create(Mesh* mesh, GLuint tex = defaultTex, GLuint normal = defaultNormal) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.normal = normal;
-        o.model = glm::mat4(1.0f);
+        o.modelMatrix = glm::mat4(1.0f);
         o.type = NONEMITTER;
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, GLuint normal, glm::mat4 initial_transform, EmitterType type, bool owned = false) {
+    static Entity create(Mesh* mesh, GLuint tex, GLuint normal, glm::mat4 initialTransform, EmitterType type, bool owned = false) {
         Entity o{};
         o.mesh = mesh;
         o.tex = tex;
         o.normal = normal;
-        o.model = initial_transform;
+        o.modelMatrix = initialTransform;
         o.type = type;
         if (type == CANNON) {
             if (owned) {
-                o.cat_id = owned_cat_id++;
+                o.cannonID = ownedCatID++;
             }
             else {
-				o.cat_id = not_owned_cat_id++;
+				o.cannonID = notOwnedCatID++;
             }
         }
         o.owned = owned;
         return o;
     }
 
-    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initial_transform, EmitterType type, bool owned = false) {
-        return Entity::create(mesh, tex, default_normal, initial_transform, type, owned);
+    static Entity create(Mesh* mesh, GLuint tex, glm::mat4 initialTransform, EmitterType type, bool owned = false) {
+        return Entity::create(mesh, tex, defaultNormal, initialTransform, type, owned);
     }
 
     std::function<bool(Entity&, F64)> update;

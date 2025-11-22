@@ -18,13 +18,17 @@
 
 #include <cmath>
 
-void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
-extern ma_engine engine;
+
+// Globals
+std::vector<ma_sound*> g_liveSounds;
+static std::uniform_real_distribution<float> g_randomPitch(0.02f, 1.15f);
+//static std::mt19937 g_rng{ std::random_device{}() }; // since we commented out the randomPitchFunction
+extern ma_engine audioEngine;
 
 void songSelect(GLuint display, const char* filepath, ImVec2 dim) {
 	if (display) {
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
-		playSound(&engine, filepath, false, .9);
+		playSound(&audioEngine, filepath, false, .9);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
 		ImGui::SetNextWindowPos(ImVec2((1920 - dim[0]) / 2, 1080 * 0.1));
 		ImGui::Begin("Song", NULL, flags);
@@ -60,4 +64,66 @@ F32 noteMultiplier(U8 start, U8 end) {
 F32 noteMultiplier(F32 start, U8 end) {
 	F32 freq2 = 440.f * pow((double)2, (end - 81) / 12.f);
 	return freq2 / start;
+}
+
+void cleanupFinishedSounds() {
+	for (auto it = g_liveSounds.begin(); it != g_liveSounds.end();) {
+		ma_sound* s = *it;
+		if (!ma_sound_is_playing(s) && ma_sound_at_end(s)) {
+			ma_sound_uninit(s);
+			delete s;
+			it = g_liveSounds.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+/*
+void playWithRandomPitch(ma_engine* engine, const char* filePath) {
+	ma_sound* s = new ma_sound{};
+	if (ma_sound_init_from_file(engine, filePath,
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_pitch(s, g_randomPitch(g_rng));
+		ma_sound_start(s);
+		g_liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
+}
+*/
+
+void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
+	ma_sound* s = new ma_sound{};
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
+		ma_sound_set_pitch(s, pitch);
+		ma_sound_start(s);
+		g_liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
+}
+
+void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume) {
+	ma_sound* s = new ma_sound{};
+	//ma_data_source_set_looping(s, loop);
+	if (ma_sound_init_from_file(engine, filePath,
+		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
+		nullptr, nullptr, s) == MA_SUCCESS) {
+		ma_sound_set_looping(s, loop);
+		ma_sound_set_volume(s, volume);
+		ma_sound_start(s);
+		g_liveSounds.push_back(s);
+	}
+	else {
+		delete s;
+	}
 }

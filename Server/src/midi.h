@@ -7,7 +7,7 @@ std::vector<char> midiKeysVelocity(128, 0);
 std::vector<char> midiControlVelocity(128, 0);
 bool midiExists = false;
 
-void midi_callback(const libremidi::message&& message) {
+void midiCallback(const libremidi::message&& message) {
 	std::cout << "Got message status: " << (int)(message[0]) << " \n";
 	if (message.size() == 0) {
 		return;
@@ -28,7 +28,7 @@ void midi_callback(const libremidi::message&& message) {
 };
 
 
-void midi_init(libremidi::midi_in& midi) {
+void midiInit(libremidi::midi_in& midi) {
 		// Open a given midi port.
 		// Alternatively, to get the default port for the system:
 		if(std::optional<libremidi::input_port> port = libremidi::midi1::in_default_port()) {
