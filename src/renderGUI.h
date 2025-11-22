@@ -77,23 +77,18 @@ void menu2(
 	ImGui::SetNextWindowPos(ImVec2(100, 100));
 	ImGui::Begin("menu", NULL, flags);
 	
-	
+	// menu logo
 	ImGui::SetCursorPos(ImVec2(menux, menuy));
 	ImGui::SetCursorPos(ImVec2(menux, menuy));
 	ImGui::Image((ImTextureID)textures.menu.menu_logo, ImVec2(menuw, menuh));
 	
-	
+	// context
 	F32 contextw = windowWidth / 3, contexth = windowWidth / 3, contextx = (windowWidth - (2 * padding) - (contextw)) / 2 + (menuw / 2), contexty = menuy + menuh - (menuh / 2);
 	ImGui::SetCursorPos(ImVec2(contextx, contexty));
 	ImGui::Image((ImTextureID)textures.menu.context, ImVec2(contextw, contexth));
 
 
-	ImGui::SetCursorPos(ImVec2(inputx, inputy));
-	ImGui::PushItemWidth(inputw);
-
-
-
-	// Editable server IP and connect disconnect buttons
+	// Editable server IP and connect disconnect setup
 	static bool ipbuf_init = false;
 	static char ipbuf[64];
 	if (!ipbuf_init) {
@@ -101,14 +96,16 @@ void menu2(
 		ipbuf_init = true;
 	}
 
-
+	// server ip input
+	ImGui::SetCursorPos(ImVec2(inputx, inputy));
+	ImGui::PushItemWidth(inputw);
 	ImGuiInputTextFlags inflags = ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue;
-	
 	if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
 		server_ip = ipbuf;
 		std::cout << "Server IP:" << ipbuf;
 	}
 
+	// Checking connect and displaying button
 	if (!client.IsConnected()) {
 		if (!g_connecting) {
 			if (!g_last_connect_error.empty()) {
@@ -131,6 +128,8 @@ void menu2(
 			}
 		}
 	}
+
+	// Disconnect button
 	else {
 		F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
 		ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
@@ -142,8 +141,8 @@ void menu2(
 		}
 	}
 
+	// Player 1 ready display
 	F32 readyd = buttonw * 0.5, ready1x = inputx + buttonw + windowWidth / 40, ready1y = inputy + (spacing);
-
 	if (g_p0_ready) {
 		ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
 		ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
@@ -153,8 +152,8 @@ void menu2(
 		ImGui::Image((ImTextureID)textures.menu.P1NotReady, ImVec2(readyd, readyd));
 	}
 
+	// Player 2 ready display
 	F32 ready2x = ready1x + readyd + windowWidth / 50, ready2y = ready1y;
-
 	if (g_p1_ready) {
 		ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
 		ImGui::Image((ImTextureID)textures.menu.P2Ready, ImVec2(readyd, readyd));
@@ -165,8 +164,7 @@ void menu2(
 	}
 
 
-
-	// main.cpp – inside the menu_open == true block, around the "Start Game" drawing
+	// Determines if player 1 or 2
 	const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
 	const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
 	const bool i_am_player = i_am_player0 || i_am_player1;
@@ -210,13 +208,13 @@ void menu2(
 		ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
 	}
 
-
-
+	// Volume Bar
 	ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
 	ImGui::PushItemWidth(inputw * 4);
 	ImGui::SliderFloat("Volume", volume, 0, 256);
 	ImGui::PopItemWidth();
 
+	// Close Yar Menu
 	ImGui::SetCursorPos(ImVec2((windowWidth - 200 - 100) / 2, windowHeight - 350));
 	ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
 	ImGui::SetCursorPos(ImVec2((windowWidth - 200 - 100) / 2, windowHeight - 350));
@@ -224,6 +222,8 @@ void menu2(
 		menu_open = false;
 		windowMouseFocus(window);
 	}
+
+
 	ImGui::End();
 	// menu end
 }
