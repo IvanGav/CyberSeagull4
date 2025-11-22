@@ -45,12 +45,6 @@ static struct {
 	Mesh shipNoMast;
 } meshes;
 
-struct Tex {
-	GLuint image;
-	U16 width;
-	U16 height;
-};
-
 
 // List of all textures
 static struct {

@@ -15,7 +15,11 @@
 
 #include <functional>
 
-extern struct Tex;
+struct Tex {
+    GLuint image;
+    U16 width;
+    U16 height;
+};
 
 struct Vertex {
     alignas(16) glm::vec3 position;
