@@ -59,20 +59,20 @@ int loadObj(std::vector<Vertex>& vertices, const char* path) {
             Vertex v;
 
             v.position = {
-                attrib.vertices[3 * index.vertexIndex + 0],
-                attrib.vertices[3 * index.vertexIndex + 1],
-                attrib.vertices[3 * index.vertexIndex + 2]
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
             };
 
             v.normal = {
-                attrib.normals[3 * index.normalIndex + 0],
-                attrib.normals[3 * index.normalIndex + 1],
-                attrib.normals[3 * index.normalIndex + 2]
+                attrib.normals[3 * index.normal_index + 0],
+                attrib.normals[3 * index.normal_index + 1],
+                attrib.normals[3 * index.normal_index + 2]
             };
 
             v.uv = {
-                attrib.texcoords[2 * index.texCoordIndex + 0],
-                attrib.texcoords[2 * index.texCoordIndex + 1]
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                attrib.texcoords[2 * index.texcoord_index + 1]
             };
 
             vertices.push_back(v);

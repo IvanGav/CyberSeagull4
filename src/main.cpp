@@ -77,13 +77,7 @@ extern "C"
 const B8 g_INFINITE_FIRE = false;
 const B8 g_USE_FREECAM = false;
 
-static std::mt19937 g_rng{ std::random_device{}() };
-
-static std::uniform_real_distribution<float> g_randomPitch(0.02f, 1.15f);
-
-
-std::vector<ma_sound*> g_liveSounds;
-
+//static std::mt19937 g_rng{ std::random_device{}() };
 
 Cam g_cam = Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375, g_USE_FREECAM ? CamType::FREECAM : CamType::STATIC };
 
@@ -638,68 +632,6 @@ void fireCannon(int cannonID, bool owned, double timeOfNote) {
 		return true;
 	};
 }
-
-void cleanupFinishedSounds() {
-	for (auto it = g_liveSounds.begin(); it != g_liveSounds.end();) {
-		ma_sound* s = *it;
-		if (!ma_sound_is_playing(s) && ma_sound_at_end(s)) {
-			ma_sound_uninit(s);
-			delete s;
-			it = g_liveSounds.erase(it);
-		}
-		else {
-			++it;
-		}
-	}
-}
-
-void playWithRandomPitch(ma_engine* engine, const char* filePath) {
-	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_pitch(s, g_randomPitch(g_rng));
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
-	ma_sound* s = new ma_sound{};
-	//ma_data_source_set_looping(s, loop);
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_looping(s, loop);
-		ma_sound_set_pitch(s, pitch);
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume) {
-	ma_sound* s = new ma_sound{};
-	//ma_data_source_set_looping(s, loop);
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_looping(s, loop);
-		ma_sound_set_volume(s, volume);
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-
 
 /* Graphics Functions */
 
