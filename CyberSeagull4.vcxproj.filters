@@ -1439,6 +1439,9 @@
     <ClInclude Include="src\graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\renderGUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="lib\libremidi\CMakeCache.txt" />

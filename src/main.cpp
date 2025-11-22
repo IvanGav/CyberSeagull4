@@ -71,6 +71,7 @@ extern "C"
 #include "music.h"
 #include "input.h"
 #include "midi.h"
+#include "renderGUI.h"
 
 // CHEATS/DEV OPTIONS
 const B8 INFINITE_FIRE = false;
@@ -507,245 +508,15 @@ int main(int argc, char** argv) {
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
 
-		ImGui::SetNextWindowSize(ImVec2(width-(width/10), 100));
-		ImGui::SetNextWindowPos(ImVec2(width/20, height * 0.01));
-		ImGui::Begin("Status", nullptr, flags);
-		/*
-		ImGui::Text("My HP: %d", g_my_health);
-		ImGui::Text("Enemy HP: %d", g_enemy_health);
-		*/
-		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-		ImGui::ProgressBar(static_cast<F32>(g_my_health) / static_cast<F32>(g_max_health));
-		ImGui::ProgressBar(static_cast<F32>(g_enemy_health) / static_cast<F32>(g_max_health));
-		ImGui::PopStyleColor();
-		if (g_game_over) {
-			ImGui::Separator();
-			if (g_winner == 0xffff) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Game Over");
-			else if (g_winner == player_id) ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "You Win!");
-			else ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "You Lose!");
-		}
-		ImGui::End();
+		healthbars(flags, width, height, g_my_health, g_enemy_health, g_max_health, g_game_over, g_winner);
 
-		/*if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-			songSelect(textures.weezer, "asset/weezer-riff.wav", ImVec2(637, 640));
-			playSound(&engine, "asset/weezer-riff.wav", MA_FALSE);
-		}*/
-
-
-		if (menuOpen) {
-			//flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
-
-			ImGui::SetNextWindowSize(ImVec2(width - 200, height - 200));
-			ImGui::SetNextWindowPos(ImVec2(100, 100));
-			ImGui::Begin("menu", NULL, flags);
-			ImGui::Image((ImTextureID)textures.menu.page, ImVec2(width - 200, height - 200));
-			ImGui::End();
-			flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
-
-			ImGui::SetNextWindowSize(ImVec2(width-200, height-200));
-			ImGui::SetNextWindowPos(ImVec2(100, 100));
-			ImGui::Begin("menu", NULL, flags);
-			int padding = 100;
-			F32 menuw = (width) / 3, menuh = ((width) / 3) * 0.562, menux = (width - (2 * padding) - menuw) / 2, menuy = height / 70;
-			ImGui::SetCursorPos(ImVec2(menux, menuy));
-			ImGui::Image((ImTextureID)textures.menu.menu_logo, ImVec2(menuw, menuh));
-			F32 contextw = width / 3, contexth = width / 3, contextx = (width - (2 * padding) - (contextw)) / 2 + (menuw / 2), contexty = menuy + menuh - (menuh/2);
-			ImGui::SetCursorPos(ImVec2(contextx, contexty));
-			ImGui::Image((ImTextureID)textures.menu.context, ImVec2(contextw, contexth));
-			/*
-				ImGui::SliderInt("val 1", &val1, 0, 256);
-				ImGui::SliderInt("val 2", &val2, 0, 256);
-				ImGui::SliderInt("val 3", &val3, 0, 256);
-				ImGui::SliderInt("val 4", &val4, 0, 256);
-				ImGui::Text(((std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4)).c_str()));
-			*/
-			F32 inputw = width/20, inputx = width/10, inputy = menuy + menuh, spacing = height/20;
-			ImGui::SetCursorPos(ImVec2(inputx, inputy));
-			ImGui::PushItemWidth(inputw);
-			
-			
-			
-			
-			/*
-			if (ImGui::InputText("Ip Address", buf, IM_ARRAYSIZE(buf), inflags) && !client.IsConnected()) goto inputChange;
-			ImGui::PopItemWidth();
-			if (!client.IsConnected()) {
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				if (ImGui::InvisibleButton("Connect", ImVec2(buttonw, buttonh))) {
-					inputChange:
-					//server_ip = std::to_string(val1) + "." + std::to_string(val2) + "." + std::to_string(val3) + "." + std::to_string(val4);
-					server_ip = buf;
-					client.Connect(server_ip, 1951);
-				}
-			}
-			else {
-				F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				ImGui::Image((ImTextureID)textures.menu.leave, ImVec2(buttondisw, buttondish));
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
-					client.Disconnect();
-				}
-			}
-			*/
-			
-			
-			// Editable server IP and connect disconnect buttons
-			static bool ipbuf_init = false;
-			static char ipbuf[64];
-			if (!ipbuf_init) {
-				std::snprintf(ipbuf, sizeof(ipbuf), "%s", server_ip.c_str());
-				ipbuf_init = true;
-			}
-
-
-			ImGuiInputTextFlags inflags = ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue;
-			F32 buttonw = inputw * 2, buttonConar = 0.40625, buttonDisar = 1.7173913, buttonh = buttonw * buttonConar;
-			if (ImGui::InputText("Server IP", ipbuf, sizeof(ipbuf))) {
-				server_ip = ipbuf;
-				std::cout << "Server IP:" <<  ipbuf;
-			}
-
-			if (!client.IsConnected()) {
-				if (!g_connecting) {
-					if (!g_last_connect_error.empty()) {
-						ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Error: %s", g_last_connect_error.c_str());
-					}
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-					ImGui::Image((ImTextureID)textures.menu.connect, ImVec2(buttonw, buttonh));
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-					if (ImGui::InvisibleButton("Join Game", ImVec2(buttonw, buttonh))) {
-						try_connect(server_ip, 1951);
-					}
-				}
-				else {
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-					ImGui::Text("Connecting to %s...", server_ip.c_str());
-					ImGui::SetCursorPos(ImVec2(inputx, inputy + (2 * spacing)));
-					if (ImGui::Button("Cancel")) {
-						client.Disconnect();
-						reset_network_state();
-					}
-				}
-			}
-			else {
-				F32 buttondisw = buttonw * 0.479166667, buttondish = buttondisw * buttonDisar;
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				ImGui::Image((ImTextureID)textures.menu.leave, ImVec2(buttondisw, buttondish));
-				ImGui::SetCursorPos(ImVec2(inputx, inputy + spacing));
-				if (ImGui::InvisibleButton("Disconnect", ImVec2(buttondisw, buttondish))) {
-					client.Disconnect();
-					reset_network_state(); 
-				}
-			}
-
-			F32 readyd = buttonw*0.5, ready1x = inputx + buttonw + width / 40, ready1y = inputy + (spacing);
-			
-			if (g_p0_ready) {
-				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
-				ImGui::Image((ImTextureID)textures.menu.P1Ready, ImVec2(readyd, readyd));
-			}
-			else {
-				ImGui::SetCursorPos(ImVec2(ready1x, ready1y));
-				ImGui::Image((ImTextureID)textures.menu.P1NotReady, ImVec2(readyd, readyd));
-			}
-
-			F32 ready2x = ready1x + readyd + width / 50, ready2y = ready1y;
-
-			if (g_p1_ready) {
-				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
-				ImGui::Image((ImTextureID)textures.menu.P2Ready, ImVec2(readyd, readyd));
-			}
-			else {
-				ImGui::SetCursorPos(ImVec2(ready2x, ready2y));
-				ImGui::Image((ImTextureID)textures.menu.P2NotReady, ImVec2(readyd, readyd));
-			}
-
-			/*
-			ImGui::Text("Player 0: %s  [%s]",
-				g_p0_id == 0xffff ? "(empty)" : std::to_string(g_p0_id).c_str(),
-				g_p0_ready ? "Ready" : "Not Ready");
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 3) + buttonh));
-			ImGui::Text("Player 1: %s  [%s]",
-				g_p1_id == 0xffff ? "(empty)" : std::to_string(g_p1_id).c_str(),
-				g_p1_ready ? "Ready" : "Not Ready");
-			*/
-			
-			// main.cpp – inside the menu_open == true block, around the "Start Game" drawing
-			const bool i_am_player0 = (player_id != 0xffff && player_id == g_p0_id);
-			const bool i_am_player1 = (player_id != 0xffff && player_id == g_p1_id);
-			const bool i_am_player = i_am_player0 || i_am_player1;
-
-			ImVec2 startSize = ImVec2(readyd * 1.5f, readyd * 1.5f);
-			ImVec2 startPos = ImVec2(((2 * ready1x) + (2 * readyd) - startSize.x) / 2.0f,
-				ready1y + readyd);
-
-			// Show button only if I'm actually a player and no match is running
-			if (!g_song_active && i_am_player && player_id != 0xffff)
-			{
-				if (!g_sent_ready)
-				{
-					ImGui::SetCursorPos(startPos);
-					ImGui::Image((ImTextureID)textures.menu.startGame, startSize);
-
-					// Place the invisible button at the SAME position/size as the image:
-					ImGui::SetCursorPos(startPos);
-					if (ImGui::InvisibleButton("Start Game", startSize))
-					{
-						cgull::net::message<message_code> m;
-						m.header.id = message_code::PLAYER_READY;
-						U16 pid = player_id;
-						m << pid;
-						if (client.IsConnected() && player_id != 0xffff) {
-							client.Send(m);
-							g_sent_ready = true;
-						}
-					}
-					ImGui::SameLine(); ImGui::TextDisabled("(press when ready)");
-				}
-				else
-				{
-					ImGui::SetCursorPos(startPos);
-					ImGui::Image((ImTextureID)textures.menu.waitForPlayer, startSize);
-				}
-			}
-			else
-			{
-				ImGui::SetCursorPos(startPos);
-				ImGui::TextDisabled(g_song_active ? "Match in progress" : "Spectating (button disabled)");
-			}
-
-			
-			
-			ImGui::SetCursorPos(ImVec2(inputx, inputy + (spacing * 5) + buttonh));
-			ImGui::PushItemWidth(inputw*4);
-			ImGui::SliderFloat("Volume", &volume, 0, 256);
-			ImGui::PopItemWidth();
-			
-			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
-			ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
-			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
-			if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
-				menuOpen = false;
-				windowMouseFocus(window);
-			}
-			ImGui::End();
-			ma_engine_set_volume(&audioEngine, volume / 100.f);
+		if (menu_open) {
+			menu(flags, width, height, server_ip, g_connecting, g_last_connect_error, &volume, window);
+			ma_engine_set_volume(&engine, volume / 100.f);
 		}
 		else {
-			ImGui::SetNextWindowSize(ImVec2(50, 50));
-			ImGui::SetNextWindowPos(ImVec2(50, 50));
-			ImGui::Begin("open menu", NULL, flags);
-			if (ImGui::Button("Menu")) {
-				menuOpen = true;
-				windowMouseRelease(window);
-			}
-			ImGui::End();
-
+			menu_close(flags, window);
 		}
-
 
 		// Status
 
@@ -926,6 +697,8 @@ void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F3
 		delete s;
 	}
 }
+
+
 
 /* Graphics Functions */
 
