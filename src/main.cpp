@@ -94,18 +94,18 @@ Entity* cannons_enemy[6];
 static int width = 1920;
 static int height = 1080;
 const F32 WATER_HEIGHT = -3.0f;
-ma_engine engine;
-double cur_time_sec;
-bool menu_open = true;
+ma_engine audioEngine;
+double curTimeSec;
+bool menuOpen = true;
 
 // Graphics global data
 extern std::vector<Vertex> vertices;
 extern std::vector<Entity> objects;
-extern struct meshes;
-extern struct textures;
-extern struct framebuffers;
-extern struct dyn_textures;
-extern struct buffers;
+extern struct Meshes;
+extern struct Textures;
+extern struct FrameBuffers;
+extern struct DynTextures;
+extern struct buffers; // Refactor into different buffers
 
 ParticleSource particleSource;
 ParticleSource featherSource;
@@ -194,7 +194,7 @@ void make_seagull(U8 note, U8 cannon, F64 timestamp) {
 	objects.back().start_time = timestamp;
 	objects.back().pretransmodel = objects.back().model;
 	objects.back().update = [cannon, note](Entity& cat, F64 curtime) {
-		F64 beats_from_fire = (((song_start_time + cat.start_time) - cur_time_sec) / song_spb);
+		F64 beats_from_fire = (((song_start_time + cat.start_time) - curTimeSec) / song_spb);
 		U8 beats_left = (U8)glm::floor(beats_from_fire);
 
 
@@ -328,9 +328,9 @@ int main(int argc, char** argv) {
 
 	F32 volume = 100.0;
 
-	ma_engine_init(NULL, &engine);
-	ma_engine_set_volume(&engine, volume/100.f);
-	playSoundVolume(&engine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
+	ma_engine_init(NULL, &audioEngine);
+	ma_engine_set_volume(&audioEngine, volume/100.f);
+	playSoundVolume(&audioEngine, "asset/seagull-flock-sound-effect-206610.wav", MA_TRUE, 0.25f);
 	//int val1 = 10, val2 = 0, val3 = 0, val4 = 153;
 
 	bool bothReady = false;
@@ -342,9 +342,9 @@ int main(int argc, char** argv) {
 	// event loop (each iteration of this loop is one frame of the application)
 	while (!glfwWindowShouldClose(window)) {
 		// calculate delta time
-		cur_time_sec = glfwGetTime();
-		double dt = cur_time_sec - last_time_sec;
-		last_time_sec = cur_time_sec;
+		curTimeSec = glfwGetTime();
+		double dt = curTimeSec - last_time_sec;
+		last_time_sec = curTimeSec;
 		double lightAzimuth = glfwGetTime() / 3.0;
 		glm::vec3 lightDir = getAngle(lightAzimuth, -PI / 4.0);
 
@@ -357,7 +357,7 @@ int main(int argc, char** argv) {
 			lastState = state;
 		}
 		
-		if (!menu_open) {
+		if (!menuOpen) {
 			moveCamGamepad(window, cam, dt, state);
 			moveCamKeyboard(window, cam, dt);
 			if (midi_exists) {
@@ -369,7 +369,7 @@ int main(int argc, char** argv) {
 
 		for (int i = 0; i < objects.size(); i++) {
 			if (objects[i].update) {
-				if (!objects[i].update(objects[i], cur_time_sec)) {
+				if (!objects[i].update(objects[i], curTimeSec)) {
 					objects.erase(objects.begin() + i);
 					i--;
 				}
@@ -497,7 +497,7 @@ int main(int argc, char** argv) {
 
 		draw_skybox(projection, view);
 		draw_objects(projection, view, sun, cam.pos);
-		draw_water(projection, view, sun, cam.pos, cur_time_sec, water);
+		draw_water(projection, view, sun, cam.pos, curTimeSec, water);
 		draw_particles(projection, view);
 
 		// TEMP UI FIX
@@ -532,7 +532,7 @@ int main(int argc, char** argv) {
 		}*/
 
 
-		if (menu_open) {
+		if (menuOpen) {
 			//flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
 
 			ImGui::SetNextWindowSize(ImVec2(width - 200, height - 200));
@@ -728,18 +728,18 @@ int main(int argc, char** argv) {
 			ImGui::Image((ImTextureID)textures.menu.closeMenu, ImVec2(100, 100));
 			ImGui::SetCursorPos(ImVec2((width - 200 - 100) / 2, height - 350));
 			if (ImGui::InvisibleButton("Close Menu", ImVec2(100, 100))) {
-				menu_open = false;
+				menuOpen = false;
 				windowMouseFocus(window);
 			}
 			ImGui::End();
-			ma_engine_set_volume(&engine, volume / 100.f);
+			ma_engine_set_volume(&audioEngine, volume / 100.f);
 		}
 		else {
 			ImGui::SetNextWindowSize(ImVec2(50, 50));
 			ImGui::SetNextWindowPos(ImVec2(50, 50));
 			ImGui::Begin("open menu", NULL, flags);
 			if (ImGui::Button("Menu")) {
-				menu_open = true;
+				menuOpen = true;
 				windowMouseRelease(window);
 			}
 			ImGui::End();
@@ -757,7 +757,7 @@ int main(int argc, char** argv) {
 
 	}
 
-	ma_engine_uninit(&engine);
+	ma_engine_uninit(&audioEngine);
 	graphics_cleanup();
 	cleanup_window(window);
 }
@@ -783,13 +783,13 @@ void throw_cats() {
 	}
 
 	if (send && client.IsConnected() && player_id != 0xffff) {
-		client.send_player_cat_fire(player_id, cur_time_sec, cats);
+		client.send_player_cat_fire(player_id, curTimeSec, cats);
 	}
 }
 
 void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time) {
-	F64 start_time = cur_time_sec;
-	F64 time_diff = cur_time_sec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
+	F64 start_time = curTimeSec;
+	F64 time_diff = curTimeSec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
 
 	// Prefer a cannon whose owned flag matches, otherwise use any matching cat_id.
 	int best = -1, fallback = -1;
@@ -802,8 +802,8 @@ void throw_cat(int cat_num, bool owned, double the_note_that_this_cat_was_played
 	const int i = (best != -1 ? best : fallback);
 	if (i == -1) return; // no suitable cannon found
 
-	playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)72,cannon_note[cat_num]));
-	playSoundVolume(&engine, "asset/cannon.wav", false, 0.3);
+	playSound(&audioEngine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)72,cannon_note[cat_num]));
+	playSoundVolume(&audioEngine, "asset/cannon.wav", false, 0.3);
 
 	glm::vec4 pos = objects[i].model[3];
 	addParticle(Particle{
