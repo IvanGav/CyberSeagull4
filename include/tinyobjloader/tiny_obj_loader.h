@@ -349,9 +349,9 @@ struct skin_weight_t {
 // Index struct to support different indices for vtx/normal/texcoord.
 // -1 means not used.
 struct index_t {
-  int vertex_index;
-  int normal_index;
-  int texcoord_index;
+  int vertexIndex;
+  int normalIndex;
+  int texCoordIndex;
 };
 
 struct mesh_t {

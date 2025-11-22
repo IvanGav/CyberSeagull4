@@ -204,7 +204,7 @@ void genTangents() {
 	}
 }
 
-void send_particle_data_to_gpu() {
+void sendParticleDataToGpu() {
 	glNamedBufferSubData(buffers.particle_vertices, 0, sizeof(ParticleVertex) * lastUsedParticle * VERTICES_PER_PARTICLE, pvertex_vertex);
 	glNamedBufferSubData(buffers.particle_data, 0, sizeof(ParticleData) * lastUsedParticle, pvertex_data);
 }
@@ -372,11 +372,11 @@ void draw_objects(const glm::mat4& proj, const glm::mat4& view, const Directiona
 
 	for (int i = 0; i < g_objects.size(); i++) {
 		Entity& o = g_objects[i];
-		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.modelMatrix)));
 		glBindTextureUnit(0, o.tex);
 		glBindTextureUnit(2, o.normal);
 
-		glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+		glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.modelMatrix));
 		glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 		glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
@@ -415,10 +415,10 @@ void draw_water(const glm::mat4& proj, const glm::mat4& view, const DirectionalL
 	glBindTextureUnit(3, textures.waterOffset);
 
 	{
-		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(water.model)));
+		glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(water.modelMatrix)));
 		glBindTextureUnit(0, dyn_textures.reflection_tex);
 
-		glProgramUniformMatrix4fv(programs.water, 0, 1, GL_FALSE, glm::value_ptr(water.model));
+		glProgramUniformMatrix4fv(programs.water, 0, 1, GL_FALSE, glm::value_ptr(water.modelMatrix));
 		glProgramUniformMatrix3fv(programs.water, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 		glDrawArrays(GL_TRIANGLES, water.mesh->offset, water.mesh->size);
@@ -439,7 +439,7 @@ void render_shadows(const DirectionalLight& sun) {
 	for (int i = 0; i < g_objects.size(); i++) {
 		Entity& o = g_objects[i];
 
-		glProgramUniformMatrix4fv(programs.shadow, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+		glProgramUniformMatrix4fv(programs.shadow, 0, 1, GL_FALSE, glm::value_ptr(o.modelMatrix));
 
 		glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
 	}

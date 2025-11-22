@@ -11,7 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 static constexpr auto PI = 3.14159265359;
-static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
+static constexpr glm::vec3 camUp = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
 
 extern bool menuOpen;

@@ -34,7 +34,7 @@ inline F64 song_spb        = 0.5; // seconds/beat
 static constexpr U8  SHOW_NUM_BEATS        = 10;
 static constexpr F64 SEAGULL_MOVE_PER_BEAT = 5;
 
-void throwCat(int, bool, F64);
+void fireCannon(int, bool, F64);
 
 class seaclient : public cgull::net::client_interface<message_code> {
 public:
@@ -117,7 +117,7 @@ private:
 
             // Use the provided timestamp rather than a sentinel for better sync
             if (who != g_playerID) {
-                for (U8 c : cats) throwCat((U32)c, false, timestamp);
+                for (U8 c : cats) fireCannon((U32)c, false, timestamp);
             }
             break;
         }
