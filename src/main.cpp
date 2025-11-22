@@ -77,13 +77,7 @@ extern "C"
 const B8 g_INFINITE_FIRE = false;
 const B8 g_USE_FREECAM = false;
 
-static std::mt19937 g_rng{ std::random_device{}() };
-
-static std::uniform_real_distribution<float> g_randomPitch(0.02f, 1.15f);
-
-
-std::vector<ma_sound*> g_liveSounds;
-
+//static std::mt19937 g_rng{ std::random_device{}() };
 
 Cam g_cam = Cam { glm::vec3(-2.39366, 19.5507, -31.1686), -0.015, -0.375, g_USE_FREECAM ? CamType::FREECAM : CamType::STATIC };
 
@@ -169,7 +163,6 @@ void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitc
 void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume = 1);
 void throwCats();
 void windowSizeCallback(GLFWwindow* window, int newWidth, int newHeight);
-//void throw_cat(int cat_num, bool owned, F64);
 
 const F64 DIST_BETWEEN_ENEMY_SHIPS = 100;
 const glm::vec3 CAT_STARTING_POS(10.0, 0.0, 10.0);
@@ -191,7 +184,7 @@ void makeSeagull(U8 note, U8 cannon, F64 timestamp) {
 	// create an entity a while away from the cannon and move towards the cannon
 	g_objects.push_back(Entity::create(&meshes.seagWalk2, textures.seagull, glm::translate(glm::rotate(getCannonPos(cannon, true), 0.0f, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0,1.0,0.0)), PROECTILE));
 	g_objects.back().startTime = timestamp;
-	g_objects.back().preTransModel = g_objects.back().model;
+	g_objects.back().preTransModelMatrix = g_objects.back().modelMatrix;
 	g_objects.back().update = [cannon, note](Entity& cat, F64 curtime) {
 		F64 beatsFromFire = (((songStartTime + cat.startTime) - curTimeSec) / song_spb);
 		U8 beatsLeft = (U8)glm::floor(beatsFromFire);
@@ -203,8 +196,9 @@ void makeSeagull(U8 note, U8 cannon, F64 timestamp) {
 		} else if (beatsLeft <= 1) {
 			cat.mesh = &meshes.seagBall;
 			F64 dist = SEAGULL_MOVE_PER_BEAT;
-			// TODO do the jumping animation here
-			transform = glm::translate(toModel(
+			
+			// Jumping 
+			transform = glm::translate(positionOnArc(
 				glm::clamp((F32)(1+(curtime - (songStartTime + cat.startTime - song_spb)) / song_spb), 0.f, 1.f) * SEAGULL_MOVE_PER_BEAT, // distance along lane
 				0, // unused
 				dist,
@@ -222,7 +216,7 @@ void makeSeagull(U8 note, U8 cannon, F64 timestamp) {
 			transform = glm::translate(transform, glm::vec3(0.0, 0.0, -SEAGULL_MOVE_PER_BEAT * (beatsLeft - 1)));
 			cat.mesh = (beatsLeft % 2) ? &meshes.seagWalk2 : &meshes.seagWalk3;
 		}
-		cat.model = transform * cat.preTransModel;
+		cat.modelMatrix = transform * cat.preTransModelMatrix;
 
 		F64 grace_period = BEATS_GRACE * song_spb;
 		B8 ccf = (abs(beatsFromFire - 1) < BEATS_GRACE);
@@ -287,7 +281,7 @@ int main(int argc, char** argv) {
 	std::string serverIP = "136.112.101.5";
 	// try_connect(server_ip, 1951);
 
-	Entity water = Entity::create(&meshes.quad, default_tex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, WATER_HEIGHT, 0.0f)), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
+	Entity water = Entity::create(&meshes.quad, defaultTex, glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, WATER_HEIGHT, 0.0f)), glm::vec3(500.0, 500.0, 500.0)), NONEMITTER); // TODO water should have its own normal map thing
 
 	// Create static particle sources (later change this to be dynamic or something)
 	g_particleSource = { glm::vec3(0.0F, 2.0F, 0.0F), glm::vec3(0.1f), RGBA8 { 255,255,255,255 }, 1.0f, 1.0f, 0 }; // live for 1 seconds
@@ -423,10 +417,10 @@ int main(int argc, char** argv) {
 		//particleSource.spawnParticle();
 		sortParticles(g_cam);
 		packParticles();
-		send_particle_data_to_gpu();
+		sendParticleDataToGpu();
 
 		// get cam matrices
-		glm::mat4 view = glm::lookAt(g_cam.pos, g_cam.pos + g_cam.lookDir(), cam_up);
+		glm::mat4 view = glm::lookAt(g_cam.pos, g_cam.pos + g_cam.lookDir(), camUp);
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)(g_width) / g_height, 0.1f, 1000.0f);
 
 		// Update the light direction
@@ -478,11 +472,11 @@ int main(int argc, char** argv) {
 			{
 				auto _model = glm::rotate(glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(g_cam.pos.x, g_cam.pos.y, g_cam.pos.z)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.2f, 0.2f, 0.2f)), g_cam.theta, glm::vec3(0.0, 0.0, 1.0));
 				Entity o = Entity::create(&meshes.cat, textures.cat, _model, NONEMITTER);
-				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.model)));
+				glm::mat3 normalTransform = glm::inverse(glm::transpose(glm::mat3(o.modelMatrix)));
 				glBindTextureUnit(0, o.tex);
 				glBindTextureUnit(2, o.normal);
 
-				glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.model));
+				glProgramUniformMatrix4fv(programs.program, 0, 1, GL_FALSE, glm::value_ptr(o.modelMatrix));
 				glProgramUniformMatrix3fv(programs.program, 8, 1, GL_FALSE, glm::value_ptr(normalTransform));
 
 				glDrawArrays(GL_TRIANGLES, o.mesh->offset, o.mesh->size);
@@ -542,7 +536,7 @@ void throwCats() {
 	for (int i = 0; i < numCats; i++) {
 		if (catsThrown[i]) {
 			if (cannonCanFire[i] || g_INFINITE_FIRE) { // TODO remove this later
-				throw_cat(i, true); // local projectile + sfx
+				fireCannon(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
 				cannonCanFire[i] = false;
@@ -556,25 +550,28 @@ void throwCats() {
 	}
 }
 
-void throw_cat(int catNum, bool owned, double the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time) {
-	F64 start_time = curTimeSec;
-	F64 time_diff = curTimeSec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
+void fireCannon(int cannonID, bool owned, double timeOfNote) {
+	F64 startTime = curTimeSec;
+	F64 timeDiff = curTimeSec - timeOfNote;
 
 	// Prefer a cannon whose owned flag matches, otherwise use any matching cat_id.
 	int best = -1, fallback = -1;
-	for (int j = 0; j < (int)g_objects.size(); ++j) {
-		if (g_objects[j].type == CANNON && g_objects[j].catID == catNum) {
-			if (g_objects[j].owned == owned) { best = j; break; }
-			if (fallback == -1) fallback = j;
+	for (int i = 0; i < (int)g_objects.size(); ++i) {
+		if (g_objects[i].type == CANNON && g_objects[i].cannonID == cannonID) {
+			if (g_objects[i].owned == owned) { best = i; break; }
+			if (fallback == -1) fallback = i;
 		}
 	}
-	const int i = (best != -1 ? best : fallback);
-	if (i == -1) return; // no suitable cannon found
 
-	playSound(&audioEngine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)72,cannonNote[catNum]));
+	const int cannonEntityIndex = (best != -1 ? best : fallback);
+	if (cannonEntityIndex == -1) return; // no suitable cannon found
+
+	playSound(&audioEngine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)72,cannonNote[cannonID]));
 	playSoundVolume(&audioEngine, "asset/cannon.wav", false, 0.3);
 
-	glm::vec4 pos = g_objects[i].model[3];
+	glm::vec4 pos = g_objects[cannonEntityIndex].modelMatrix[3]; // 3 here represents position on matrix 
+
+	// Cannon smoke
 	addParticle(Particle{
 			.pos = glm::vec3(pos.x, pos.y + 2.16504F, pos.z + 0.052887F),
 			.color = { 255, 255, 255, 255 },
@@ -588,46 +585,46 @@ void throw_cat(int catNum, bool owned, double the_note_that_this_cat_was_played_
 	});
 
 	// Spawn projectile using the chosen cannon's transform
-	g_objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, g_objects[i].model, PROECTILE));
+	g_objects.push_back(Entity::create(&meshes.seagBall, textures.seagull, g_objects[cannonEntityIndex].modelMatrix, PROECTILE));
 	Entity& p = g_objects.back();
 
-	p.startTime = start_time;
-	p.preTransModel = p.model;
+	p.startTime = startTime;
+	p.preTransModelMatrix = p.modelMatrix;
 	p.shootAngle = owned ? 0.0f : PI;
 
-	p.update = [catNum](Entity& cat, F64 curTime) {
-		cat.model = toModel(
-			(curTime - cat.startTime) * 50, // distance along lane
+	p.update = [cannonID](Entity& seagullEntity, F64 curTime) {
+		seagullEntity.modelMatrix = positionOnArc(
+			(curTime - seagullEntity.startTime) * 50, // distance along lane
 			0,                               // lane index
 			DIST_BETWEEN_ENEMY_SHIPS,
-			cat.shootAngle
-		) * cat.preTransModel;
+			seagullEntity.shootAngle
+		) * seagullEntity.preTransModelMatrix;
 
-		glm::vec3 self_pos = glm::vec3(cat.model[3]);
-		for (int i = 0; i < g_objects.size(); i++) {
-			if (g_objects[i].type != PROECTILE || // only collide with seagulls
+		glm::vec3 projectilePosition = glm::vec3(seagullEntity.modelMatrix[3]);
+		for (int objectIndex = 0; objectIndex < g_objects.size(); objectIndex++) {
+			if (g_objects[objectIndex].type != PROECTILE || // only collide with seagulls
 				//objects[i].owned == cat.owned // don't collide with own faction
-				g_objects[i].shootAngle == cat.shootAngle
+				g_objects[objectIndex].shootAngle == seagullEntity.shootAngle
 			) continue;
-			glm::vec3 enemy_pos = glm::vec3(g_objects[i].model[3]);
-			F32 dist = glm::length(self_pos - enemy_pos);
+			glm::vec3 enemyPos = glm::vec3(g_objects[objectIndex].modelMatrix[3]);
+			F32 dist = glm::length(projectilePosition - enemyPos);
 			if (dist < 5.0) {
-				g_featherSource.pos = self_pos;
+				g_featherSource.pos = projectilePosition;
 				g_featherSource.spawnParticles(75);
-				g_objects[i].markedForDeath = true;
+				g_objects[objectIndex].markedForDeath = true;
 				return false;
 			}
 		}
 
 		// Die if marked for death
-		if (cat.markedForDeath) {
-			g_featherSource.pos = self_pos;
+		if (seagullEntity.markedForDeath) {
+			g_featherSource.pos = projectilePosition;
 			g_featherSource.spawnParticles(75);
 			return false;
 		}
 		// keep alive while above ground
-		if (cat.model[3][1] < 2.0f && (curTime - cat.startTime) > 1.0) {
-			g_particleSource.pos = self_pos;
+		if (seagullEntity.modelMatrix[3][1] < 2.0f && (curTime - seagullEntity.startTime) > 1.0) {
+			g_particleSource.pos = projectilePosition;
 			g_particleSource.spawnParticles(75);
 			return false;
 		}
@@ -635,68 +632,6 @@ void throw_cat(int catNum, bool owned, double the_note_that_this_cat_was_played_
 		return true;
 	};
 }
-
-void cleanupFinishedSounds() {
-	for (auto it = g_liveSounds.begin(); it != g_liveSounds.end();) {
-		ma_sound* s = *it;
-		if (!ma_sound_is_playing(s) && ma_sound_at_end(s)) {
-			ma_sound_uninit(s);
-			delete s;
-			it = g_liveSounds.erase(it);
-		}
-		else {
-			++it;
-		}
-	}
-}
-
-void playWithRandomPitch(ma_engine* engine, const char* filePath) {
-	ma_sound* s = new ma_sound{};
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_pitch(s, g_randomPitch(g_rng));
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch) {
-	ma_sound* s = new ma_sound{};
-	//ma_data_source_set_looping(s, loop);
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_looping(s, loop);
-		ma_sound_set_pitch(s, pitch);
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-void playSoundVolume(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 volume) {
-	ma_sound* s = new ma_sound{};
-	//ma_data_source_set_looping(s, loop);
-	if (ma_sound_init_from_file(engine, filePath,
-		MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE,
-		nullptr, nullptr, s) == MA_SUCCESS) {
-		ma_sound_set_looping(s, loop);
-		ma_sound_set_volume(s, volume);
-		ma_sound_start(s);
-		g_liveSounds.push_back(s);
-	}
-	else {
-		delete s;
-	}
-}
-
-
 
 /* Graphics Functions */
 

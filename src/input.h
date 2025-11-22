@@ -6,7 +6,7 @@
 #include "message.h"
 
 
-void throw_cat(int cat_num, bool owned, F64 = -1);
+void fireCannon(int cat_num, bool owned, F64 = -1);
 
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
 F32 weezer_notes[] = { 0.79367809502, 0.89087642854, 1.f, 1.05943508007, 1.33482398807, 1.4982991247 };
@@ -63,7 +63,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         if (key == GLFW_KEY_P && action == GLFW_PRESS) {
             //song_start_time = cur_time_sec;
             //make_seagull(65, 0, 3);
-            throw_cat(0, false);
+            fireCannon(0, false);
         }
     }
 }
