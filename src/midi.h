@@ -2,6 +2,10 @@
 #include <libremidi/libremidi.hpp>
 #include <libremidi/reader.hpp>
 #include <fstream>
+#include <cmath>
+#include <climits>
+
+#include "util.h"
 
 std::vector<char> midi_keys_velocity(128, 0);
 std::vector<char> midi_control_velocity(128, 0);
@@ -19,6 +23,7 @@ void midi_callback(const libremidi::message&& message) {
 	}
 	if ((message[0] & 0b11110000) == 0b10010000) {
 		midi_keys_velocity[message[1]] = message[2];
+		playSound(&engine, "asset/cat-meow-401729-2.wav", false, noteMultiplier((U8)84, (U8)message[1]));
 		std::cout << "Note On: " << (int)message[1] << " vel: " << (int)message[2] << "\n";
 	}
 	if ((message[0] & 0b11110000) == 0b10110000) {
@@ -47,24 +52,64 @@ typedef struct {
 } midi_note;
 
 
+
+/*
+// midi_track usage guide:
+// I didn't want to put even more merge conflicts to main.cpp
+
+
+U32 lanes = 6; // we have 6 cannons
+std::string track_name;
+midi_track track = midi_track::create(midi_parse_file("example.midi", track_name), lanes);
+
+{
+	...
+	// game loop
+
+	track.tick(dt);
+
+	// while the next note needs to be played within 2 seconds,
+	while(track.next_note_in() < 2.0) {
+		// assuming the function `send_seagull(U8 note, U32 lane)` will put a seagull in a queue to be loaded into the cannon in exactly 2 seconds
+		send_seagull(
+			track.next_note().note, // note (correlated to pitch, look https://computermusicresource.com/midikeys.html)
+			track.play_note() // lane
+		);
+	}
+
+	// continue game loop
+	...
+}
+*/
 // at most 12 lanes supported, since currently it will not differentiate on octaves
 // for mapping, go here https://computermusicresource.com/midikeys.html
 struct midi_track {
 	std::vector<midi_note> notes;
 	std::string song_name;
-	U32 lanes; // how many lanes we have
-	F64 seconds_per_beat;
+	U32 lanes = 0; // how many lanes we have
+	F64 seconds_per_beat = 0;
+	F64 smallest_time_step = INFINITY;
 
-	F64 time; // current time from start of this track
-	U32 index; // index into `notes`, where we're at
+	F64 time = 0; // current time from start of this track
+	U32 index = 0; // index into `notes`, where we're at
 	U8 note_lane_map[12]; // note_lane_map[n] = lane on which to send a given note
 
-	static midi_track create(std::vector<midi_note> notes, std::string song_name, U32 lanes, F64 spb) {
-		midi_track self = { notes, song_name, lanes, spb };
+	static midi_track create(std::vector<midi_note> notes, std::string song_name, U32 lanes, F64 spb, F64 sts) {
+		midi_track self = { notes, song_name, lanes, spb};
+		std::cout << "pre sts: " << sts - 0.01 << "\n";
+		self.smallest_time_step_in_beats(sts - 0.01);
+		std::cout << "sts: " << self.smallest_time_step << "\n";
 		self.time = 0.0;
 		self.find_note_lane_mapping();
 		return self;
 	}
+	/// Forces sts to be confined to (1/2^n) beats where n < 5 (1/128 notes). (beats are stored in 1/4 notes so its actually 1/(4 * 2^n) notes).
+	F64 smallest_time_step_in_beats(F64 sts) {
+		if (sts < DBL_EPSILON) return 0;
+		smallest_time_step = (seconds_per_beat) * (1.0 / pow(2, round(log2(((seconds_per_beat) / sts)))));
+		return smallest_time_step;
+	}
+
 	void tick(F64 dt) {
 		time += dt;
 	}
@@ -128,106 +173,84 @@ midi_track midi_parse_file(std::string filename, U8 lanes) {
 	libremidi::reader::parse_result result = r.parse(bytes);
 	F64 current_time_s = 0;
 
-	double beat_duration;
-	if(result != libremidi::reader::invalid) {
-		beat_duration = (60 * 1000000. / (double)r.startingTempo);
+	F64 beat_duration;
+	F64 smallest_time_step = INFINITY;
+	F64 last_note_on = current_time_s;
+	if(result == libremidi::reader::invalid) {
+		std::cerr << "Invalid MIDI File\n";
+		return {};
+	}
 
-		for(auto& track : r.tracks) {
-			for(auto& event : track) {
-				current_time_s += (event.tick / r.ticksPerBeat) * (beat_duration);
-				if (event.m.is_meta_event())
-					{
-						switch (event.m.get_meta_event_type())
-							{
-							case libremidi::meta_event_type::TRACK_NAME:
-								song_name.clear();
-								for (int i = 3; i < event.m.bytes.size(); ++i)
-									song_name.push_back(event.m.bytes[i]);
-								break;
-							case libremidi::meta_event_type::END_OF_TRACK:
-							case libremidi::meta_event_type::INSTRUMENT:
-							case libremidi::meta_event_type::LYRIC:
-							case libremidi::meta_event_type::MARKER:
-							case libremidi::meta_event_type::CUE:
-							case libremidi::meta_event_type::PATCH_NAME:
-							case libremidi::meta_event_type::DEVICE_NAME:
-							case libremidi::meta_event_type::CHANNEL_PREFIX:
-							case libremidi::meta_event_type::MIDI_PORT:
-							case libremidi::meta_event_type::SEQUENCE_NUMBER:
-							case libremidi::meta_event_type::TEXT:
-							case libremidi::meta_event_type::COPYRIGHT:
-								break;
-							case libremidi::meta_event_type::TEMPO_CHANGE:
-								beat_duration = (((((uint32_t)event.m.bytes[3]) << 16) + (event.m.bytes[4] << 8) + event.m.bytes[5]) / (double)1000000); // sec
-								// tickDuration = beatDuration / r.ticksPerBeat;
-								// duration = (long)r.get_end_time() * tickDuration / 1'000'000;
-								break;
-							case libremidi::meta_event_type::SMPTE_OFFSET:
-							case libremidi::meta_event_type::TIME_SIGNATURE:
-							case libremidi::meta_event_type::KEY_SIGNATURE:
-							case libremidi::meta_event_type::PROPRIETARY:
-								break;
-							case libremidi::meta_event_type::UNKNOWN:
-								std::cout << "UNKNOWN MIDI EVENT";
-								break;
-							default:
-								std::cout << "Unsupported.";
-								break;
-							}
+	beat_duration = (60 * 1000000. / (double)r.startingTempo);
+
+	for(auto& track : r.tracks) {
+		for(auto& event : track) {
+			current_time_s += (event.tick / r.ticksPerBeat) * (beat_duration);
+			if (event.m.is_meta_event()) {
+				switch (event.m.get_meta_event_type()) {
+				case libremidi::meta_event_type::TRACK_NAME:
+					song_name.clear();
+					for (int i = 3; i < event.m.bytes.size(); ++i)
+						song_name.push_back(event.m.bytes[i]);
+					break;
+				case libremidi::meta_event_type::END_OF_TRACK:
+				case libremidi::meta_event_type::INSTRUMENT:
+				case libremidi::meta_event_type::LYRIC:
+				case libremidi::meta_event_type::MARKER:
+				case libremidi::meta_event_type::CUE:
+				case libremidi::meta_event_type::PATCH_NAME:
+				case libremidi::meta_event_type::DEVICE_NAME:
+				case libremidi::meta_event_type::CHANNEL_PREFIX:
+				case libremidi::meta_event_type::MIDI_PORT:
+				case libremidi::meta_event_type::SEQUENCE_NUMBER:
+				case libremidi::meta_event_type::TEXT:
+				case libremidi::meta_event_type::COPYRIGHT:
+					break;
+				case libremidi::meta_event_type::TEMPO_CHANGE:
+					beat_duration = (((((uint32_t)event.m.bytes[3]) << 16) + (event.m.bytes[4] << 8) + event.m.bytes[5]) / (double)1000000); // sec
+					// tickDuration = beatDuration / r.ticksPerBeat;
+					// duration = (long)r.get_end_time() * tickDuration / 1'000'000;
+					break;
+				case libremidi::meta_event_type::SMPTE_OFFSET:
+				case libremidi::meta_event_type::TIME_SIGNATURE:
+				case libremidi::meta_event_type::KEY_SIGNATURE:
+				case libremidi::meta_event_type::PROPRIETARY:
+					break;
+				case libremidi::meta_event_type::UNKNOWN:
+					std::cout << "UNKNOWN MIDI EVENT";
+					break;
+				default:
+					std::cout << "Unsupported.";
+					break;
+				}
+			}
+			else {
+				switch (event.m.get_message_type()) {
+				case libremidi::message_type::NOTE_ON: {
+					notes.emplace_back(event.m.bytes[1], event.m.bytes[2], current_time_s);
+					F64 since_last_note = (current_time_s - last_note_on);
+					if (since_last_note > DBL_EPSILON && smallest_time_step > (since_last_note)) {
+						smallest_time_step = since_last_note;
 					}
-				else
-					{
-						switch (event.m.get_message_type())
-							{
-							case libremidi::message_type::NOTE_ON:
-								notes.emplace_back(event.m.bytes[1], event.m.bytes[2], current_time_s);
-								break;
-							case libremidi::message_type::NOTE_OFF:
-							case libremidi::message_type::CONTROL_CHANGE:
-							case libremidi::message_type::PROGRAM_CHANGE:
-							case libremidi::message_type::AFTERTOUCH:
-							case libremidi::message_type::POLY_PRESSURE:
-							case libremidi::message_type::PITCH_BEND:
-								break;
-							default:
-								std::cout << "Unsupported.";
-								break;
-							}
+					last_note_on = current_time_s;
 					}
+					break;
+				case libremidi::message_type::NOTE_OFF:
+				case libremidi::message_type::CONTROL_CHANGE:
+				case libremidi::message_type::PROGRAM_CHANGE:
+				case libremidi::message_type::AFTERTOUCH:
+				case libremidi::message_type::POLY_PRESSURE:
+				case libremidi::message_type::PITCH_BEND:
+					break;
+				default:
+					std::cout << "Unsupported.";
+					break;
+				}
 			}
 		}
 	}
 	file.close();
 
 	std::cout << "bd: " << beat_duration << "\n";
-	return midi_track::create(notes, song_name, lanes, beat_duration);
+	return midi_track::create(notes, song_name, lanes, beat_duration, smallest_time_step);
 }
-
-/*
-// midi_track usage guide:
-// I didn't want to put even more merge conflicts to main.cpp
-
-
-U32 lanes = 6; // we have 6 cannons
-std::string track_name;
-midi_track track = midi_track::create(midi_parse_file("example.midi", track_name), lanes);
-
-{
-	...
-	// game loop
-	
-	track.tick(dt);
-	
-	// while the next note needs to be played within 2 seconds,
-	while(track.next_note_in() < 2.0) {
-		// assuming the function `send_seagull(U8 note, U32 lane)` will put a seagull in a queue to be loaded into the cannon in exactly 2 seconds
-		send_seagull(
-			track.next_note().note, // note (correlated to pitch, look https://computermusicresource.com/midikeys.html)
-			track.play_note() // lane
-		);
-	}
-
-	// continue game loop
-	...
-}
-*/

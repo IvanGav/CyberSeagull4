@@ -98,15 +98,6 @@ ma_engine engine;
 double cur_time_sec;
 bool menu_open = true;
 
-// Graphics global data
-extern std::vector<Vertex> vertices;
-extern std::vector<Entity> objects;
-extern struct meshes;
-extern struct textures;
-extern struct framebuffers;
-extern struct dyn_textures;
-extern struct buffers;
-
 ParticleSource particleSource;
 ParticleSource featherSource;
 
@@ -265,13 +256,6 @@ int main(int argc, char** argv) {
 
 	// Create geometry
 
-	std::string song_name;
-	std::vector<midi_note> notes = midi_parse_file("asset/Buddy Holly riff.mid", song_name);
-
-	for (int i = 0; i < notes.size(); i++) {
-		std::cout << notes[i].time << "s: " << (int)notes[i].note << "\n";
-	}
-
 	objects.push_back(Entity::create(&meshes.shipNoMast, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(5.0F, -4.1F, 0.0F)), NONEMITTER));
 	objects.push_back(Entity::create(&meshes.ship, textures.ship.color, textures.ship.norm, glm::translate(glm::rotate(glm::radians(90.0F), glm::vec3(0.0F, 1.0F, 0.0F)), glm::vec3(-25.0F - distancebetweenthetwoshipswhichshallherebyshootateachother, -4.1F, 0.0F)), NONEMITTER));
 	objects.push_back(Entity::create(&meshes.cat, textures.cat, glm::scale(glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 0.0f)), (float)-PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f)), glm::vec3(0.1f, 0.1f, 0.1f)), NONEMITTER));
@@ -325,6 +309,8 @@ int main(int argc, char** argv) {
 	if (obs.get_input_ports().size()) {
 		midi_init(midi);
 	}
+
+	midi_parse_file("asset/SOOOOON MAY THE WELLLERRRRRRRMANNNNN COMEEEEEEEEEEEEEE.mid", 6);
 
 	F32 volume = 100.0;
 
