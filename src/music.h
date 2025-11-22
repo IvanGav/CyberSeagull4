@@ -19,12 +19,12 @@
 #include <cmath>
 
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
-extern ma_engine engine;
+extern ma_engine audioEngine;
 
 void songSelect(GLuint display, const char* filepath, ImVec2 dim) {
 	if (display) {
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
-		playSound(&engine, filepath, false, .9);
+		playSound(&audioEngine, filepath, false, .9);
 		ImGui::SetNextWindowSize(ImVec2(1000, 1000));
 		ImGui::SetNextWindowPos(ImVec2((1920 - dim[0]) / 2, 1080 * 0.1));
 		ImGui::Begin("Song", NULL, flags);

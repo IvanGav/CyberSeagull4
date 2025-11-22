@@ -14,11 +14,11 @@ F32 weezer[] = { weezer_notes[2], weezer_notes[3], weezer_notes[2], weezer_notes
 I32 weezer_index = 0;
 constexpr U16 numcats = 6;
 B8 cats_thrown[numcats];
-extern ma_engine engine;
+extern ma_engine audioEngine;
 extern U16 player_id;
 extern seaclient client;
-extern double cur_time_sec;
-extern bool menu_open;
+extern double curTimeSec;
+extern bool menuOpen;
 extern ParticleSource featherSource;
 extern Cam cam;
 
@@ -26,11 +26,11 @@ void make_seagull(U8 note, U8 cannon, F64 timestamp);
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        menu_open = !menu_open;
-        if(menu_open) windowMouseRelease(window);
+        menuOpen = !menuOpen;
+        if(menuOpen) windowMouseRelease(window);
         else windowMouseFocus(window);
     }
-    if (!menu_open) {
+    if (!menuOpen) {
         if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
             cats_thrown[0] = true;
         }
@@ -51,7 +51,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
       
         if (key == GLFW_KEY_I && action == GLFW_PRESS) {
-            song_start_time = cur_time_sec;
+            song_start_time = curTimeSec;
             make_seagull(65, 0, 3);
         }
 
@@ -69,7 +69,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 }
 
 void gamepadInput(GLFWgamepadstate state, GLFWgamepadstate lastState) {
-    if (!menu_open) {
+    if (!menuOpen) {
         if (state.buttons[0] == GLFW_PRESS && lastState.buttons[0] != GLFW_PRESS) {
             cats_thrown[0] = true;
         }

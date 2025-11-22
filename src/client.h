@@ -8,7 +8,7 @@
 #include <iostream>
 
 extern U16 player_id;
-extern F64 cur_time_sec;
+extern F64 curTimeSec;
 extern std::vector<Entity> objects;
 void make_seagull(U8 note, U8 cannon, F64 timestamp);
 
@@ -23,7 +23,7 @@ extern int g_max_health;
 
 extern U16 g_p0_id, g_p1_id;
 extern bool g_p0_ready, g_p1_ready;
-extern ma_engine engine;
+extern ma_engine audioEngine;
 void playSound(ma_engine* engine, const char* filePath, ma_bool32 loop, F32 pitch);
 
 // If you’re building with C++17 or later, using inline variables here avoids ODR issues.
@@ -133,7 +133,7 @@ private:
         case message_code::SONG_START: {
             if (m.body.size() < sizeof(F64)) break;
             m >> song_spb;
-            song_start_time = cur_time_sec;
+            song_start_time = curTimeSec;
             g_song_active = true;
             g_game_over   = false;
             g_sent_ready  = false;

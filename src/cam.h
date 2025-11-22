@@ -14,7 +14,7 @@ static constexpr auto PI = 3.14159265359;
 static constexpr glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 static constexpr auto epsilon = 0.00001;
 
-extern bool menu_open;
+extern bool menuOpen;
 extern std::vector<char> midi_keys_velocity;
 extern std::vector<char> midi_control_velocity;
 
