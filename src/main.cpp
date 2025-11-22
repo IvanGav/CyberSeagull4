@@ -542,7 +542,7 @@ void throwCats() {
 	for (int i = 0; i < numCats; i++) {
 		if (catsThrown[i]) {
 			if (cannonCanFire[i] || g_INFINITE_FIRE) { // TODO remove this later
-				throw_cat(i, true); // local projectile + sfx
+				throwCat(i, true); // local projectile + sfx
 				cats.push_back(static_cast<uint8_t>(i));
 				send = true;
 				cannonCanFire[i] = false;
@@ -556,9 +556,9 @@ void throwCats() {
 	}
 }
 
-void throw_cat(int catNum, bool owned, double the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time) {
+void throwCat(int catNum, bool owned, double timeOfNote) {
 	F64 start_time = curTimeSec;
-	F64 time_diff = curTimeSec - the_note_that_this_cat_was_played_to_is_supposed_to_be_played_at_time;
+	F64 time_diff = curTimeSec - timeOfNote;
 
 	// Prefer a cannon whose owned flag matches, otherwise use any matching cat_id.
 	int best = -1, fallback = -1;
